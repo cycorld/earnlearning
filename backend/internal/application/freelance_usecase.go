@@ -21,11 +21,11 @@ func NewFreelanceUseCase(db *sql.DB, repo freelance.Repository, wr wallet.Reposi
 // --- Input types ---
 
 type CreateJobInput struct {
-	Title          string `json:"title"`
-	Description    string `json:"description"`
-	Budget         int    `json:"budget"`
-	Deadline       string `json:"deadline"`
-	RequiredSkills string `json:"required_skills"`
+	Title          string                `json:"title"`
+	Description    string                `json:"description"`
+	Budget         int                   `json:"budget"`
+	Deadline       string                `json:"deadline"`
+	RequiredSkills freelance.SkillsList  `json:"required_skills"`
 }
 
 type ApplyJobInput struct {
@@ -90,6 +90,14 @@ func (uc *FreelanceUseCase) GetJob(jobID, userID int) (*freelance.FreelanceJob, 
 		job.Applications = apps
 	}
 	return job, nil
+}
+
+func (uc *FreelanceUseCase) ListApplications(jobID int) ([]*freelance.JobApplication, error) {
+	_, err := uc.repo.FindByID(jobID)
+	if err != nil {
+		return nil, err
+	}
+	return uc.repo.ListApplicationsByJob(jobID)
 }
 
 func (uc *FreelanceUseCase) ApplyToJob(jobID int, input ApplyJobInput, userID int) (*freelance.JobApplication, error) {

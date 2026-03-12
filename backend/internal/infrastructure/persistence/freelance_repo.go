@@ -35,6 +35,7 @@ func (r *FreelanceRepo) FindByID(id int) (*freelance.FreelanceJob, error) {
 	var deadline sql.NullTime
 	var completedAt sql.NullTime
 	var freelancerName sql.NullString
+	var clientName string
 
 	err := r.db.QueryRow(`
 		SELECT j.id, j.client_id, j.title, j.description, j.budget, j.deadline,
@@ -49,7 +50,7 @@ func (r *FreelanceRepo) FindByID(id int) (*freelance.FreelanceJob, error) {
 		&job.ID, &job.ClientID, &job.Title, &job.Description, &job.Budget, &deadline,
 		&job.RequiredSkills, &job.Status, &freelancerID, &job.EscrowAmount,
 		&job.AgreedPrice, &job.WorkCompleted, &job.CreatedAt, &completedAt,
-		&job.ClientName, &freelancerName,
+		&clientName, &freelancerName,
 	)
 	if err == sql.ErrNoRows {
 		return nil, freelance.ErrJobNotFound
@@ -70,6 +71,12 @@ func (r *FreelanceRepo) FindByID(id int) (*freelance.FreelanceJob, error) {
 	if freelancerName.Valid {
 		job.FreelancerName = freelancerName.String
 	}
+	// Populate nested client reference
+	job.Client = &freelance.UserRef{
+		ID:   job.ClientID,
+		Name: clientName,
+	}
+	job.ClientName = clientName
 	return job, nil
 }
 
@@ -105,7 +112,8 @@ func (r *FreelanceRepo) List(filter freelance.JobFilter, page, limit int) ([]*fr
 		SELECT j.id, j.client_id, j.title, j.description, j.budget, j.deadline,
 			   j.required_skills, j.status, j.freelancer_id, j.escrow_amount,
 			   j.agreed_price, j.work_completed, j.created_at, j.completed_at,
-			   u.name AS client_name
+			   u.name AS client_name,
+			   (SELECT COUNT(*) FROM job_applications WHERE job_id = j.id) AS application_count
 		FROM freelance_jobs j
 		JOIN users u ON u.id = j.client_id
 		WHERE `+whereClause+`
@@ -122,12 +130,14 @@ func (r *FreelanceRepo) List(filter freelance.JobFilter, page, limit int) ([]*fr
 		var freelancerID sql.NullInt64
 		var deadline sql.NullTime
 		var completedAt sql.NullTime
+		var clientName string
+		var appCount int
 
 		if err := rows.Scan(
 			&job.ID, &job.ClientID, &job.Title, &job.Description, &job.Budget, &deadline,
 			&job.RequiredSkills, &job.Status, &freelancerID, &job.EscrowAmount,
 			&job.AgreedPrice, &job.WorkCompleted, &job.CreatedAt, &completedAt,
-			&job.ClientName,
+			&clientName, &appCount,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan freelance job: %w", err)
 		}
@@ -141,6 +151,13 @@ func (r *FreelanceRepo) List(filter freelance.JobFilter, page, limit int) ([]*fr
 		if completedAt.Valid {
 			job.CompletedAt = &completedAt.Time
 		}
+		// Populate nested client reference and application count
+		job.Client = &freelance.UserRef{
+			ID:   job.ClientID,
+			Name: clientName,
+		}
+		job.ClientName = clientName
+		job.ApplicationCount = &appCount
 		jobs = append(jobs, job)
 	}
 	return jobs, total, nil
@@ -194,6 +211,7 @@ func (r *FreelanceRepo) CreateApplication(app *freelance.JobApplication) (int, e
 
 func (r *FreelanceRepo) FindApplicationByID(id int) (*freelance.JobApplication, error) {
 	app := &freelance.JobApplication{}
+	var userName string
 	err := r.db.QueryRow(`
 		SELECT a.id, a.job_id, a.user_id, a.proposal, a.price, a.status, a.created_at,
 			   u.name AS user_name
@@ -201,7 +219,7 @@ func (r *FreelanceRepo) FindApplicationByID(id int) (*freelance.JobApplication, 
 		JOIN users u ON u.id = a.user_id
 		WHERE a.id = ?`, id).Scan(
 		&app.ID, &app.JobID, &app.UserID, &app.Proposal, &app.Price, &app.Status, &app.CreatedAt,
-		&app.UserName,
+		&userName,
 	)
 	if err == sql.ErrNoRows {
 		return nil, freelance.ErrApplicationNotFound
@@ -209,11 +227,17 @@ func (r *FreelanceRepo) FindApplicationByID(id int) (*freelance.JobApplication, 
 	if err != nil {
 		return nil, fmt.Errorf("find application: %w", err)
 	}
+	app.UserName = userName
+	app.User = &freelance.UserRef{
+		ID:   app.UserID,
+		Name: userName,
+	}
 	return app, nil
 }
 
 func (r *FreelanceRepo) FindApplicationByJobAndUser(jobID, userID int) (*freelance.JobApplication, error) {
 	app := &freelance.JobApplication{}
+	var userName string
 	err := r.db.QueryRow(`
 		SELECT a.id, a.job_id, a.user_id, a.proposal, a.price, a.status, a.created_at,
 			   u.name AS user_name
@@ -221,13 +245,18 @@ func (r *FreelanceRepo) FindApplicationByJobAndUser(jobID, userID int) (*freelan
 		JOIN users u ON u.id = a.user_id
 		WHERE a.job_id = ? AND a.user_id = ?`, jobID, userID).Scan(
 		&app.ID, &app.JobID, &app.UserID, &app.Proposal, &app.Price, &app.Status, &app.CreatedAt,
-		&app.UserName,
+		&userName,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("find application by job and user: %w", err)
+	}
+	app.UserName = userName
+	app.User = &freelance.UserRef{
+		ID:   app.UserID,
+		Name: userName,
 	}
 	return app, nil
 }
@@ -248,11 +277,17 @@ func (r *FreelanceRepo) ListApplicationsByJob(jobID int) ([]*freelance.JobApplic
 	var apps []*freelance.JobApplication
 	for rows.Next() {
 		app := &freelance.JobApplication{}
+		var userName string
 		if err := rows.Scan(
 			&app.ID, &app.JobID, &app.UserID, &app.Proposal, &app.Price, &app.Status, &app.CreatedAt,
-			&app.UserName,
+			&userName,
 		); err != nil {
 			return nil, fmt.Errorf("scan application: %w", err)
+		}
+		app.UserName = userName
+		app.User = &freelance.UserRef{
+			ID:   app.UserID,
+			Name: userName,
 		}
 		apps = append(apps, app)
 	}

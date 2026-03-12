@@ -41,13 +41,15 @@ type Loan struct {
 }
 
 // CalcWeeklyInterest calculates weekly interest on the remaining balance.
+// InterestRate is stored as an annual percentage (e.g. 5 for 5%).
 func (l *Loan) CalcWeeklyInterest() int {
-	return int(float64(l.Remaining) * l.InterestRate)
+	return int(float64(l.Remaining) * l.InterestRate / 100.0 / 52.0)
 }
 
-// CalcPenalty calculates penalty on the remaining balance.
+// CalcPenalty calculates weekly penalty on the remaining balance.
+// PenaltyRate is stored as an annual percentage.
 func (l *Loan) CalcPenalty() int {
-	return int(float64(l.Remaining) * l.PenaltyRate)
+	return int(float64(l.Remaining) * l.PenaltyRate / 100.0 / 52.0)
 }
 
 type LoanPayment struct {

@@ -64,6 +64,11 @@ func (uc *ClassroomUseCase) CreateClassroom(input CreateClassroomInput, creatorI
 	}
 	c.ID = id
 
+	// Add creator as a member of the classroom
+	if err := uc.classroomRepo.AddMember(id, creatorID); err != nil {
+		return nil, err
+	}
+
 	// Create default channels
 	for _, ch := range defaultChannels {
 		_, err := uc.classroomRepo.CreateChannel(&classroom.Channel{

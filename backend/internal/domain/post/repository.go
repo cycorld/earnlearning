@@ -9,7 +9,7 @@ type PostRepository interface {
 	// Post operations
 	CreatePost(p *Post) (int, error)
 	FindPostByID(postID int) (*Post, error)
-	GetPosts(channelID int, page, limit int, tag string, currentUserID int) ([]*Post, int, error)
+	GetPosts(classroomID, channelID int, page, limit int, tag string, currentUserID int) ([]*Post, int, error)
 
 	// Like operations
 	LikePost(postID, userID int) error

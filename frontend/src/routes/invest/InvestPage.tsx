@@ -36,7 +36,7 @@ export default function InvestPage() {
   useEffect(() => {
     Promise.all([
       api
-        .get<InvestmentRound[]>('/investment/rounds?status=active')
+        .get<{ rounds: InvestmentRound[]; total: number } | InvestmentRound[]>('/investment/rounds?status=active')
         .catch(() => [] as InvestmentRound[]),
       api
         .get<Investment[]>('/investment/portfolio')
@@ -45,9 +45,12 @@ export default function InvestPage() {
         .get<Dividend[]>('/investment/dividends')
         .catch(() => [] as Dividend[]),
     ]).then(([r, p, d]) => {
-      setRounds(r)
-      setPortfolio(p)
-      setDividends(d)
+      const roundsArr = Array.isArray(r) ? r : (r?.rounds ?? [])
+      const portfolioArr = Array.isArray(p) ? p : []
+      const dividendsArr = Array.isArray(d) ? d : []
+      setRounds(roundsArr)
+      setPortfolio(portfolioArr)
+      setDividends(dividendsArr)
       setLoading(false)
     })
   }, [])

@@ -67,10 +67,11 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string) {
 	approved.GET("/companies/:id", h.Company.GetCompany)
 	approved.PUT("/companies/:id", h.Company.UpdateCompany)
 	approved.POST("/companies/:id/business-card", h.Company.CreateBusinessCard)
-	approved.GET("/companies/:id/business-card", h.Company.DownloadBusinessCard)
+	approved.GET("/companies/:id/business-card", h.Company.GetBusinessCard)
 
 	// Feed / Posts
 	approved.GET("/classrooms/:classroomId/channels", h.Post.GetChannels)
+	approved.GET("/posts", h.Post.GetPosts)
 	approved.GET("/channels/:channelId/posts", h.Post.GetPosts)
 	approved.POST("/channels/:channelId/posts", h.Post.CreatePost)
 	approved.POST("/posts/:id/like", h.Post.LikePost)
@@ -90,6 +91,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string) {
 	approved.GET("/freelance/jobs", h.Freelance.ListJobs)
 	approved.POST("/freelance/jobs", h.Freelance.CreateJob)
 	approved.GET("/freelance/jobs/:id", h.Freelance.GetJob)
+	approved.GET("/freelance/jobs/:id/applications", h.Freelance.ListApplications)
 	approved.POST("/freelance/jobs/:id/apply", h.Freelance.ApplyToJob)
 	approved.POST("/freelance/jobs/:id/accept", h.Freelance.AcceptApplication)
 	approved.POST("/freelance/jobs/:id/complete", h.Freelance.CompleteWork)

@@ -1,10 +1,12 @@
 package application
 
 import (
+	"fmt"
 	"regexp"
 	"time"
 
 	"github.com/earnlearning/backend/internal/domain/user"
+	"github.com/earnlearning/backend/internal/domain/wallet"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -12,12 +14,13 @@ import (
 var studentIDRegex = regexp.MustCompile(`^\d{7,10}$`)
 
 type AuthUseCase struct {
-	userRepo  user.Repository
-	jwtSecret string
+	userRepo   user.Repository
+	walletRepo wallet.Repository
+	jwtSecret  string
 }
 
-func NewAuthUseCase(repo user.Repository, jwtSecret string) *AuthUseCase {
-	return &AuthUseCase{userRepo: repo, jwtSecret: jwtSecret}
+func NewAuthUseCase(repo user.Repository, walletRepo wallet.Repository, jwtSecret string) *AuthUseCase {
+	return &AuthUseCase{userRepo: repo, walletRepo: walletRepo, jwtSecret: jwtSecret}
 }
 
 type RegisterInput struct {
@@ -110,7 +113,22 @@ func (uc *AuthUseCase) AdminGetPending() ([]*user.User, error) {
 }
 
 func (uc *AuthUseCase) AdminApprove(userID int) error {
-	return uc.userRepo.UpdateStatus(userID, user.StatusApproved)
+	if err := uc.userRepo.UpdateStatus(userID, user.StatusApproved); err != nil {
+		return err
+	}
+
+	// Create wallet for the newly approved user (balance starts at 0;
+	// initial capital is granted later when the student joins a classroom).
+	_, err := uc.walletRepo.FindByUserID(userID)
+	if err != nil {
+		// Wallet does not exist yet — create one.
+		if _, createErr := uc.walletRepo.CreateWallet(userID); createErr != nil {
+			fmt.Printf("wallet creation failed for approved user %d: %v\n", userID, createErr)
+			// Non-fatal: the classroom-join flow will retry wallet creation.
+		}
+	}
+
+	return nil
 }
 
 func (uc *AuthUseCase) AdminReject(userID int) error {

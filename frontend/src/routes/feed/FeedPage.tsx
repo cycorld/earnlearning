@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/use-auth'
 import type { Post, Channel, Comment, PaginatedData } from '@/types'
@@ -50,6 +51,7 @@ function timeAgo(dateStr: string): string {
 
 export default function FeedPage() {
   const { user } = useAuth()
+  const location = useLocation()
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
   const [selectedClassroom, setSelectedClassroom] = useState<number | null>(null)
   const [channels, setChannels] = useState<Channel[]>([])
@@ -75,21 +77,41 @@ export default function FeedPage() {
   const [commentLoading, setCommentLoading] = useState<Record<number, boolean>>({})
 
   // Load classrooms
-  useEffect(() => {
-    setClassroomLoading(true)
-    api
-      .get<Classroom[]>('/classrooms')
-      .then((data) => {
-        setClassrooms(data)
-        if (data.length > 0) {
-          setSelectedClassroom(data[0].id)
-        }
-      })
-      .catch(() => {
-        setClassrooms([])
-      })
-      .finally(() => setClassroomLoading(false))
+  const fetchClassrooms = useCallback(async (showLoading = true) => {
+    if (showLoading) setClassroomLoading(true)
+    try {
+      const data = await api.get<Classroom[]>('/classrooms')
+      const list = data ?? []
+      setClassrooms(list)
+      if (list.length > 0) {
+        setSelectedClassroom((prev) => prev ?? list[0].id)
+      }
+    } catch {
+      setClassrooms([])
+    } finally {
+      if (showLoading) setClassroomLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    fetchClassrooms()
+  }, [fetchClassrooms, location.key])
+
+  // Refetch classrooms when the page becomes visible (e.g. after external join)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchClassrooms(false)
+      }
+    }
+    const handleFocus = () => fetchClassrooms(false)
+    document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('focus', handleFocus)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [fetchClassrooms])
 
   // Load channels when classroom changes
   useEffect(() => {
@@ -165,11 +187,7 @@ export default function FeedPage() {
       await api.post('/classrooms/join', { code: inviteCode.trim() })
       toast.success('클래스룸에 참여했습니다!')
       setInviteCode('')
-      const data = await api.get<Classroom[]>('/classrooms')
-      setClassrooms(data)
-      if (data.length > 0 && !selectedClassroom) {
-        setSelectedClassroom(data[0].id)
-      }
+      await fetchClassrooms(false)
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : '참여에 실패했습니다.'
@@ -415,15 +433,18 @@ export default function FeedPage() {
                     <p className="mt-1 whitespace-pre-wrap text-sm">
                       {post.content}
                     </p>
-                    {post.tags.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {post.tags.map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            #{tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
+                    {(() => {
+                      const tags = Array.isArray(post.tags) ? post.tags : typeof post.tags === 'string' ? (post.tags as string).split(',').filter(Boolean) : [];
+                      return tags.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {tags.map((tag) => (
+                            <Badge key={tag} variant="outline" className="text-xs">
+                              #{tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
                     <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                       <button
                         onClick={() => handleLike(post.id, post.is_liked)}

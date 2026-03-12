@@ -43,7 +43,12 @@ func (h *PostHandler) GetChannels(c echo.Context) error {
 func (h *PostHandler) GetPosts(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 
+	classroomID, _ := strconv.Atoi(c.QueryParam("classroom_id"))
 	channelID, _ := strconv.Atoi(c.QueryParam("channel_id"))
+	// Also support path param for /channels/:channelId/posts
+	if channelID == 0 {
+		channelID, _ = strconv.Atoi(c.Param("channelId"))
+	}
 	page, _ := strconv.Atoi(c.QueryParam("page"))
 	limit, _ := strconv.Atoi(c.QueryParam("limit"))
 	tag := c.QueryParam("tag")
@@ -56,6 +61,7 @@ func (h *PostHandler) GetPosts(c echo.Context) error {
 	}
 
 	result, err := h.uc.GetPosts(application.GetPostsInput{
+		ClassroomID:   classroomID,
 		ChannelID:     channelID,
 		Page:          page,
 		Limit:         limit,
@@ -69,8 +75,23 @@ func (h *PostHandler) GetPosts(c echo.Context) error {
 		})
 	}
 
+	totalPages := 0
+	if result.Limit > 0 {
+		totalPages = (result.Total + result.Limit - 1) / result.Limit
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"success": true, "data": result, "error": nil,
+		"success": true,
+		"data": map[string]interface{}{
+			"data": result.Posts,
+			"pagination": map[string]interface{}{
+				"page":        result.Page,
+				"limit":       result.Limit,
+				"total":       result.Total,
+				"total_pages": totalPages,
+			},
+		},
+		"error": nil,
 	})
 }
 
@@ -84,6 +105,11 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 			"success": false, "data": nil,
 			"error": map[string]string{"code": "INVALID_INPUT", "message": "잘못된 입력입니다"},
 		})
+	}
+
+	// Support path param for /channels/:channelId/posts
+	if input.ChannelID == 0 {
+		input.ChannelID, _ = strconv.Atoi(c.Param("channelId"))
 	}
 
 	result, err := h.uc.CreatePost(userID, role, input)

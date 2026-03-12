@@ -90,7 +90,7 @@ export default function UserProfilePage() {
                   <GraduationCap className="h-3 w-3" />
                   {profile.department}
                 </span>
-                <span>{profile.student_id_display}</span>
+                <span>{profile.student_id}</span>
               </div>
             </div>
             {profile.bio && (

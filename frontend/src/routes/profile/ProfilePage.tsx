@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Building2,
   GraduationCap,
+  Loader2,
 } from 'lucide-react'
 
 function formatMoney(amount: number): string {
@@ -20,8 +21,16 @@ function formatMoney(amount: number): string {
 }
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user, isLoading, logout } = useAuth()
   const { wallet, loading: walletLoading } = useWallet()
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (!user) return null
 
@@ -53,7 +62,7 @@ export default function ProfilePage() {
                   <GraduationCap className="h-3 w-3" />
                   {user.department}
                 </span>
-                <span>{user.student_id_display}</span>
+                <span>{user.student_id}</span>
               </div>
             </div>
           </div>
@@ -86,25 +95,25 @@ export default function ProfilePage() {
               <div>
                 <p className="text-xs text-muted-foreground">총 자산</p>
                 <p className="text-sm font-semibold">
-                  {formatMoney(wallet.total_asset_value)}
+                  {formatMoney(Number(wallet.total_asset_value) || 0)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">보유 현금</p>
                 <p className="text-sm font-semibold">
-                  {formatMoney(wallet.balance)}
+                  {formatMoney(Number(wallet.balance) || 0)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">순위</p>
                 <p className="text-sm font-semibold">
-                  {wallet.rank}위 / {wallet.total_students}명
+                  {wallet.rank ?? 0}위 / {wallet.total_students ?? 0}명
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">회사 지분</p>
                 <p className="text-sm font-semibold">
-                  {formatMoney(wallet.asset_breakdown.company_equity)}
+                  {formatMoney(wallet.asset_breakdown?.company_equity ?? 0)}
                 </p>
               </div>
             </div>

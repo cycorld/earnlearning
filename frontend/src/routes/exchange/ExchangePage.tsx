@@ -39,10 +39,11 @@ export default function ExchangePage() {
     try {
       const [companiesData, ordersData] = await Promise.all([
         api.get<Company[]>('/exchange/companies'),
-        api.get<ExchangeOrder[]>('/exchange/orders/mine'),
+        api.get<{ orders: ExchangeOrder[]; total: number } | ExchangeOrder[]>('/exchange/orders/mine'),
       ])
-      setCompanies(companiesData || [])
-      setMyOrders(ordersData || [])
+      setCompanies(Array.isArray(companiesData) ? companiesData : [])
+      const ordersArr = Array.isArray(ordersData) ? ordersData : (ordersData?.orders ?? [])
+      setMyOrders(ordersArr)
     } catch {
       // ignore
     } finally {

@@ -5,7 +5,7 @@ export interface User {
   role: 'admin' | 'student'
   status: 'pending' | 'approved' | 'rejected'
   department: string
-  student_id_display: string
+  student_id: string
   bio: string
   avatar_url: string
   wallet_balance?: number
@@ -41,7 +41,7 @@ export interface Transaction {
 
 export interface Company {
   id: number
-  owner?: { id: number; name: string; student_id_display: string }
+  owner?: { id: number; name: string; student_id: string }
   name: string
   description: string
   logo_url: string
@@ -78,7 +78,7 @@ export interface Channel {
 export interface Post {
   id: number
   channel?: Channel
-  author?: { id: number; name: string; avatar_url: string; student_id_display: string }
+  author?: { id: number; name: string; avatar_url: string; student_id: string }
   content: string
   post_type: string
   media: MediaItem[]

@@ -29,6 +29,7 @@ func (uc *PostUsecase) GetChannels(classroomID int) ([]*post.Channel, error) {
 }
 
 type GetPostsInput struct {
+	ClassroomID   int    `json:"classroom_id"`
 	ChannelID     int    `json:"channel_id"`
 	Page          int    `json:"page"`
 	Limit         int    `json:"limit"`
@@ -51,7 +52,7 @@ func (uc *PostUsecase) GetPosts(input GetPostsInput) (*PostsResult, error) {
 		input.Limit = 20
 	}
 
-	posts, total, err := uc.postRepo.GetPosts(input.ChannelID, input.Page, input.Limit, input.Tag, input.CurrentUserID)
+	posts, total, err := uc.postRepo.GetPosts(input.ClassroomID, input.ChannelID, input.Page, input.Limit, input.Tag, input.CurrentUserID)
 	if err != nil {
 		return nil, err
 	}

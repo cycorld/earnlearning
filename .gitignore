@@ -27,3 +27,6 @@ backend/earnlearning
 # Temp
 *.local
 .tsbuildinfo
+
+# Backend binary
+backend/server

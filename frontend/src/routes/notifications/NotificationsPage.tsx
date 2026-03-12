@@ -84,7 +84,7 @@ export default function NotificationsPage() {
       const data = await api.get<PaginatedData<Notification>>(
         '/notifications?page=1&limit=20',
       )
-      setNotifications(data.data)
+      setNotifications(data?.data ?? [])
     } catch {
       setNotifications([])
     } finally {

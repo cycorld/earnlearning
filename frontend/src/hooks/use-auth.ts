@@ -18,7 +18,7 @@ interface RegisterData {
   password: string
   name: string
   department: string
-  student_id_display: string
+  student_id: string
 }
 
 interface AuthContextValue {

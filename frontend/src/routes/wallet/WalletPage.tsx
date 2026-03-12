@@ -38,10 +38,10 @@ export default function WalletPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-80">총 자산</p>
-              <p className="text-2xl font-bold">{formatMoney(wallet.total_asset_value)}</p>
+              <p className="text-2xl font-bold">{formatMoney(Number(wallet.total_asset_value) || 0)}</p>
             </div>
             <Badge variant="secondary" className="text-xs">
-              {wallet.rank}위 / {wallet.total_students}명
+              {wallet.rank ?? 0}위 / {wallet.total_students ?? 0}명
             </Badge>
           </div>
         </CardContent>
@@ -55,7 +55,7 @@ export default function WalletPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">보유 현금</p>
-              <p className="text-sm font-semibold">{formatMoney(wallet.asset_breakdown.cash)}</p>
+              <p className="text-sm font-semibold">{formatMoney(wallet.asset_breakdown?.cash ?? 0)}</p>
             </div>
           </CardContent>
         </Card>
@@ -67,7 +67,7 @@ export default function WalletPage() {
             <div>
               <p className="text-xs text-muted-foreground">주식 가치</p>
               <p className="text-sm font-semibold">
-                {formatMoney(wallet.asset_breakdown.stock_value)}
+                {formatMoney(wallet.asset_breakdown?.stock_value ?? 0)}
               </p>
             </div>
           </CardContent>
@@ -80,7 +80,7 @@ export default function WalletPage() {
             <div>
               <p className="text-xs text-muted-foreground">회사 지분</p>
               <p className="text-sm font-semibold">
-                {formatMoney(wallet.asset_breakdown.company_equity)}
+                {formatMoney(wallet.asset_breakdown?.company_equity ?? 0)}
               </p>
             </div>
           </CardContent>
@@ -93,7 +93,7 @@ export default function WalletPage() {
             <div>
               <p className="text-xs text-muted-foreground">총 부채</p>
               <p className="text-sm font-semibold text-red-600">
-                -{formatMoney(wallet.asset_breakdown.total_debt)}
+                -{formatMoney(wallet.asset_breakdown?.total_debt ?? 0)}
               </p>
             </div>
           </CardContent>
