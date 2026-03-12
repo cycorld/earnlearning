@@ -14,7 +14,8 @@
 ### 기술 스택
 - **Backend**: Go (Echo) + SQLite (Docker volume persistent)
 - **Frontend**: Vite + React 18 + TypeScript + Tailwind CSS + shadcn/ui
-- **Realtime**: WebSocket (자산/알림 실시간 반영)
+- **Realtime**: WebSocket (자산/알림 실시간 반영) + Web Push (오프라인 푸시)
+- **PWA**: Vite PWA Plugin (홈 화면 설치, 오프라인 캐시, 웹 푸시 알림)
 - **Auth**: JWT (이메일 회원가입 + Admin 승인제)
 - **Deploy**: Docker + Nginx (SQLite DB는 Docker volume으로 영속화)
 
@@ -236,7 +237,17 @@
   - 투자 체결, 외주 계약, 배당 입금, 이자 차감
   - 과제 등록, 새 게시글 (팔로우 채널)
   - 주식 체결, 대출 승인
+- **웹 푸시 알림** (Web Push API)
+  - 앱이 꺼져 있어도 금전/계약/긴급 알림 수신
+  - Service Worker 기반, VAPID 인증
+  - 사용자가 푸시 허용/거부 선택 가능
 - 알림 센터 (읽음/안읽음 관리)
+
+### 3.9 PWA (Progressive Web App)
+
+- **홈 화면 설치**: 모바일/데스크탑에서 앱처럼 사용
+- **오프라인 캐시**: 정적 자산 + API 캐싱 (NetworkFirst)
+- **자동 업데이트**: 새 버전 배포 시 Service Worker 자동 갱신
 
 ---
 
@@ -476,6 +487,12 @@ Dividend & KPI
 Notifications
   GET    /api/notifications
   PUT    /api/notifications/:id/read
+  PUT    /api/notifications/read-all
+
+Web Push
+  GET    /api/push/vapid-public-key       (VAPID 공개키 조회)
+  POST   /api/push/subscribe              (푸시 구독 등록)
+  DELETE /api/push/subscribe              (푸시 구독 해제)
 ```
 
 ---
@@ -532,6 +549,7 @@ Notifications
 - **파일 저장**: 이미지/첨부파일은 Docker volume 로컬 저장 (`/data/uploads/`)
 - **Admin 시드**: 초기 기동 시 Admin 계정 자동 생성 (${CONTACT_EMAIL})
 - **이메일 제한 없음**: 아무 이메일로 가입 가능 (Admin 승인이 필터 역할)
+- **PWA**: 홈 화면 설치, 오프라인 캐시, Web Push 알림 (VAPID)
 - **UI/UX**: 모바일 퍼스트, 깔끔하고 fancy한 디자인
 
 ---

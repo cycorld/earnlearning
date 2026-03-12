@@ -18,6 +18,9 @@ services:
       - DB_PATH=/data/db/earnlearning.db
       - UPLOAD_PATH=/data/uploads
       - JWT_SECRET=${JWT_SECRET}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
+      - VAPID_SUBJECT=mailto:${CONTACT_EMAIL}
       - ADMIN_EMAIL=${CONTACT_EMAIL}
       - ADMIN_PASSWORD=test1234
 
@@ -161,6 +164,9 @@ PRAGMA foreign_keys = ON;
 | `ADMIN_EMAIL` | Admin 시드 이메일 | `${CONTACT_EMAIL}` |
 | `ADMIN_PASSWORD` | Admin 시드 비밀번호 | `test1234` |
 | `PORT` | 서버 포트 | `8080` |
+| `VAPID_PUBLIC_KEY` | Web Push VAPID 공개키 | (필수) |
+| `VAPID_PRIVATE_KEY` | Web Push VAPID 비밀키 | (필수) |
+| `VAPID_SUBJECT` | VAPID 연락처 | `mailto:${CONTACT_EMAIL}` |
 
 ---
 
@@ -170,7 +176,8 @@ PRAGMA foreign_keys = ON;
 |------|------|
 | 동시 접속 | 50명 (수강생 규모) |
 | API 응답 시간 | < 200ms |
-| 실시간 반영 | WebSocket (자산, 알림, 시세) |
+| 실시간 반영 | WebSocket (자산, 알림, 시세) + Web Push (오프라인) |
+| PWA | 홈 화면 설치, 오프라인 캐시, 푸시 알림 |
 | DB 백업 | 일별 자동 (Docker volume) |
 | 파일 저장 | Docker volume 로컬 (`/data/uploads/`) |
 | UI/UX | 모바일 퍼스트, 반응형 |
