@@ -73,7 +73,7 @@ func (uc *LoanUseCase) ApproveLoan(loanID, adminUserID int, input ApproveLoanInp
 
 	interestRate := input.InterestRate
 	if interestRate <= 0 {
-		interestRate = 0.05 // default 5%
+		interestRate = 5 // default 5% (stored as percentage)
 	}
 	penaltyRate := interestRate * 2
 
@@ -96,7 +96,7 @@ func (uc *LoanUseCase) ApproveLoan(loanID, adminUserID int, input ApproveLoanInp
 	// Notify borrower
 	uc.createNotification(l.BorrowerID, "loan_approved",
 		"대출이 승인되었습니다",
-		fmt.Sprintf("%d원 대출이 승인되어 지급되었습니다. 이자율: %.1f%%", l.Amount, interestRate*100),
+		fmt.Sprintf("%d원 대출이 승인되어 지급되었습니다. 이자율: %.1f%%", l.Amount, interestRate),
 		"loan", loanID)
 
 	return uc.repo.FindByID(loanID)

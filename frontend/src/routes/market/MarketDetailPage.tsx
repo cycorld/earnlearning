@@ -212,21 +212,28 @@ export default function MarketDetailPage() {
             <p className="mb-2 text-sm font-medium">상세 설명</p>
             <p className="whitespace-pre-wrap text-sm">{job.description}</p>
           </div>
-          {job.required_skills.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <p className="mb-2 text-sm font-medium">필요 기술</p>
-                <div className="flex flex-wrap gap-1">
-                  {job.required_skills.map((skill) => (
-                    <Badge key={skill} variant="outline">
-                      {skill}
-                    </Badge>
-                  ))}
+          {(() => {
+            const skills = typeof job.required_skills === 'string'
+              ? (job.required_skills as string).split(',').map(s => s.trim()).filter(Boolean)
+              : Array.isArray(job.required_skills)
+                ? job.required_skills
+                : []
+            return skills.length > 0 ? (
+              <>
+                <Separator />
+                <div>
+                  <p className="mb-2 text-sm font-medium">필요 기술</p>
+                  <div className="flex flex-wrap gap-1">
+                    {skills.map((skill) => (
+                      <Badge key={skill} variant="outline">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            ) : null
+          })()}
         </CardContent>
       </Card>
 

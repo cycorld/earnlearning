@@ -91,7 +91,7 @@ export default function RegisterPage() {
         password: form.password,
         name: form.name,
         department: form.department,
-        student_id_display: form.student_id,
+        student_id: form.student_id,
       })
       setShowDialog(true)
     } catch (err: unknown) {

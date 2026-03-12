@@ -56,7 +56,7 @@ func main() {
 	pushSvc := push.NewWebPushService(cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject, notifRepo)
 
 	// Use Cases
-	authUC := application.NewAuthUseCase(userRepo, cfg.JWTSecret)
+	authUC := application.NewAuthUseCase(userRepo, walletRepo, cfg.JWTSecret)
 	walletUC := application.NewWalletUseCase(walletRepo, userRepo)
 	classroomUC := application.NewClassroomUseCase(classroomRepo, walletRepo)
 	companyUC := application.NewCompanyUsecase(companyRepo, userRepo, walletRepo)

@@ -31,8 +31,8 @@ export default function TransactionsPage() {
       const data = await api.get<PaginatedData<Transaction>>(
         `/wallet/transactions?page=${p}&limit=20`,
       )
-      setTransactions(data.data)
-      setPagination(data.pagination)
+      setTransactions(data?.data ?? [])
+      setPagination(data?.pagination ?? null)
     } catch {
       setTransactions([])
     } finally {

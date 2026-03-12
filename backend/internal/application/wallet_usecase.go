@@ -18,8 +18,10 @@ func NewWalletUseCase(wr wallet.Repository, ur user.Repository) *WalletUseCase {
 }
 
 type WalletResponse struct {
-	Wallet *wallet.Wallet          `json:"wallet"`
-	Assets *wallet.AssetBreakdown  `json:"assets"`
+	Wallet        *wallet.Wallet         `json:"wallet"`
+	Assets        *wallet.AssetBreakdown `json:"assets"`
+	Rank          int                    `json:"rank"`
+	TotalStudents int                    `json:"total_students"`
 }
 
 func (uc *WalletUseCase) GetWallet(userID int) (*WalletResponse, error) {
@@ -33,13 +35,26 @@ func (uc *WalletUseCase) GetWallet(userID int) (*WalletResponse, error) {
 		return nil, err
 	}
 
-	return &WalletResponse{Wallet: w, Assets: assets}, nil
+	// Calculate rank
+	rank := 0
+	totalStudents := 0
+	rankings, err := uc.walletRepo.GetRanking(1000) // get all rankings
+	if err == nil {
+		totalStudents = len(rankings)
+		for _, r := range rankings {
+			if r.UserID == userID {
+				rank = r.Rank
+				break
+			}
+		}
+	}
+
+	return &WalletResponse{Wallet: w, Assets: assets, Rank: rank, TotalStudents: totalStudents}, nil
 }
 
 type TransactionListResult struct {
-	Transactions []*wallet.Transaction `json:"transactions"`
-	Total        int                   `json:"total"`
-	TotalPages   int                   `json:"total_pages"`
+	Data       []*wallet.Transaction `json:"data"`
+	Pagination PaginationInfo        `json:"pagination"`
 }
 
 func (uc *WalletUseCase) GetTransactions(userID int, txType string, startDate, endDate *time.Time, page, limit int) (*TransactionListResult, error) {
@@ -71,10 +86,18 @@ func (uc *WalletUseCase) GetTransactions(userID int, txType string, startDate, e
 		totalPages++
 	}
 
+	if txs == nil {
+		txs = []*wallet.Transaction{}
+	}
+
 	return &TransactionListResult{
-		Transactions: txs,
-		Total:        total,
-		TotalPages:   totalPages,
+		Data: txs,
+		Pagination: PaginationInfo{
+			Page:       page,
+			Limit:      limit,
+			Total:      total,
+			TotalPages: totalPages,
+		},
 	}, nil
 }
 

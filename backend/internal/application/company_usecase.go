@@ -30,16 +30,23 @@ type CreateCompanyInput struct {
 	InitialCapital int    `json:"initial_capital"`
 }
 
+type CompanyOwnerInfo struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	StudentID string `json:"student_id"`
+}
+
 type CompanyDetail struct {
 	*company.Company
-	OwnerName     string              `json:"owner_name"`
-	WalletBalance int                 `json:"wallet_balance"`
-	Shareholders  []ShareholderDetail `json:"shareholders"`
+	Owner         *CompanyOwnerInfo    `json:"owner"`
+	OwnerName     string               `json:"owner_name"`
+	WalletBalance int                  `json:"wallet_balance"`
+	Shareholders  []ShareholderDetail  `json:"shareholders"`
 }
 
 type ShareholderDetail struct {
 	*company.Shareholder
-	UserName   string  `json:"user_name"`
+	Name       string  `json:"name"`
 	Percentage float64 `json:"percentage"`
 }
 
@@ -149,7 +156,7 @@ func (uc *CompanyUsecase) GetCompany(companyID int) (*CompanyDetail, error) {
 		}
 		shDetails = append(shDetails, ShareholderDetail{
 			Shareholder: sh,
-			UserName:    userName,
+			Name:        userName,
 			Percentage:  sh.Percentage(c.TotalShares),
 		})
 	}
@@ -162,7 +169,12 @@ func (uc *CompanyUsecase) GetCompany(companyID int) (*CompanyDetail, error) {
 	}
 
 	return &CompanyDetail{
-		Company:       c,
+		Company: c,
+		Owner: &CompanyOwnerInfo{
+			ID:        owner.ID,
+			Name:      owner.Name,
+			StudentID: owner.StudentID,
+		},
 		OwnerName:     owner.Name,
 		WalletBalance: walletBalance,
 		Shareholders:  shDetails,
@@ -232,6 +244,62 @@ func (uc *CompanyUsecase) CreateBusinessCard(companyID, userID int, card company
 
 	c.BusinessCard = string(cardJSON)
 	return uc.companyRepo.Update(c)
+}
+
+type BusinessCardOwner struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type BusinessCardCompany struct {
+	ID           int                `json:"id"`
+	OwnerID      int                `json:"owner_id"`
+	Owner        *BusinessCardOwner `json:"owner"`
+	Name         string             `json:"name"`
+	Description  string             `json:"description"`
+	LogoURL      string             `json:"logo_url"`
+	TotalCapital int                `json:"total_capital"`
+	TotalShares  int                `json:"total_shares"`
+	Valuation    int                `json:"valuation"`
+	Listed       bool               `json:"listed"`
+	Status       string             `json:"status"`
+}
+
+type BusinessCardResponse struct {
+	Company BusinessCardCompany `json:"company"`
+}
+
+func (uc *CompanyUsecase) GetBusinessCard(companyID int) (*BusinessCardResponse, error) {
+	c, err := uc.companyRepo.FindByID(companyID)
+	if err != nil {
+		return nil, err
+	}
+
+	bc := BusinessCardCompany{
+		ID:           c.ID,
+		OwnerID:      c.OwnerID,
+		Name:         c.Name,
+		Description:  c.Description,
+		LogoURL:      c.LogoURL,
+		TotalCapital: c.TotalCapital,
+		TotalShares:  c.TotalShares,
+		Valuation:    c.Valuation,
+		Listed:       c.Listed,
+		Status:       c.Status,
+	}
+
+	// Get owner info
+	owner, err := uc.userRepo.FindByID(c.OwnerID)
+	if err == nil {
+		bc.Owner = &BusinessCardOwner{
+			ID:   owner.ID,
+			Name: owner.Name,
+		}
+	}
+
+	return &BusinessCardResponse{
+		Company: bc,
+	}, nil
 }
 
 func (uc *CompanyUsecase) DownloadBusinessCard(companyID int) ([]byte, string, error) {

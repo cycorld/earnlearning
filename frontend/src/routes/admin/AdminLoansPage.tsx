@@ -27,8 +27,8 @@ import {
 } from 'lucide-react'
 
 interface AdminLoan extends Loan {
-  user_id: number
-  user_name?: string
+  borrower_id: number
+  borrower_name?: string
 }
 
 function formatMoney(amount: number): string {
@@ -83,8 +83,9 @@ export default function AdminLoansPage() {
   const fetchLoans = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await api.get<AdminLoan[]>('/admin/loans')
-      setLoans(data || [])
+      const data = await api.get<{ loans: AdminLoan[]; total: number } | AdminLoan[]>('/admin/loans')
+      const loansArr = Array.isArray(data) ? data : (data?.loans ?? [])
+      setLoans(loansArr)
     } catch {
       // ignore
     } finally {
@@ -160,7 +161,7 @@ export default function AdminLoansPage() {
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium">
-            {loan.user_name || `사용자 #${loan.user_id}`}
+            {loan.borrower_name || `사용자 #${loan.borrower_id}`}
           </p>
           <p className="text-xs text-muted-foreground">{loan.purpose}</p>
         </div>
@@ -307,7 +308,7 @@ export default function AdminLoansPage() {
               <div className="rounded-lg bg-muted p-3 text-sm">
                 <p>
                   <span className="text-muted-foreground">신청자: </span>
-                  {selectedLoan.user_name || `#${selectedLoan.user_id}`}
+                  {selectedLoan.borrower_name || `#${selectedLoan.borrower_id}`}
                 </p>
                 <p>
                   <span className="text-muted-foreground">금액: </span>

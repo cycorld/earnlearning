@@ -25,10 +25,16 @@ func NewNotificationUseCase(repo notification.Repository, pushSvc *push.WebPushS
 }
 
 type NotificationListResult struct {
-	Notifications []*notification.Notification `json:"notifications"`
-	UnreadCount   int                          `json:"unread_count"`
-	Total         int                          `json:"total"`
-	TotalPages    int                          `json:"total_pages"`
+	Data         []*notification.Notification `json:"data"`
+	UnreadCount  int                          `json:"unread_count"`
+	Pagination   PaginationInfo               `json:"pagination"`
+}
+
+type PaginationInfo struct {
+	Page       int `json:"page"`
+	Limit      int `json:"limit"`
+	Total      int `json:"total"`
+	TotalPages int `json:"total_pages"`
 }
 
 func (uc *NotificationUseCase) GetNotifications(userID int, isRead *bool, page, limit int) (*NotificationListResult, error) {
@@ -54,11 +60,19 @@ func (uc *NotificationUseCase) GetNotifications(userID int, isRead *bool, page, 
 		totalPages++
 	}
 
+	if notifications == nil {
+		notifications = []*notification.Notification{}
+	}
+
 	return &NotificationListResult{
-		Notifications: notifications,
-		UnreadCount:   unreadCount,
-		Total:         total,
-		TotalPages:    totalPages,
+		Data:        notifications,
+		UnreadCount: unreadCount,
+		Pagination: PaginationInfo{
+			Page:       page,
+			Limit:      limit,
+			Total:      total,
+			TotalPages: totalPages,
+		},
 	}, nil
 }
 

@@ -178,6 +178,34 @@ func (h *CompanyHandler) CreateBusinessCard(c echo.Context) error {
 	})
 }
 
+func (h *CompanyHandler) GetBusinessCard(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 ID입니다"},
+		})
+	}
+
+	result, err := h.uc.GetBusinessCard(id)
+	if err != nil {
+		if err == company.ErrNotFound {
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_FOUND", "message": err.Error()},
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "FETCH_FAILED", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": result, "error": nil,
+	})
+}
+
 func (h *CompanyHandler) DownloadBusinessCard(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

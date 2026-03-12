@@ -100,20 +100,46 @@ func (r *PostRepo) FindPostByID(postID int) (*post.Post, error) {
 	return p, nil
 }
 
-func (r *PostRepo) GetPosts(channelID int, page, limit int, tag string, currentUserID int) ([]*post.Post, int, error) {
+func (r *PostRepo) GetPosts(classroomID, channelID int, page, limit int, tag string, currentUserID int) ([]*post.Post, int, error) {
 	offset := (page - 1) * limit
 
-	// Count total
-	countQuery := "SELECT COUNT(*) FROM posts WHERE channel_id = ?"
-	countArgs := []interface{}{channelID}
+	// Build WHERE clause based on classroomID or channelID
+	var countWhere string
+	var countArgs []interface{}
+	if channelID > 0 {
+		countWhere = "WHERE p.channel_id = ?"
+		countArgs = []interface{}{channelID}
+	} else if classroomID > 0 {
+		countWhere = "WHERE p.channel_id IN (SELECT id FROM channels WHERE classroom_id = ?)"
+		countArgs = []interface{}{classroomID}
+	} else {
+		countWhere = "WHERE 1=0"
+	}
+
 	if tag != "" {
-		countQuery += " AND tags LIKE ?"
+		countWhere += " AND p.tags LIKE ?"
 		countArgs = append(countArgs, "%\""+tag+"\"%")
 	}
+
+	// Count total
+	countQuery := "SELECT COUNT(*) FROM posts p " + countWhere
 
 	var total int
 	if err := r.db.QueryRow(countQuery, countArgs...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count posts: %w", err)
+	}
+
+	// Build main query WHERE clause
+	var queryWhere string
+	var filterArgs []interface{}
+	if channelID > 0 {
+		queryWhere = "WHERE p.channel_id = ?"
+		filterArgs = []interface{}{channelID}
+	} else if classroomID > 0 {
+		queryWhere = "WHERE p.channel_id IN (SELECT id FROM channels WHERE classroom_id = ?)"
+		filterArgs = []interface{}{classroomID}
+	} else {
+		queryWhere = "WHERE 1=0"
 	}
 
 	// Query posts
@@ -125,8 +151,8 @@ func (r *PostRepo) GetPosts(channelID int, page, limit int, tag string, currentU
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
 		LEFT JOIN post_likes pl ON pl.post_id = p.id AND pl.user_id = ?
-		WHERE p.channel_id = ?`
-	args := []interface{}{currentUserID, channelID}
+		` + queryWhere
+	args := append([]interface{}{currentUserID}, filterArgs...)
 
 	if tag != "" {
 		query += " AND p.tags LIKE ?"

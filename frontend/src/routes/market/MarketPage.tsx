@@ -50,8 +50,8 @@ export default function MarketPage() {
       const data = await api.get<PaginatedData<FreelanceJob>>(
         `/freelance/jobs?${params.toString()}`,
       )
-      setJobs(data.data)
-      setTotalPages(data.pagination.total_pages || 1)
+      setJobs(data.data ?? [])
+      setTotalPages(data.pagination?.total_pages || 1)
     } catch {
       setJobs([])
     } finally {
@@ -140,7 +140,7 @@ export default function MarketPage() {
                         {statusLabels[job.status] || job.status}
                       </Badge>
                     </div>
-                    {job.required_skills.length > 0 && (
+                    {job.required_skills?.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1">
                         {job.required_skills.map((skill) => (
                           <Badge key={skill} variant="outline" className="text-xs">

@@ -46,12 +46,14 @@ export default function AdminUsersPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [all, pending] = await Promise.all([
-        api.get<User[]>('/admin/users'),
+      const [allData, pending] = await Promise.all([
+        api.get<{ users: User[]; total: number } | User[]>('/admin/users'),
         api.get<User[]>('/admin/users/pending'),
       ])
-      setAllUsers(all || [])
-      setPendingUsers(pending || [])
+      const allArr = Array.isArray(allData) ? allData : (allData?.users ?? [])
+      const pendingArr = Array.isArray(pending) ? pending : []
+      setAllUsers(allArr)
+      setPendingUsers(pendingArr)
     } catch {
       // ignore
     } finally {
@@ -167,7 +169,7 @@ export default function AdminUsersPage() {
           )}
         </div>
         <p className="truncate text-xs text-muted-foreground">
-          {user.email} | {user.department} | {user.student_id_display}
+          {user.email} | {user.department} | {user.student_id}
         </p>
         {user.wallet_balance != null && (
           <p className="text-xs text-muted-foreground">

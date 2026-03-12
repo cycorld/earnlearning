@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/hooks/use-auth'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 // Layouts
 import MainLayout from '@/components/layout/MainLayout'
@@ -44,6 +45,7 @@ import AdminKpiPage from '@/routes/admin/AdminKpiPage'
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <BrowserRouter>
       <AuthProvider>
         <Routes>
@@ -91,5 +93,6 @@ export default function App() {
         </Routes>
       </AuthProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   )
 }
