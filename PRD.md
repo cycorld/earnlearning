@@ -52,15 +52,28 @@
 - 강의자가 강의실 생성 및 초대 코드 발급
 
 #### 3.1.2 회사 설립
+- 학생 1명이 **여러 회사** 설립 가능 (1회사 = 1프로젝트)
 - **회사명** 설정 (중복 검사)
+- **최소 자본금**: 100만원 이상 납입 필수 (금액은 설립자 자유)
+  - 자본금은 개인 지갑에서 회사 지갑으로 이동
+- 설립자는 **지분 100%**로 시작 (총 발행 주식: 10,000주)
+- 이후 투자 유치 또는 거래소 매각으로 주주 구성 변경 가능
 - **회사 로고** 업로드 또는 자동 생성
 - **명함 디자이너**: 템플릿 기반 명함 생성
   - 회사명, 이름, 직함, 연락처, 로고
   - PDF/이미지 다운로드 가능
   - 여러 디자인 템플릿 제공
+- 새 바이브코딩 프로젝트 = 새 회사 설립
 
-#### 3.1.3 프로필
-- 회사 정보, 자산 현황, 보유 주식, 대출 현황 한눈에 확인
+#### 3.1.3 기업가치 산정
+- **기업가치** = 최근 거래 주가 × 총 발행 주식 수 (10,000주)
+- 거래 이력이 없는 경우: 기업가치 = 납입 자본금
+- 투자 라운드 체결 시: 투자 금액 ÷ 양도 지분율 = 기업가치 (Post-money)
+- 거래소에서 주식 거래 시: 최종 체결가 기준 시가총액 갱신
+
+#### 3.1.4 프로필
+- 보유 회사 목록 & 각 회사 기업가치
+- 자산 현황, 보유 주식(타사 포함), 대출 현황 한눈에 확인
 
 ---
 
@@ -275,10 +288,17 @@ EarnLearning
 User
 ├── id, email, name, department, student_id (full)
 ├── role (admin/student), status (pending/approved/rejected)
-├── company_name, company_logo, bio
-└── business_card_data (JSON)
+├── bio
+└── created_at, updated_at
 # 학번 표시: API 응답 시 role에 따라 student_id 마스킹
 # student → 앞 2자리만 (예: "24학번"), admin → 전체 학번
+
+Company (1 User → N Companies, 1 Company = 1 Project)
+├── id, owner_id (설립자), name (unique), logo, description
+├── initial_capital (≥ 1,000,000), total_shares (10,000 고정)
+├── valuation (기업가치 = 최근 주가 × 10,000)
+├── business_card_data (JSON)
+└── created_at, status (active/dissolved)
 
 Classroom
 ├── id, name, code, created_by (admin)
@@ -310,19 +330,25 @@ FreelanceJob
 ├── Application[] (freelancer_id, proposal, price)
 └── escrow_amount
 
-Project (투자 대상 = 학생의 서비스)
-├── id, owner_id, name, description
-├── total_shares (10,000), share_price
-├── kpi_rules (JSON), weekly_revenue
-└── ShareHolder[] (user_id, shares, percentage)
+CompanyWallet (회사별 지갑 - 자본금, KPI 소득 등)
+├── company_id, balance
+└── TransactionLog[] (amount, type, description, timestamp)
+
+ShareHolder (지분 구조)
+├── company_id, user_id, shares, percentage
+└── acquired_at, acquisition_type (founding/investment/trade)
+
+KpiRule (회사별 KPI 규칙 - Admin 설정)
+├── company_id, rule_description, formula
+└── weekly_revenue, active
 
 InvestmentRound
-├── project_id, target_amount, offered_shares
+├── company_id, target_amount, offered_shares
 ├── status (open/funded/failed)
 └── Investment[] (investor_id, amount, shares)
 
 StockOrder
-├── project_id, user_id
+├── company_id, user_id
 ├── type (buy/sell), order_type (limit/market)
 ├── shares, price_per_share
 ├── status (open/filled/cancelled)
@@ -362,8 +388,15 @@ Classroom
 
 Users/Profile
   GET    /api/users/:id/profile
-  PUT    /api/users/me/company
-  POST   /api/users/me/business-card
+  GET    /api/users/me/companies       (내 보유 회사 목록)
+
+Company (1 User → N Companies)
+  POST   /api/companies                (회사 설립: 이름, 자본금 ≥ 100만원)
+  GET    /api/companies/:id
+  PUT    /api/companies/:id            (회사 정보 수정)
+  GET    /api/companies/:id/shareholders (지분 구조)
+  GET    /api/companies/:id/valuation  (기업가치)
+  POST   /api/companies/:id/business-card (명함 생성)
 
 Wallet
   GET    /api/wallet
@@ -392,18 +425,16 @@ Freelance Market
   PUT    /api/jobs/:id/approve
 
 Investment
-  GET    /api/projects
-  POST   /api/projects
-  POST   /api/projects/:id/rounds
-  POST   /api/rounds/:id/invest
-  GET    /api/portfolio
+  POST   /api/companies/:id/rounds    (투자 라운드 생성)
+  POST   /api/rounds/:id/invest       (투자 참여)
+  GET    /api/portfolio               (내 투자 포트폴리오)
 
 Stock Exchange
-  GET    /api/exchange/projects
-  GET    /api/exchange/projects/:id/orderbook
-  POST   /api/exchange/orders
-  DELETE /api/exchange/orders/:id
-  GET    /api/exchange/my-orders
+  GET    /api/exchange/companies                (상장 회사 목록 & 시세)
+  GET    /api/exchange/companies/:id/orderbook  (호가창)
+  POST   /api/exchange/orders                   (매수/매도 주문)
+  DELETE /api/exchange/orders/:id               (주문 취소)
+  GET    /api/exchange/my-orders                (내 주문 내역)
 
 Bank
   POST   /api/bank/loans/apply
@@ -411,9 +442,10 @@ Bank
   PUT    /api/bank/loans/:id/approve  (admin)
   POST   /api/bank/loans/:id/repay
 
-Dividend
-  POST   /api/projects/:id/revenue    (admin: KPI 소득 부여)
-  POST   /api/projects/:id/dividend   (배당 실행)
+Dividend & KPI
+  POST   /api/companies/:id/kpi-rules  (admin: KPI 규칙 설정)
+  POST   /api/companies/:id/revenue    (admin: KPI 소득 부여)
+  POST   /api/companies/:id/dividend   (배당 실행)
   GET    /api/dividends/my
 
 Notifications
@@ -482,7 +514,8 @@ Notifications
 최종 성적 기여도 = f(총 자산가치)
 
 총 자산가치 = 현금 잔고
-            + Σ(보유 지분 × 최종 주가)
+            + Σ(보유 회사 지분 × 최종 주가)   # 내가 설립한 회사 + 타사 투자분
+            + Σ(보유 회사 지갑 잔고 × 내 지분율) # 회사 현금 중 내 지분만큼
             - Σ(미상환 대출 원금 + 미납 이자)
 ```
 
