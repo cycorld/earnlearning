@@ -19,8 +19,10 @@
 | Database | SQLite (WAL 모드) | Docker volume 영속화 |
 | Frontend | Vite + React 18 | TypeScript + Tailwind CSS + shadcn/ui |
 | Realtime | WebSocket | 자산/알림/시세 실시간 반영 |
+| Push | Web Push (FCM) | PWA 오프라인 푸시 알림 |
 | Auth | JWT | 이메일 회원가입 + Admin 승인제 |
 | Deploy | Docker + Nginx | docker-compose 단일 구성 |
+| PWA | Vite PWA Plugin | 홈 화면 설치, 오프라인 캐시, 푸시 알림 |
 
 ---
 
@@ -129,6 +131,8 @@ backend/
 │   │   │   └── notification_repo.go
 │   │   ├── pdf/
 │   │   │   └── business_card.go      # PDF 생성 (명함)
+│   │   ├── push/
+│   │   │   └── webpush.go            # Web Push 발송 (VAPID)
 │   │   └── config/
 │   │       └── config.go             # 환경변수, 설정
 │   │
@@ -230,13 +234,19 @@ frontend/
 │   │   ├── api.ts                       # API 클라이언트 (fetch/axios)
 │   │   ├── auth.ts                      # JWT 관리 (localStorage)
 │   │   ├── ws.ts                        # WebSocket 클라이언트
+│   │   ├── push.ts                      # Web Push 구독/해제
 │   │   └── utils.ts
 │   ├── hooks/
 │   │   ├── use-auth.ts
 │   │   ├── use-wallet.ts
-│   │   └── use-ws.ts
+│   │   ├── use-ws.ts
+│   │   └── use-push.ts                  # 푸시 알림 훅
 │   └── types/
 │       └── index.ts
+├── public/
+│   ├── manifest.json                    # PWA 매니페스트
+│   ├── sw.js                            # Service Worker (Vite PWA 자동 생성)
+│   └── icons/                           # PWA 아이콘 (192×192, 512×512)
 ├── index.html                           # Vite HTML 엔트리
 ├── vite.config.ts
 ├── tailwind.config.ts
