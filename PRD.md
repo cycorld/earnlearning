@@ -12,8 +12,8 @@
 바이브 코딩으로 서비스를 만들고, 투자를 받고, 외주를 주고받으며, 학기 말 **최종 자산가치가 성적에 반영**된다.
 
 ### 기술 스택
-- **Backend**: Go (Gin/Echo) + SQLite (Docker volume persistent)
-- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui
+- **Backend**: Go (Echo) + SQLite (Docker volume persistent)
+- **Frontend**: Vite + React 18 + TypeScript + Tailwind CSS + shadcn/ui
 - **Realtime**: WebSocket (자산/알림 실시간 반영)
 - **Auth**: JWT (이메일 회원가입 + Admin 승인제)
 - **Deploy**: Docker + Nginx (SQLite DB는 Docker volume으로 영속화)
@@ -166,9 +166,9 @@
 - **신주 발행** 방식: 투자금 유입 시 신주 발행, 기존 주주 지분 희석
 
 #### 3.5.2 투자 실행
-- 투자자가 금액 입력 → 신주 자동 계산 (투자금 ÷ 주당 가격)
-- 목표 금액 달성 시 **펀딩 성공** → 신주 발행 & 회사 지갑에 입금
-- 미달 시 전액 환불 또는 부분 펀딩 (설정 가능)
+- **1라운드 = 1투자자**: 한 투자자가 모집 금액 전액을 투자
+- 투자 시 즉시 **펀딩 성공** → 신주 발행 & 회사 지갑에 입금
+- 부분 펀딩 없음
 
 #### 3.5.3 KPI 기반 소득 (Admin)
 - 런칭된 서비스에 대해 Admin이 **KPI 규칙** 설정
@@ -199,8 +199,7 @@
 #### 3.6.2 거래 시스템
 - **매도 주문**: 보유 지분 중 일부를 가격 지정하여 매도 등록
 - **매수 주문**: 원하는 회사의 지분을 가격 지정하여 매수 등록
-- **체결**: 가격 매칭 시 자동 체결 (지정가 주문)
-- **시장가 주문**: 현재 최우선 호가에 즉시 체결
+- **체결**: 가격 매칭 시 자동 체결 (지정가 주문만 지원)
 
 #### 3.6.3 시세 정보
 - 회사별 지분 가격 차트
@@ -319,7 +318,7 @@ Company (1 User → N Companies, 1 Company = 1 Project)
 ├── id, owner_id (설립자), name (unique), logo, description
 ├── initial_capital (≥ 1,000,000), total_shares (초기 10,000, 신주 발행 시 증가)
 ├── listed (거래소 상장 여부: 자본금 ≥ 5,000만원 시 상장)
-├── valuation (기업가치 = 최근 주가 × 10,000)
+├── valuation (기업가치 = 최근 주가 × total_shares)
 ├── business_card_data (JSON)
 └── created_at, status (active/dissolved)
 
@@ -366,14 +365,15 @@ KpiRule (회사별 KPI 규칙 - Admin 설정)
 └── weekly_revenue, active
 
 InvestmentRound
-├── company_id, target_amount, offered_shares
-├── status (open/funded/failed)
+├── company_id, target_amount, offered_percent (양도 지분율)
+├── new_shares (발행 신주 수), price_per_share
+├── status (open/funded/failed/cancelled)
 └── Investment[] (investor_id, amount, shares)
 
 StockOrder
 ├── company_id, user_id
-├── type (buy/sell), order_type (limit/market)
-├── shares, price_per_share
+├── type (buy/sell), order_type (limit only — 지정가만 지원)
+├── shares, price_per_share, remaining_shares
 ├── status (open/filled/cancelled)
 └── matched_order_id
 
@@ -424,12 +424,12 @@ Company (1 User → N Companies)
 Wallet
   GET    /api/wallet
   GET    /api/wallet/transactions
-  POST   /api/wallet/transfer         (admin: 유동성 공급)
+  POST   /api/wallet/transfer         (admin: 유동성 공급, target_user_ids 또는 target_all)
   GET    /api/wallet/ranking
 
 Posts (SNS)
   GET    /api/channels
-  GET    /api/channels/:id/posts
+  GET    /api/posts                   (?channel_id=1&page=1&limit=20)
   POST   /api/posts
   POST   /api/posts/:id/comments
   POST   /api/posts/:id/like
@@ -444,8 +444,10 @@ Freelance Market
   POST   /api/jobs
   POST   /api/jobs/:id/apply
   PUT    /api/jobs/:id/accept/:appId
-  PUT    /api/jobs/:id/complete
-  PUT    /api/jobs/:id/approve
+  PUT    /api/jobs/:id/complete       (수주자: 작업 완료 알림)
+  PUT    /api/jobs/:id/approve        (의뢰자: 승인 → 정산)
+  PUT    /api/jobs/:id/cancel         (의뢰자: 취소, open일 때만)
+  PUT    /api/jobs/:id/dispute        (양쪽: 분쟁 신고)
 
 Investment
   POST   /api/companies/:id/rounds    (투자 라운드 생성)
@@ -552,10 +554,10 @@ Notifications
 ### 시나리오 1: 바이브 코딩 → 투자 유치 → 런칭
 1. 학생 A가 바이브 코딩으로 웹앱 개발 과정을 `#쇼케이스`에 공유
 2. 완성 후 `#투자라운지`에 IR 게시 (1,000만원 모집, 지분 20%)
-3. 학생 B, C가 각각 500만원 투자 → 펀딩 성공
+3. 학생 B가 1,000만원 전액 투자 → 펀딩 성공 (1라운드 = 1투자자)
 4. Admin이 KPI 규칙 설정 (가입자 1명 = 5만원/주)
 5. 런칭 후 매주 Admin이 KPI 확인 → 소득 부여
-6. 매주 배당 실행 → 투자자 B, C에게 지분율만큼 분배
+6. 매주 배당 실행 → 투자자 B에게 지분율만큼 분배
 
 ### 시나리오 2: 외주로 자본 축적
 1. 학생 D가 "로고 디자인" 외주 등록 (30만원)

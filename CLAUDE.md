@@ -4,8 +4,8 @@
 이화여자대학교 "스타트업을 위한 코딩입문" 강의용 게임화 창업 교육 LMS.
 
 ## 기술 스택
-- **Backend**: Go (Gin/Echo) + SQLite (Docker volume persistent)
-- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui
+- **Backend**: Go (Echo) + SQLite (Docker volume persistent)
+- **Frontend**: Vite + React 18 + TypeScript + Tailwind CSS + shadcn/ui
 - **Realtime**: WebSocket
 - **Auth**: JWT (이메일 회원가입 + Admin 승인제)
 - **Deploy**: Docker + Nginx (SQLite는 volume 마운트로 영속화)
