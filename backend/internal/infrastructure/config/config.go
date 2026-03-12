@@ -1,0 +1,36 @@
+package config
+
+import "os"
+
+type Config struct {
+	Port            string
+	DBPath          string
+	UploadPath      string
+	JWTSecret       string
+	AdminEmail      string
+	AdminPassword   string
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+	VAPIDSubject    string
+}
+
+func Load() *Config {
+	return &Config{
+		Port:            getEnv("PORT", "8080"),
+		DBPath:          getEnv("DB_PATH", "./data/earnlearning.db"),
+		UploadPath:      getEnv("UPLOAD_PATH", "./data/uploads"),
+		JWTSecret:       getEnv("JWT_SECRET", "dev-secret-change-in-production"),
+		AdminEmail:      getEnv("ADMIN_EMAIL", "cyc@snu.ac.kr"),
+		AdminPassword:   getEnv("ADMIN_PASSWORD", "test1234"),
+		VAPIDPublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),
+		VAPIDPrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
+		VAPIDSubject:    getEnv("VAPID_SUBJECT", "mailto:cyc@snu.ac.kr"),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}

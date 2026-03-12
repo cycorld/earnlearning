@@ -1,0 +1,152 @@
+package router
+
+import (
+	"github.com/labstack/echo/v4"
+
+	"github.com/earnlearning/backend/internal/interfaces/http/handler"
+	"github.com/earnlearning/backend/internal/interfaces/http/middleware"
+	"github.com/earnlearning/backend/internal/interfaces/ws"
+)
+
+// Handlers holds all handler references for route registration.
+type Handlers struct {
+	Auth         *handler.AuthHandler
+	Admin        *handler.AdminHandler
+	Classroom    *handler.ClassroomHandler
+	Company      *handler.CompanyHandler
+	Wallet       *handler.WalletHandler
+	Post         *handler.PostHandler
+	Upload       *handler.UploadHandler
+	Freelance    *handler.FreelanceHandler
+	Investment   *handler.InvestmentHandler
+	Exchange     *handler.ExchangeHandler
+	Loan         *handler.LoanHandler
+	Notification *handler.NotificationHandler
+}
+
+// Setup registers all routes on the given Echo instance.
+func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string) {
+	// CORS
+	e.Use(middleware.CORS())
+
+	api := e.Group("/api")
+
+	// ================================================================
+	// Public routes (no auth required)
+	// ================================================================
+	api.POST("/auth/register", h.Auth.Register)
+	api.POST("/auth/login", h.Auth.Login)
+	api.GET("/push/vapid-public-key", h.Notification.GetVAPIDPublicKey)
+
+	// ================================================================
+	// Auth routes (JWT required, any status)
+	// ================================================================
+	auth := api.Group("", middleware.JWTAuth(jwtSecret))
+	auth.GET("/auth/me", h.Auth.GetMe)
+	auth.GET("/users/:id/profile", h.Auth.GetProfile)
+
+	// ================================================================
+	// Approved routes (JWT + approved status)
+	// ================================================================
+	approved := auth.Group("", middleware.ApprovedOnly())
+
+	// Wallet
+	approved.GET("/wallet", h.Wallet.GetWallet)
+	approved.GET("/wallet/transactions", h.Wallet.GetTransactions)
+	approved.GET("/wallet/ranking", h.Wallet.GetRanking)
+
+	// Classrooms
+	approved.POST("/classrooms", h.Classroom.CreateClassroom)
+	approved.POST("/classrooms/join", h.Classroom.JoinClassroom)
+	approved.GET("/classrooms", h.Classroom.ListMyClassrooms)
+	approved.GET("/classrooms/:id", h.Classroom.GetClassroom)
+
+	// Companies
+	approved.POST("/companies", h.Company.CreateCompany)
+	approved.GET("/companies/mine", h.Company.GetMyCompanies)
+	approved.GET("/companies/:id", h.Company.GetCompany)
+	approved.PUT("/companies/:id", h.Company.UpdateCompany)
+	approved.POST("/companies/:id/business-card", h.Company.CreateBusinessCard)
+	approved.GET("/companies/:id/business-card", h.Company.DownloadBusinessCard)
+
+	// Feed / Posts
+	approved.GET("/classrooms/:classroomId/channels", h.Post.GetChannels)
+	approved.GET("/channels/:channelId/posts", h.Post.GetPosts)
+	approved.POST("/channels/:channelId/posts", h.Post.CreatePost)
+	approved.POST("/posts/:id/like", h.Post.LikePost)
+	approved.GET("/posts/:id/comments", h.Post.GetComments)
+	approved.POST("/posts/:id/comments", h.Post.CreateComment)
+
+	// Assignments
+	approved.POST("/channels/:channelId/assignments", h.Post.CreateAssignment)
+	approved.POST("/assignments/:id/submit", h.Post.SubmitAssignment)
+	approved.PUT("/submissions/:id/grade", h.Post.GradeAssignment)
+	approved.GET("/assignments/:id/submissions", h.Post.GetSubmissions)
+
+	// Upload
+	approved.POST("/upload", h.Upload.Upload)
+
+	// Freelance Market
+	approved.GET("/freelance/jobs", h.Freelance.ListJobs)
+	approved.POST("/freelance/jobs", h.Freelance.CreateJob)
+	approved.GET("/freelance/jobs/:id", h.Freelance.GetJob)
+	approved.POST("/freelance/jobs/:id/apply", h.Freelance.ApplyToJob)
+	approved.POST("/freelance/jobs/:id/accept", h.Freelance.AcceptApplication)
+	approved.POST("/freelance/jobs/:id/complete", h.Freelance.CompleteWork)
+	approved.POST("/freelance/jobs/:id/approve", h.Freelance.ApproveJob)
+	approved.POST("/freelance/jobs/:id/cancel", h.Freelance.CancelJob)
+	approved.POST("/freelance/jobs/:id/dispute", h.Freelance.DisputeJob)
+	approved.POST("/freelance/jobs/:id/review", h.Freelance.ReviewJob)
+
+	// Investment
+	approved.POST("/investment/rounds", h.Investment.CreateRound)
+	approved.POST("/investment/rounds/:id/invest", h.Investment.Invest)
+	approved.GET("/investment/rounds", h.Investment.ListRounds)
+	approved.GET("/investment/portfolio", h.Investment.GetPortfolio)
+	approved.POST("/investment/dividends", h.Investment.ExecuteDividend)
+	approved.GET("/investment/dividends", h.Investment.GetMyDividends)
+	approved.POST("/investment/kpi-rules", h.Investment.CreateKpiRule)
+	approved.POST("/investment/kpi-revenue", h.Investment.AddKpiRevenue)
+
+	// Exchange
+	approved.GET("/exchange/companies", h.Exchange.ListCompanies)
+	approved.GET("/exchange/orderbook/:companyId", h.Exchange.GetOrderbook)
+	approved.POST("/exchange/orders", h.Exchange.PlaceOrder)
+	approved.DELETE("/exchange/orders/:id", h.Exchange.CancelOrder)
+	approved.GET("/exchange/orders/mine", h.Exchange.GetMyOrders)
+
+	// Loans (Bank)
+	approved.POST("/loans", h.Loan.ApplyLoan)
+	approved.GET("/loans/mine", h.Loan.GetMyLoans)
+	approved.GET("/loans/:id/payments", h.Loan.GetLoanPayments)
+	approved.POST("/loans/:id/repay", h.Loan.RepayLoan)
+
+	// Notifications
+	approved.GET("/notifications", h.Notification.GetNotifications)
+	approved.PUT("/notifications/:id/read", h.Notification.MarkRead)
+	approved.PUT("/notifications/read-all", h.Notification.MarkAllRead)
+	approved.POST("/notifications/push/subscribe", h.Notification.SubscribePush)
+	approved.DELETE("/notifications/push/subscribe", h.Notification.UnsubscribePush)
+	approved.GET("/notifications/push/vapid-key", h.Notification.GetVAPIDPublicKey)
+
+	// ================================================================
+	// Admin routes (JWT + approved + admin)
+	// ================================================================
+	admin := approved.Group("/admin", middleware.AdminOnly())
+	admin.GET("/users/pending", h.Admin.GetPendingUsers)
+	admin.PUT("/users/:id/approve", h.Admin.ApproveUser)
+	admin.PUT("/users/:id/reject", h.Admin.RejectUser)
+	admin.GET("/users", h.Admin.ListUsers)
+	admin.POST("/wallet/transfer", h.Wallet.AdminTransfer)
+	admin.PUT("/loans/:id/approve", h.Loan.ApproveLoan)
+	admin.PUT("/loans/:id/reject", h.Loan.RejectLoan)
+	admin.POST("/loans/weekly-interest", h.Loan.ProcessWeeklyInterest)
+	admin.GET("/loans", h.Loan.AdminListLoans)
+
+	// ================================================================
+	// WebSocket
+	// ================================================================
+	e.GET("/ws", func(c echo.Context) error {
+		return ws.ServeWS(hub, jwtSecret, c)
+	})
+}

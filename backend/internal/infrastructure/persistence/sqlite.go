@@ -1,0 +1,44 @@
+package persistence
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+func NewDB(dbPath string) (*sql.DB, error) {
+	dir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("create db directory: %w", err)
+	}
+
+	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_foreign_keys=ON")
+	if err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
+
+	db.SetMaxOpenConns(1)
+
+	return db, nil
+}
+
+func RunMigrations(db *sql.DB) error {
+	migrationSQL, err := os.ReadFile("internal/infrastructure/persistence/migrations/001_init.sql")
+	if err != nil {
+		return fmt.Errorf("read migration file: %w", err)
+	}
+
+	_, err = db.Exec(string(migrationSQL))
+	if err != nil {
+		return fmt.Errorf("run migrations: %w", err)
+	}
+
+	return nil
+}

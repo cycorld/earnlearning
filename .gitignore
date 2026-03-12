@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Go
+backend/earnlearning
+*.db
+*.db-shm
+*.db-wal
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+*.sw?
+
+# Logs
+*.log
+
+# Temp
+*.local
+.tsbuildinfo
