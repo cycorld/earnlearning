@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - db_data:/data/db
+      - upload_data:/data/uploads
+    environment:
+      - DB_PATH=/data/db/earnlearning.db
+      - UPLOAD_PATH=/data/uploads
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=mailto:${CONTACT_EMAIL}
+      - ADMIN_EMAIL=${CONTACT_EMAIL}
+      - ADMIN_PASSWORD=test1234
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=/api
+        - VITE_WS_URL=
+    ports:
+      - "5173:5173"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  db_data:
+  upload_data:
