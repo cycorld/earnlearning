@@ -12,11 +12,11 @@
 바이브 코딩으로 서비스를 만들고, 투자를 받고, 외주를 주고받으며, 학기 말 **최종 자산가치가 성적에 반영**된다.
 
 ### 기술 스택
-- **Backend**: Go (Gin/Echo) + PostgreSQL + Redis
+- **Backend**: Go (Gin/Echo) + SQLite (Docker volume persistent)
 - **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui
 - **Realtime**: WebSocket (자산/알림 실시간 반영)
-- **Auth**: JWT + OAuth2 (학교 이메일)
-- **Deploy**: Docker + Nginx
+- **Auth**: JWT (이메일 회원가입 + Admin 승인제)
+- **Deploy**: Docker + Nginx (SQLite DB는 Docker volume으로 영속화)
 
 ---
 
@@ -24,14 +24,27 @@
 
 | 역할 | 설명 | 권한 |
 |------|------|------|
-| **Admin (최용철)** | 강의자, 중앙은행, 유동성 공급자 | 강의실 관리, 유동성 공급, 대출 승인, KPI 기반 소득 부여, 과제 출제, 배당 관리 |
+| **Admin (최용철)** | 강의자, 중앙은행, 유동성 공급자 | 강의실 관리, 유동성 공급, 대출 승인, KPI 기반 소득 부여, 과제 출제, 배당 관리, **학생 승인**, 전체 학번 열람 |
 | **Student** | 수강생, 창업가 | 회사 설립, 명함 생성, 외주 등록/수주, 투자, 주식 거래, 게시글 작성, 서비스 런칭 |
+| **Pending** | 가입했지만 미승인 | 승인 대기 안내 화면만 노출 (문의: cyc@snu.ac.kr) |
 
 ---
 
 ## 3. 핵심 기능 모듈
 
 ### 3.1 온보딩 & 회사 설립
+
+#### 3.1.0 회원가입 & 승인 시스템
+- **가입 정보**: 이메일(학교 이메일), 이름, 학과, 학번(전체)
+- 비밀번호 설정
+- 가입 즉시 **pending** 상태
+- Admin이 승인해야 서비스 접근 가능
+- 미승인 시 **승인 대기 안내 페이지** 표시
+  - "관리자 승인을 기다리고 있습니다."
+  - "문의: cyc@snu.ac.kr"
+- **학번 표시 규칙**:
+  - 학생 간: 앞 2자리(입학년도)만 표시 (예: "24학번")
+  - Admin: 전체 학번 열람 가능
 
 #### 3.1.1 강의실 등록
 - 강의실 코드 입력으로 참여 (첫 강의실: "2026 스타트업을위한코딩입문")
@@ -260,9 +273,12 @@ EarnLearning
 
 ```
 User
-├── id, email, name, role (admin/student)
+├── id, email, name, department, student_id (full)
+├── role (admin/student), status (pending/approved/rejected)
 ├── company_name, company_logo, bio
 └── business_card_data (JSON)
+# 학번 표시: API 응답 시 role에 따라 student_id 마스킹
+# student → 앞 2자리만 (예: "24학번"), admin → 전체 학번
 
 Classroom
 ├── id, name, code, created_by (admin)
@@ -330,9 +346,14 @@ Notification
 
 ```
 Auth
-  POST   /api/auth/register
+  POST   /api/auth/register           (이메일, 이름, 학과, 학번, 비밀번호)
   POST   /api/auth/login
   GET    /api/auth/me
+
+Admin - 학생 승인
+  GET    /api/admin/users/pending      (승인 대기 목록)
+  PUT    /api/admin/users/:id/approve  (승인)
+  PUT    /api/admin/users/:id/reject   (거절)
 
 Classroom
   POST   /api/classrooms              (admin)
@@ -419,7 +440,7 @@ Notifications
 ## 8. 구현 우선순위
 
 ### Phase 1: MVP (Week 1-2)
-1. 인증 (회원가입/로그인)
+1. 인증 (이메일 회원가입/로그인 + Admin 승인제)
 2. 강의실 생성 & 참여 (초기 자본 지급)
 3. 회사 설립 & 명함 생성
 4. 지갑 & 자산 현황
@@ -450,7 +471,7 @@ Notifications
 - **응답 시간**: API < 200ms
 - **실시간**: 자산 변동, 알림은 WebSocket으로 즉시 반영
 - **보안**: JWT 인증, CORS, SQL Injection 방지, XSS 방지
-- **백업**: 일별 DB 백업
+- **DB**: SQLite (Docker volume 영속화, 일별 백업)
 - **UI/UX**: 모바일 퍼스트, 깔끔하고 fancy한 디자인
 
 ---
