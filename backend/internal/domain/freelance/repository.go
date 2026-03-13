@@ -15,6 +15,7 @@ type Repository interface {
 	SetEscrow(jobID, amount int) error
 	SetWorkCompleted(jobID int) error
 	SetCompleted(jobID int) error
+	SaveCompletionReport(jobID int, report, media string) error
 
 	CreateApplication(app *JobApplication) (int, error)
 	FindApplicationByID(id int) (*JobApplication, error)

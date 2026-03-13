@@ -33,6 +33,11 @@ type ApplyJobInput struct {
 	Price    int    `json:"price"`
 }
 
+type CompleteWorkInput struct {
+	Report string `json:"report"`
+	Media  string `json:"media"`
+}
+
 type ReviewJobInput struct {
 	Rating  int    `json:"rating"`
 	Comment string `json:"comment"`
@@ -204,7 +209,7 @@ func (uc *FreelanceUseCase) AcceptApplication(jobID, applicationID, userID int) 
 	return nil
 }
 
-func (uc *FreelanceUseCase) CompleteWork(jobID, userID int) error {
+func (uc *FreelanceUseCase) CompleteWork(jobID, userID int, input CompleteWorkInput) error {
 	job, err := uc.repo.FindByID(jobID)
 	if err != nil {
 		return err
@@ -220,6 +225,18 @@ func (uc *FreelanceUseCase) CompleteWork(jobID, userID int) error {
 		return err
 	}
 
+	// Save completion report
+	if input.Report != "" {
+		media := input.Media
+		if media == "" {
+			media = "[]"
+		}
+		uc.repo.SaveCompletionReport(jobID, input.Report, media)
+	}
+
+	// Auto-post to 외주마켓 channel
+	uc.postToMarketChannel(job, userID, input)
+
 	// Notify client
 	uc.createNotification(job.ClientID, "work_completed",
 		"외주 작업이 완료되었습니다",
@@ -227,6 +244,47 @@ func (uc *FreelanceUseCase) CompleteWork(jobID, userID int) error {
 		"freelance_job", jobID)
 
 	return nil
+}
+
+func (uc *FreelanceUseCase) postToMarketChannel(job *freelance.FreelanceJob, userID int, input CompleteWorkInput) {
+	// Find market channels across all classrooms the user belongs to
+	rows, err := uc.db.Query(`
+		SELECT c.id FROM channels c
+		JOIN classroom_members cm ON cm.classroom_id = c.classroom_id
+		WHERE c.slug = 'market' AND cm.user_id = ?
+		LIMIT 1`, userID)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	var channelID int
+	if rows.Next() {
+		rows.Scan(&channelID)
+	}
+	if channelID == 0 {
+		return
+	}
+
+	report := input.Report
+	if report == "" {
+		report = "(보고서 없음)"
+	}
+
+	content := fmt.Sprintf("## 📋 외주 완료 보고: %s\n\n**의뢰자:** 사용자 #%d\n**합의 금액:** %d원\n\n---\n\n%s",
+		job.Title, job.ClientID, job.AgreedPrice, report)
+
+	media := input.Media
+	if media == "" {
+		media = "[]"
+	}
+
+	tags := `["외주완료","작업보고"]`
+
+	_, _ = uc.db.Exec(`
+		INSERT INTO posts (channel_id, author_id, content, post_type, media, tags)
+		VALUES (?, ?, ?, 'normal', ?, ?)`,
+		channelID, userID, content, media, tags)
 }
 
 func (uc *FreelanceUseCase) ApproveJob(jobID, userID int) error {
