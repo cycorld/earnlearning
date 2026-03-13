@@ -217,9 +217,11 @@ CREATE TABLE IF NOT EXISTS freelance_jobs (
     freelancer_id   INTEGER REFERENCES users(id),
     escrow_amount   INTEGER NOT NULL DEFAULT 0,
     agreed_price    INTEGER DEFAULT 0,
-    work_completed  INTEGER NOT NULL DEFAULT 0,
-    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    completed_at    DATETIME
+    work_completed    INTEGER NOT NULL DEFAULT 0,
+    completion_report TEXT    DEFAULT '',
+    completion_media  TEXT    DEFAULT '[]',
+    created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed_at      DATETIME
 );
 
 CREATE TABLE IF NOT EXISTS job_applications (
@@ -401,3 +403,5 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_push_sub_user ON push_subscriptions(user_id);
+
+

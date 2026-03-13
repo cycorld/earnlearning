@@ -19,7 +19,10 @@ import {
   CheckCircle,
   Send,
   Star,
+  FileText,
 } from 'lucide-react'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
+import { MarkdownContent } from '@/components/MarkdownContent'
 
 function formatMoney(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(amount) + '원'
@@ -57,6 +60,10 @@ export default function MarketDetailPage() {
   const [showApplyForm, setShowApplyForm] = useState(false)
   const [proposal, setProposal] = useState('')
   const [price, setPrice] = useState('')
+
+  // Complete work report form
+  const [showReportForm, setShowReportForm] = useState(false)
+  const [reportContent, setReportContent] = useState('')
 
   const fetchJob = useCallback(async () => {
     try {
@@ -117,10 +124,18 @@ export default function MarketDetailPage() {
   }
 
   const handleComplete = async () => {
+    if (!reportContent.trim()) {
+      toast.error('완료 보고서를 작성해주세요.')
+      return
+    }
     setActionLoading(true)
     try {
-      await api.post(`/freelance/jobs/${id}/complete`)
-      toast.success('작업 완료를 보고했습니다.')
+      await api.post(`/freelance/jobs/${id}/complete`, {
+        report: reportContent,
+      })
+      toast.success('작업 완료를 보고했습니다. 외주마켓 게시판에 자동 포스팅됩니다.')
+      setShowReportForm(false)
+      setReportContent('')
       await fetchJob()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '완료 처리에 실패했습니다.')
@@ -210,7 +225,7 @@ export default function MarketDetailPage() {
           <Separator />
           <div>
             <p className="mb-2 text-sm font-medium">상세 설명</p>
-            <p className="whitespace-pre-wrap text-sm">{job.description}</p>
+            <MarkdownContent content={job.description} maxLines={10} className="text-sm" />
           </div>
           {(() => {
             const skills = typeof job.required_skills === 'string'
@@ -296,14 +311,52 @@ export default function MarketDetailPage() {
 
       {/* Freelancer: Complete work */}
       {job.status === 'in_progress' && isFreelancer && !job.work_completed && (
-        <Button className="w-full" onClick={handleComplete} disabled={actionLoading}>
-          {actionLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <CheckCircle className="mr-2 h-4 w-4" />
-          )}
-          작업 완료 보고
-        </Button>
+        <Card>
+          <CardContent className="p-4">
+            {showReportForm ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <h3 className="text-sm font-semibold">작업 완료 보고서</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  작업 내용을 정리하여 보고서를 작성해주세요. 이 보고서는 외주마켓 게시판에 자동 포스팅됩니다.
+                </p>
+                <MarkdownEditor
+                  value={reportContent}
+                  onChange={setReportContent}
+                  placeholder="작업 내용, 결과물, 특이사항 등을 마크다운으로 작성하세요. 파일 첨부도 가능합니다."
+                  rows={8}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={handleComplete}
+                    disabled={actionLoading || !reportContent.trim()}
+                  >
+                    {actionLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                    )}
+                    완료 보고 제출
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowReportForm(false)}
+                  >
+                    취소
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button className="w-full" onClick={() => setShowReportForm(true)}>
+                <FileText className="mr-2 h-4 w-4" />
+                작업 완료 보고
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Client: Approve completed work */}

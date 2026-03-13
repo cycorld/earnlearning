@@ -194,6 +194,14 @@ func (r *FreelanceRepo) SetCompleted(jobID int) error {
 	return err
 }
 
+func (r *FreelanceRepo) SaveCompletionReport(jobID int, report, media string) error {
+	_, err := r.db.Exec(
+		"UPDATE freelance_jobs SET completion_report = ?, completion_media = ? WHERE id = ?",
+		report, media, jobID,
+	)
+	return err
+}
+
 // --- Applications ---
 
 func (r *FreelanceRepo) CreateApplication(app *freelance.JobApplication) (int, error) {

@@ -39,5 +39,14 @@ func RunMigrations(db *sql.DB) error {
 		return fmt.Errorf("run migrations: %w", err)
 	}
 
+	// Incremental migrations (safe to re-run; errors ignored for existing columns)
+	alterStatements := []string{
+		`ALTER TABLE freelance_jobs ADD COLUMN completion_report TEXT DEFAULT ''`,
+		`ALTER TABLE freelance_jobs ADD COLUMN completion_media TEXT DEFAULT '[]'`,
+	}
+	for _, stmt := range alterStatements {
+		db.Exec(stmt) // ignore "duplicate column" errors
+	}
+
 	return nil
 }
