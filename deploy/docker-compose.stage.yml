@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  backend:
+    build: ../backend
+    restart: always
+    volumes:
+      - stage_db:/data/db
+      - stage_uploads:/data/uploads
+    environment:
+      - DB_PATH=/data/db/earnlearning.db
+      - UPLOAD_PATH=/data/uploads
+      - JWT_SECRET=${JWT_SECRET}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=mailto:${CONTACT_EMAIL}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@ewha.ac.kr}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    networks:
+      - stage
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        - VITE_API_URL=/api
+        - VITE_VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+    restart: always
+    networks:
+      - stage
+
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx-app.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - stage
+
+volumes:
+  stage_db:
+  stage_uploads:
+
+networks:
+  stage:
