@@ -18,6 +18,7 @@ import {
 interface Classroom {
   id: number
   name: string
+  code: string
   initial_capital: number
   member_count?: number
   created_at: string
@@ -174,9 +175,12 @@ export default function AdminClassroomPage() {
                       </span>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    #{classroom.id}
-                  </Badge>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">초대코드</p>
+                    <Badge variant="secondary" className="font-mono text-sm tracking-wider">
+                      {classroom.code}
+                    </Badge>
+                  </div>
                 </CardContent>
               </Card>
             ))

@@ -53,7 +53,7 @@ export default function AdminKpiPage() {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const data = await api.get<Company[]>('/companies')
+        const data = await api.get<Company[]>('/admin/companies')
         setCompanies(data || [])
       } catch {
         // ignore

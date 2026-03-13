@@ -85,6 +85,33 @@ func (r *CompanyRepo) FindByOwnerID(ownerID int) ([]*company.Company, error) {
 	return companies, nil
 }
 
+func (r *CompanyRepo) FindAll() ([]*company.Company, error) {
+	rows, err := r.db.Query(`
+		SELECT id, owner_id, name, description, logo_url, initial_capital,
+		       total_capital, total_shares, valuation, listed, business_card, status, created_at
+		FROM companies ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("query all companies: %w", err)
+	}
+	defer rows.Close()
+
+	var companies []*company.Company
+	for rows.Next() {
+		c := &company.Company{}
+		var listed int
+		if err := rows.Scan(
+			&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.LogoURL,
+			&c.InitialCapital, &c.TotalCapital, &c.TotalShares,
+			&c.Valuation, &listed, &c.BusinessCard, &c.Status, &c.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan company: %w", err)
+		}
+		c.Listed = listed == 1
+		companies = append(companies, c)
+	}
+	return companies, nil
+}
+
 func (r *CompanyRepo) Update(c *company.Company) error {
 	_, err := r.db.Exec(`
 		UPDATE companies SET description = ?, logo_url = ?, business_card = ?
