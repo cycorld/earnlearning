@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { toast } from 'sonner'
 import { ArrowLeft, Landmark, Info } from 'lucide-react'
 
@@ -92,13 +92,11 @@ export default function LoanApplyPage() {
 
             <div className="space-y-2">
               <Label htmlFor="purpose">대출 목적</Label>
-              <Textarea
-                id="purpose"
-                placeholder="대출 목적을 상세히 작성해주세요. (예: 회사 운영 자금, 주식 투자 등)"
+              <MarkdownEditor
                 value={purpose}
-                onChange={(e) => setPurpose(e.target.value)}
-                rows={3}
-                required
+                onChange={setPurpose}
+                placeholder="대출 목적을 상세히 작성해주세요. (예: 회사 운영 자금, 주식 투자 등)"
+                rows={8}
               />
             </div>
 

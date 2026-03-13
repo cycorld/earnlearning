@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
+import { MarkdownContent } from '@/components/MarkdownContent'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -184,7 +185,7 @@ export default function CompanyDetailPage() {
             <CardTitle className="text-base">회사 소개</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="whitespace-pre-wrap text-sm">{company.description}</p>
+            <MarkdownContent content={company.description} maxLines={8} className="text-sm" />
           </CardContent>
         </Card>
       )}
@@ -261,11 +262,11 @@ export default function CompanyDetailPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-desc">회사 소개</Label>
-              <Textarea
-                id="edit-desc"
+              <MarkdownEditor
                 value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                rows={4}
+                onChange={(v) => setEditForm({ ...editForm, description: v })}
+                placeholder="회사에 대해 설명해 주세요"
+                rows={8}
               />
             </div>
             <div className="flex justify-end gap-2">
