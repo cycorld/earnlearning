@@ -28,6 +28,8 @@ import {
   ChevronDown,
   ChevronUp,
   LogIn,
+  X,
+  Hash,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
@@ -65,9 +67,13 @@ export default function FeedPage() {
   const [inviteCode, setInviteCode] = useState('')
   const [joining, setJoining] = useState(false)
 
+  // Tag filter
+  const [activeTag, setActiveTag] = useState('')
+
   // Create post
   const [newPostOpen, setNewPostOpen] = useState(false)
   const [newPostContent, setNewPostContent] = useState('')
+  const [newPostTags, setNewPostTags] = useState('')
   const [postChannelId, setPostChannelId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
 
@@ -140,8 +146,9 @@ export default function FeedPage() {
     try {
       const channelParam =
         activeChannel !== 'all' ? `&channel_id=${activeChannel}` : ''
+      const tagParam = activeTag ? `&tag=${encodeURIComponent(activeTag)}` : ''
       const data = await api.get<PaginatedData<Post>>(
-        `/posts?classroom_id=${selectedClassroom}${channelParam}&page=1&limit=20`,
+        `/posts?classroom_id=${selectedClassroom}${channelParam}${tagParam}&page=1&limit=20`,
       )
       setPosts(data.data)
     } catch {
@@ -149,7 +156,7 @@ export default function FeedPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedClassroom, activeChannel])
+  }, [selectedClassroom, activeChannel, activeTag])
 
   useEffect(() => {
     fetchPosts()
@@ -203,12 +210,18 @@ export default function FeedPage() {
     if (!newPostContent.trim() || !postChannelId) return
     setCreating(true)
     try {
+      const tags = newPostTags
+        .split(',')
+        .map((t) => t.trim().replace(/^#/, ''))
+        .filter(Boolean)
       await api.post(`/channels/${postChannelId}/posts`, {
         content: newPostContent.trim(),
         post_type: 'normal',
+        tags: JSON.stringify(tags),
       })
       toast.success('게시물이 작성되었습니다.')
       setNewPostContent('')
+      setNewPostTags('')
       setPostChannelId(null)
       setNewPostOpen(false)
       fetchPosts()
@@ -382,6 +395,30 @@ export default function FeedPage() {
                 rows={6}
               />
             </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <Hash className="h-3.5 w-3.5" />
+                태그 (쉼표로 구분)
+              </Label>
+              <Input
+                placeholder="예: 공지, 중요, 프로젝트"
+                value={newPostTags}
+                onChange={(e) => setNewPostTags(e.target.value)}
+              />
+              {newPostTags.trim() && (
+                <div className="flex flex-wrap gap-1">
+                  {newPostTags
+                    .split(',')
+                    .map((t) => t.trim().replace(/^#/, ''))
+                    .filter(Boolean)
+                    .map((tag) => (
+                      <Badge key={tag} variant="outline" className="text-xs">
+                        #{tag}
+                      </Badge>
+                    ))}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -394,6 +431,24 @@ export default function FeedPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Active tag filter */}
+      {activeTag && (
+        <div className="flex items-center gap-2 rounded-lg border bg-primary/5 px-3 py-2">
+          <Hash className="h-4 w-4 text-primary" />
+          <span className="text-sm">
+            <span className="font-medium text-primary">#{activeTag}</span> 태그로 필터링 중
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto h-6 w-6"
+            onClick={() => setActiveTag('')}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
 
       {/* Posts list */}
       {loading ? (
@@ -437,11 +492,21 @@ export default function FeedPage() {
                       className="mt-1 text-sm"
                     />
                     {(() => {
-                      const tags = Array.isArray(post.tags) ? post.tags : typeof post.tags === 'string' ? (post.tags as string).split(',').filter(Boolean) : [];
+                      let tags: string[] = [];
+                      if (Array.isArray(post.tags)) {
+                        tags = post.tags;
+                      } else if (typeof post.tags === 'string') {
+                        try { tags = JSON.parse(post.tags); } catch { tags = (post.tags as string).split(',').filter(Boolean); }
+                      }
                       return tags.length > 0 ? (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {tags.map((tag) => (
-                            <Badge key={tag} variant="outline" className="text-xs">
+                            <Badge
+                              key={tag}
+                              variant={activeTag === tag ? 'default' : 'outline'}
+                              className="cursor-pointer text-xs transition-colors hover:bg-primary/10"
+                              onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
+                            >
                               #{tag}
                             </Badge>
                           ))}

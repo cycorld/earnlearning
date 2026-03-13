@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/earnlearning/backend/internal/domain/post"
@@ -74,6 +75,7 @@ type CreatePostInput struct {
 	Content   string `json:"content"`
 	PostType  string `json:"post_type"`
 	Media     string `json:"media"`
+	Tags      string `json:"tags"`
 }
 
 func (uc *PostUsecase) CreatePost(userID int, role string, input CreatePostInput) (*post.Post, error) {
@@ -88,8 +90,33 @@ func (uc *PostUsecase) CreatePost(userID int, role string, input CreatePostInput
 		return nil, fmt.Errorf("이 채널에는 관리자만 글을 작성할 수 있습니다")
 	}
 
-	// Extract tags from content
-	tags := extractTags(input.Content)
+	// Merge user-provided tags with auto-extracted tags from content
+	autoTags := extractTags(input.Content)
+	seen := make(map[string]bool)
+	var tags []string
+	// User-provided tags (from JSON array string)
+	if input.Tags != "" {
+		var userTags []string
+		if json.Unmarshal([]byte(input.Tags), &userTags) == nil {
+			for _, t := range userTags {
+				t = strings.TrimSpace(t)
+				if t != "" && !seen[t] {
+					seen[t] = true
+					tags = append(tags, t)
+				}
+			}
+		}
+	}
+	// Auto-extracted #tags from content
+	for _, t := range autoTags {
+		if !seen[t] {
+			seen[t] = true
+			tags = append(tags, t)
+		}
+	}
+	if tags == nil {
+		tags = []string{}
+	}
 	tagsJSON, _ := json.Marshal(tags)
 
 	if input.PostType == "" {
