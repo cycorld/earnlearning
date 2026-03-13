@@ -2,12 +2,16 @@ package persistence
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+//go:embed migrations/001_init.sql
+var migrationSQL string
 
 func NewDB(dbPath string) (*sql.DB, error) {
 	dir := filepath.Dir(dbPath)
@@ -30,12 +34,7 @@ func NewDB(dbPath string) (*sql.DB, error) {
 }
 
 func RunMigrations(db *sql.DB) error {
-	migrationSQL, err := os.ReadFile("internal/infrastructure/persistence/migrations/001_init.sql")
-	if err != nil {
-		return fmt.Errorf("read migration file: %w", err)
-	}
-
-	_, err = db.Exec(string(migrationSQL))
+	_, err := db.Exec(migrationSQL)
 	if err != nil {
 		return fmt.Errorf("run migrations: %w", err)
 	}

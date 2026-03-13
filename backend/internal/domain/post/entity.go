@@ -1,6 +1,9 @@
 package post
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Channel struct {
 	ID          int    `json:"id"`
@@ -35,14 +38,35 @@ type Post struct {
 type Comment struct {
 	ID        int       `json:"id"`
 	PostID    int       `json:"post_id"`
-	AuthorID  int       `json:"author_id"`
+	AuthorID  int       `json:"-"`
 	Content   string    `json:"content"`
 	Media     string    `json:"media"`
 	CreatedAt time.Time `json:"created_at"`
 
-	// Joined fields
-	AuthorName   string `json:"author_name,omitempty"`
-	AuthorAvatar string `json:"author_avatar,omitempty"`
+	// Joined fields (not serialized directly)
+	AuthorName   string `json:"-"`
+	AuthorAvatar string `json:"-"`
+}
+
+type CommentAuthor struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+func (c Comment) MarshalJSON() ([]byte, error) {
+	type Alias Comment
+	return json.Marshal(&struct {
+		Alias
+		Author CommentAuthor `json:"author"`
+	}{
+		Alias: (Alias)(c),
+		Author: CommentAuthor{
+			ID:        c.AuthorID,
+			Name:      c.AuthorName,
+			AvatarURL: c.AuthorAvatar,
+		},
+	})
 }
 
 type Assignment struct {

@@ -151,6 +151,10 @@ func (h *CompanyHandler) ListAllCompanies(c echo.Context) error {
 		})
 	}
 
+	if result == nil {
+		result = []*company.Company{}
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true, "data": result, "error": nil,
 	})
