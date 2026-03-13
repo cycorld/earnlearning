@@ -178,6 +178,7 @@ func (uc *PostUsecase) CreateComment(userID int, input CreateCommentInput) (*pos
 		return nil, fmt.Errorf("댓글 작성 실패: %w", err)
 	}
 	c.ID = commentID
+	c.CreatedAt = time.Now()
 
 	_ = uc.postRepo.IncrementCommentCount(input.PostID)
 

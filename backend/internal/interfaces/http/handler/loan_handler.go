@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/earnlearning/backend/internal/application"
+	"github.com/earnlearning/backend/internal/domain/loan"
 	"github.com/earnlearning/backend/internal/interfaces/http/middleware"
 	"github.com/labstack/echo/v4"
 )
@@ -35,6 +36,9 @@ func (h *LoanHandler) GetMyLoans(c echo.Context) error {
 	loans, err := h.uc.GetMyLoans(userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, errorResp("INTERNAL", err.Error()))
+	}
+	if loans == nil {
+		loans = []*loan.Loan{}
 	}
 	return c.JSON(http.StatusOK, successResp(loans))
 }

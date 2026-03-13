@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/earnlearning/backend/internal/application"
+	"github.com/earnlearning/backend/internal/domain/post"
 	"github.com/earnlearning/backend/internal/interfaces/http/middleware"
 )
 
@@ -165,8 +166,22 @@ func (h *PostHandler) GetComments(c echo.Context) error {
 		})
 	}
 
+	if comments == nil {
+		comments = []*post.Comment{}
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"success": true, "data": comments, "error": nil,
+		"success": true,
+		"data": map[string]interface{}{
+			"data": comments,
+			"pagination": map[string]interface{}{
+				"page":        1,
+				"limit":       len(comments),
+				"total":       len(comments),
+				"total_pages": 1,
+			},
+		},
+		"error": nil,
 	})
 }
 
@@ -179,6 +194,11 @@ func (h *PostHandler) CreateComment(c echo.Context) error {
 			"success": false, "data": nil,
 			"error": map[string]string{"code": "INVALID_INPUT", "message": "잘못된 입력입니다"},
 		})
+	}
+
+	// Support path param for /posts/:id/comments
+	if input.PostID == 0 {
+		input.PostID, _ = strconv.Atoi(c.Param("id"))
 	}
 
 	result, err := h.uc.CreateComment(userID, input)

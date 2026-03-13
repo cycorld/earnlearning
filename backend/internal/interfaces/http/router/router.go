@@ -34,6 +34,9 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string) {
 	// ================================================================
 	// Public routes (no auth required)
 	// ================================================================
+	api.GET("/health", func(c echo.Context) error {
+		return c.JSON(200, map[string]interface{}{"success": true, "data": "ok", "error": nil})
+	})
 	api.POST("/auth/register", h.Auth.Register)
 	api.POST("/auth/login", h.Auth.Login)
 	api.GET("/push/vapid-public-key", h.Notification.GetVAPIDPublicKey)
