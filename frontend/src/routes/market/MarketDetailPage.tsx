@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import {
@@ -260,13 +259,11 @@ export default function MarketDetailPage() {
               <form onSubmit={handleApply} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="proposal">제안서</Label>
-                  <Textarea
-                    id="proposal"
-                    placeholder="자신의 강점과 작업 계획을 설명해 주세요"
-                    rows={4}
+                  <MarkdownEditor
                     value={proposal}
-                    onChange={(e) => setProposal(e.target.value)}
-                    required
+                    onChange={setProposal}
+                    placeholder="자신의 강점과 작업 계획을 설명해 주세요 (마크다운 지원)"
+                    rows={8}
                   />
                 </div>
                 <div className="space-y-2">

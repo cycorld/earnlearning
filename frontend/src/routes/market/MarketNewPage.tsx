@@ -4,7 +4,7 @@ import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -78,13 +78,11 @@ export default function MarketNewPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">상세 설명</Label>
-              <Textarea
-                id="description"
-                placeholder="의뢰 내용을 자세히 설명해 주세요"
-                rows={5}
+              <MarkdownEditor
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                required
+                onChange={(v) => setForm({ ...form, description: v })}
+                placeholder="의뢰 내용을 자세히 설명해 주세요 (마크다운 지원, 파일 첨부 가능)"
+                rows={10}
               />
             </div>
             <div className="space-y-2">

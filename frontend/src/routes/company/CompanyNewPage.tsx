@@ -5,7 +5,7 @@ import type { Company } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Loader2, Upload } from 'lucide-react'
@@ -144,12 +144,11 @@ export default function CompanyNewPage() {
 
             <div className="space-y-2">
               <Label htmlFor="description">회사 소개</Label>
-              <Textarea
-                id="description"
-                placeholder="회사에 대해 설명해 주세요"
-                rows={3}
+              <MarkdownEditor
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(v) => setForm({ ...form, description: v })}
+                placeholder="회사에 대해 설명해 주세요 (마크다운 지원, 파일 첨부 가능)"
+                rows={8}
               />
             </div>
 
