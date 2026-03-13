@@ -247,22 +247,14 @@ func (uc *FreelanceUseCase) CompleteWork(jobID, userID int, input CompleteWorkIn
 }
 
 func (uc *FreelanceUseCase) postToMarketChannel(job *freelance.FreelanceJob, userID int, input CompleteWorkInput) {
-	// Find market channels across all classrooms the user belongs to
-	rows, err := uc.db.Query(`
+	// Find market channel across all classrooms the user belongs to
+	var channelID int
+	err := uc.db.QueryRow(`
 		SELECT c.id FROM channels c
 		JOIN classroom_members cm ON cm.classroom_id = c.classroom_id
 		WHERE c.slug = 'market' AND cm.user_id = ?
-		LIMIT 1`, userID)
-	if err != nil {
-		return
-	}
-	defer rows.Close()
-
-	var channelID int
-	if rows.Next() {
-		rows.Scan(&channelID)
-	}
-	if channelID == 0 {
+		LIMIT 1`, userID).Scan(&channelID)
+	if err != nil || channelID == 0 {
 		return
 	}
 
