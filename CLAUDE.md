@@ -42,13 +42,14 @@ ssh earnlearning
 cd /home/ubuntu/lms && git pull
 
 # Production 배포
-cd deploy && sudo docker compose -f docker-compose.prod.yml -p earnlearning-prod --env-file .env up -d --build
+cd deploy && sudo docker compose -f docker-compose.prod.yml -p earnlearning-prod --env-file .env.prod up -d --build
 
 # Staging 배포
-cd deploy && sudo docker compose -f docker-compose.stage.yml -p earnlearning-stage --env-file .env up -d --build
+cd deploy && sudo docker compose -f docker-compose.stage.yml -p earnlearning-stage --env-file .env.stage up -d --build
 ```
 
-### 환경변수 (서버: /home/ubuntu/lms/deploy/.env)
+### 환경변수 (서버: /home/ubuntu/lms/deploy/)
+- `.env.prod` / `.env.stage` — JWT_SECRET 등 키 분리됨
 - `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (Web Push용, 아직 미설정)
 
