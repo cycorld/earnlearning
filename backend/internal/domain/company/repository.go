@@ -5,6 +5,7 @@ type CompanyRepository interface {
 	Create(c *Company) (int, error)
 	FindByID(id int) (*Company, error)
 	FindByOwnerID(ownerID int) ([]*Company, error)
+	FindAll() ([]*Company, error)
 	Update(c *Company) error
 	UpdateListed(companyID int, listed bool) error
 

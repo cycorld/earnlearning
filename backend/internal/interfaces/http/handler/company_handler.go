@@ -142,6 +142,20 @@ func (h *CompanyHandler) GetMyCompanies(c echo.Context) error {
 	})
 }
 
+func (h *CompanyHandler) ListAllCompanies(c echo.Context) error {
+	result, err := h.uc.GetAllCompanies()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "FETCH_FAILED", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": result, "error": nil,
+	})
+}
+
 func (h *CompanyHandler) CreateBusinessCard(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	id, err := strconv.Atoi(c.Param("id"))

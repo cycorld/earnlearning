@@ -228,6 +228,10 @@ func (uc *CompanyUsecase) GetMyCompanies(userID int) ([]*MyCompanyItem, error) {
 	return items, nil
 }
 
+func (uc *CompanyUsecase) GetAllCompanies() ([]*company.Company, error) {
+	return uc.companyRepo.FindAll()
+}
+
 func (uc *CompanyUsecase) CreateBusinessCard(companyID, userID int, card company.BusinessCard) error {
 	c, err := uc.companyRepo.FindByID(companyID)
 	if err != nil {

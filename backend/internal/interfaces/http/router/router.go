@@ -144,6 +144,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string) {
 	admin.PUT("/loans/:id/reject", h.Loan.RejectLoan)
 	admin.POST("/loans/weekly-interest", h.Loan.ProcessWeeklyInterest)
 	admin.GET("/loans", h.Loan.AdminListLoans)
+	admin.GET("/companies", h.Company.ListAllCompanies)
 
 	// ================================================================
 	// WebSocket
