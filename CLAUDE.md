@@ -9,7 +9,48 @@
 - **Realtime**: WebSocket + Web Push (VAPID)
 - **PWA**: Vite PWA Plugin (홈 화면 설치, 오프라인 캐시, 웹 푸시)
 - **Auth**: JWT (이메일 회원가입 + Admin 승인제)
-- **Deploy**: Docker + Nginx (SQLite는 volume 마운트로 영속화)
+- **Deploy**: AWS EC2 (t3.small) + Docker Compose + Nginx + Cloudflare (SSL/CDN)
+
+## 배포 인프라
+
+### AWS 리소스 (태그: Project=EarnLearning)
+- **EC2**: `<EC2_INSTANCE_ID>` (t3.small, ap-northeast-2, Ubuntu 24.04)
+- **IP**: <SERVER_IP>
+- **SSH**: `ssh earnlearning` (~/.ssh/earnlearning.pem)
+- **Security Group**: `<SECURITY_GROUP_ID>` (22, 80, 443)
+- **Key Pair**: earnlearning
+
+### 도메인 & DNS (Cloudflare)
+- **Production**: https://earnlearning.com
+- **Staging**: https://stage.earnlearning.com
+- **Zone ID**: `<CLOUDFLARE_ZONE_ID>`
+- **SSL**: Cloudflare Flexible + Always HTTPS
+
+### 서버 구성
+하나의 EC2에 stage/prod 두 환경을 Docker Compose로 운영:
+```
+호스트 Nginx (80) → earnlearning.com     → localhost:8080 (prod)
+                  → stage.earnlearning.com → localhost:8081 (stage)
+
+각 환경 = backend + frontend + nginx (Docker Compose)
+데이터: Docker volume (prod_db, stage_db 분리)
+```
+
+### 배포 명령어
+```bash
+ssh earnlearning
+cd /home/ubuntu/lms && git pull
+
+# Production 배포
+cd deploy && sudo docker compose -f docker-compose.prod.yml -p earnlearning-prod --env-file .env up -d --build
+
+# Staging 배포
+cd deploy && sudo docker compose -f docker-compose.stage.yml -p earnlearning-stage --env-file .env up -d --build
+```
+
+### 환경변수 (서버: /home/ubuntu/lms/deploy/.env)
+- `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (Web Push용, 아직 미설정)
 
 ## 배포 시 필수 작업
 
