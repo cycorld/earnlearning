@@ -41,11 +41,11 @@
 ssh earnlearning
 cd /home/ubuntu/lms && git pull
 
-# Production 배포
-cd deploy && sudo docker compose -f docker-compose.prod.yml -p earnlearning-prod --env-file .env.prod up -d --build
+# Production 배포 (--force-recreate로 nginx도 함께 재시작)
+cd deploy && sudo docker compose -f docker-compose.prod.yml -p earnlearning-prod --env-file .env.prod up -d --build --force-recreate
 
 # Staging 배포
-cd deploy && sudo docker compose -f docker-compose.stage.yml -p earnlearning-stage --env-file .env.stage up -d --build
+cd deploy && sudo docker compose -f docker-compose.stage.yml -p earnlearning-stage --env-file .env.stage up -d --build --force-recreate
 ```
 
 ### 환경변수 (서버: /home/ubuntu/lms/deploy/)
