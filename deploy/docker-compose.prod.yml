@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  backend:
+    build: ../backend
+    restart: always
+    volumes:
+      - prod_db:/data/db
+      - prod_uploads:/data/uploads
+    environment:
+      - DB_PATH=/data/db/earnlearning.db
+      - UPLOAD_PATH=/data/uploads
+      - JWT_SECRET=${JWT_SECRET}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=mailto:cyc@snu.ac.kr
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@ewha.ac.kr}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    networks:
+      - prod
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        - VITE_API_URL=/api
+        - VITE_VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+    restart: always
+    networks:
+      - prod
+
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx-app.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - prod
+
+volumes:
+  prod_db:
+  prod_uploads:
+
+networks:
+  prod:
