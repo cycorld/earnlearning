@@ -8,7 +8,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -31,6 +30,8 @@ import {
   LogIn,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
+import { MarkdownContent } from '@/components/MarkdownContent'
 
 interface Classroom {
   id: number
@@ -374,11 +375,11 @@ export default function FeedPage() {
             </div>
             <div className="space-y-2">
               <Label>내용</Label>
-              <Textarea
-                placeholder="내용을 입력하세요"
+              <MarkdownEditor
                 value={newPostContent}
-                onChange={(e) => setNewPostContent(e.target.value)}
-                rows={5}
+                onChange={setNewPostContent}
+                placeholder="마크다운으로 작성하세요... (이미지 붙여넣기 가능)"
+                rows={6}
               />
             </div>
           </div>
@@ -430,9 +431,11 @@ export default function FeedPage() {
                         {timeAgo(post.created_at)}
                       </span>
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-sm">
-                      {post.content}
-                    </p>
+                    <MarkdownContent
+                      content={post.content}
+                      maxLines={6}
+                      className="mt-1 text-sm"
+                    />
                     {(() => {
                       const tags = Array.isArray(post.tags) ? post.tags : typeof post.tags === 'string' ? (post.tags as string).split(',').filter(Boolean) : [];
                       return tags.length > 0 ? (
@@ -495,7 +498,11 @@ export default function FeedPage() {
                                       {timeAgo(c.created_at)}
                                     </span>
                                   </div>
-                                  <p className="text-xs">{c.content}</p>
+                                  <MarkdownContent
+                                    content={c.content}
+                                    maxLines={4}
+                                    className="text-xs"
+                                  />
                                 </div>
                               </div>
                             ))}
@@ -506,33 +513,30 @@ export default function FeedPage() {
                             )}
                           </>
                         )}
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="댓글을 입력하세요"
+                        <div className="space-y-1">
+                          <MarkdownEditor
                             value={commentInput[post.id] || ''}
-                            onChange={(e) =>
+                            onChange={(v) =>
                               setCommentInput((prev) => ({
                                 ...prev,
-                                [post.id]: e.target.value,
+                                [post.id]: v,
                               }))
                             }
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault()
-                                handleCreateComment(post.id)
-                              }
-                            }}
-                            className="h-8 text-xs"
+                            placeholder="댓글을 입력하세요 (마크다운 지원)"
+                            rows={2}
+                            compact
                           />
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleCreateComment(post.id)}
-                            disabled={!commentInput[post.id]?.trim()}
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              className="h-7 gap-1 px-3 text-xs"
+                              onClick={() => handleCreateComment(post.id)}
+                              disabled={!commentInput[post.id]?.trim()}
+                            >
+                              <Send className="h-3 w-3" />
+                              댓글
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}
