@@ -47,7 +47,7 @@ export default function AdminUsersPage() {
     setLoading(true)
     try {
       const [allData, pending] = await Promise.all([
-        api.get<{ users: User[]; total: number } | User[]>('/admin/users'),
+        api.get<{ users: User[]; total: number } | User[]>('/admin/users?page=1&limit=1000'),
         api.get<User[]>('/admin/users/pending'),
       ])
       const allArr = Array.isArray(allData) ? allData : (allData?.users ?? [])
