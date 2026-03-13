@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/labstack/echo/v4"
+	echomw "github.com/labstack/echo/v4/middleware"
 
 	"github.com/earnlearning/backend/internal/interfaces/http/handler"
 	"github.com/earnlearning/backend/internal/interfaces/http/middleware"
@@ -26,6 +27,16 @@ type Handlers struct {
 
 // Setup registers all routes on the given Echo instance.
 func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string) {
+	// Request Logger - errors and slow requests
+	e.Use(echomw.LoggerWithConfig(echomw.LoggerConfig{
+		Format: "${time_rfc3339} ${status} ${method} ${uri} ${latency_human} ${error}\n",
+		Skipper: func(c echo.Context) bool {
+			// Skip health checks and successful WebSocket upgrades
+			return c.Path() == "/api/health"
+		},
+	}))
+	e.Use(echomw.Recover())
+
 	// CORS
 	e.Use(middleware.CORS())
 
