@@ -231,6 +231,65 @@ describe('AdminUsersPage 승인/거절', () => {
   })
 })
 
+describe('AdminUsersPage 60명 대기 유저 페이지네이션', () => {
+  const sixtyPendingUsers: User[] = Array.from({ length: 60 }, (_, i) => ({
+    id: i + 100,
+    email: `pending${i + 100}@ewha.ac.kr`,
+    name: koreanNames[i % koreanNames.length],
+    role: 'student' as const,
+    status: 'pending' as const,
+    department: departments[i % departments.length],
+    student_id: `202610${String(i).padStart(4, '0')}`,
+    bio: '',
+    avatar_url: '',
+  }))
+
+  beforeEach(() => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('/admin/users/pending'))
+        return Promise.resolve(sixtyPendingUsers)
+      if (path.includes('/admin/users'))
+        return Promise.resolve({ users: sixtyPendingUsers, total: sixtyPendingUsers.length })
+      return Promise.resolve([])
+    })
+  })
+
+  it('60명 대기 유저가 전부 렌더링된다 (20명 제한 회귀 테스트)', async () => {
+    renderWithProviders(<AdminUsersPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(`대기 (${sixtyPendingUsers.length})`)).toBeInTheDocument()
+    })
+
+    // 60명 전원의 이메일이 DOM에 있는지 확인
+    await waitFor(() => {
+      for (const u of sixtyPendingUsers) {
+        expect(screen.getByText(new RegExp(u.email))).toBeInTheDocument()
+      }
+    })
+  })
+
+  it('60명 각각에 승인/거절 버튼이 표시된다', async () => {
+    renderWithProviders(<AdminUsersPage />)
+
+    await waitFor(() => {
+      const approveButtons = screen.getAllByTitle('승인')
+      const rejectButtons = screen.getAllByTitle('거절')
+      expect(approveButtons.length).toBe(60)
+      expect(rejectButtons.length).toBe(60)
+    })
+  })
+
+  it('60명 모두 "대기" 뱃지가 표시된다', async () => {
+    renderWithProviders(<AdminUsersPage />)
+
+    await waitFor(() => {
+      const badges = screen.getAllByText('대기', { selector: '.text-xs' })
+      expect(badges.length).toBe(60)
+    })
+  })
+})
+
 describe('AdminUsersPage 에러 처리', () => {
   it('API 에러 시 크래시하지 않는다', async () => {
     mockApiGet.mockImplementation(() => Promise.reject(new Error('서버 에러')))
