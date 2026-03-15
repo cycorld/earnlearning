@@ -29,6 +29,9 @@ backend/earnlearning
 
 # Temp
 *.local
+
+# Local dev symlinks
+frontend/public/changelog
 .tsbuildinfo
 
 # Backend binary
