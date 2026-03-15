@@ -14,4 +14,7 @@ type Repository interface {
 	DeleteSubscription(userID int, endpoint string) error
 	GetSubscriptionsByUserID(userID int) ([]*PushSubscription, error)
 	DeleteSubscriptionByEndpoint(endpoint string) error
+
+	// User query for announcements
+	GetApprovedUserIDs() ([]int, error)
 }
