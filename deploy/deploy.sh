@@ -13,7 +13,7 @@ PROJECT_DIR="$(dirname "$DEPLOY_DIR")"
 STARTED_AT=$(date +%s)
 
 # Build info (from CI env or git)
-export BUILD_NUMBER="${BUILD_NUMBER:-dev}"
+export BUILD_NUMBER="${BUILD_NUMBER:-$(cd "$PROJECT_DIR" && git rev-list --count HEAD 2>/dev/null || echo 'dev')}"
 export COMMIT_SHA="${COMMIT_SHA:-$(cd "$PROJECT_DIR" && git rev-parse HEAD 2>/dev/null || echo 'unknown')}"
 
 RED='\033[0;31m'
