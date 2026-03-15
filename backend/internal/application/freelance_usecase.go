@@ -21,14 +21,11 @@ func NewFreelanceUseCase(db *sql.DB, repo freelance.Repository, wr wallet.Reposi
 // --- Input types ---
 
 type CreateJobInput struct {
-	Title                  string               `json:"title"`
-	Description            string               `json:"description"`
-	Budget                 int                  `json:"budget"`
-	Deadline               string               `json:"deadline"`
-	RequiredSkills         freelance.SkillsList `json:"required_skills"`
-	MaxWorkers             *int                 `json:"max_workers"`
-	AutoApproveApplication bool                 `json:"auto_approve_application"`
-	PriceType              string               `json:"price_type"`
+	Title          string               `json:"title"`
+	Description    string               `json:"description"`
+	Budget         int                  `json:"budget"`
+	Deadline       string               `json:"deadline"`
+	RequiredSkills freelance.SkillsList `json:"required_skills"`
 }
 
 type ApplyJobInput struct {
@@ -37,9 +34,8 @@ type ApplyJobInput struct {
 }
 
 type CompleteWorkInput struct {
-	Report        string `json:"report"`
-	Media         string `json:"media"`
-	ApplicationID int    `json:"application_id"`
+	Report string `json:"report"`
+	Media  string `json:"media"`
 }
 
 type ReviewJobInput struct {
@@ -69,33 +65,15 @@ func (uc *FreelanceUseCase) CreateJob(input CreateJobInput, clientID int) (*free
 		return nil, fmt.Errorf("예산은 0보다 커야 합니다")
 	}
 
-	maxWorkers := 1 // default: traditional single-worker mode
-	if input.MaxWorkers != nil {
-		maxWorkers = *input.MaxWorkers
-	}
-	// 자동 승인(과제 모드)인데 max_workers=1이면 무제한으로 변경
-	if input.AutoApproveApplication && maxWorkers == 1 {
-		maxWorkers = 0
-	}
-
-	priceType := "negotiable" // default
-	if input.PriceType != "" {
-		if input.PriceType != "fixed" && input.PriceType != "negotiable" {
-			return nil, freelance.ErrInvalidPriceType
-		}
-		priceType = input.PriceType
-	}
-
 	job := &freelance.FreelanceJob{
-		ClientID:               clientID,
-		Title:                  input.Title,
-		Description:            input.Description,
-		Budget:                 input.Budget,
-		RequiredSkills:         input.RequiredSkills,
-		Status:                 freelance.StatusOpen,
-		MaxWorkers:             maxWorkers,
-		AutoApproveApplication: input.AutoApproveApplication,
-		PriceType:              priceType,
+		ClientID:       clientID,
+		Title:          input.Title,
+		Description:    input.Description,
+		Budget:         input.Budget,
+		RequiredSkills: input.RequiredSkills,
+		Status:         freelance.StatusOpen,
+		MaxWorkers:     1,
+		PriceType:      "negotiable",
 	}
 
 	id, err := uc.repo.Create(job)
@@ -150,53 +128,18 @@ func (uc *FreelanceUseCase) ApplyToJob(jobID int, input ApplyJobInput, userID in
 		return nil, freelance.ErrAlreadyApplied
 	}
 
-	// Fixed price: worker must apply with exact budget price
-	if job.PriceType == "fixed" && input.Price != job.Budget {
-		return nil, freelance.ErrFixedPriceMismatch
-	}
-
-	// Check max_workers limit (0 = unlimited)
-	if job.MaxWorkers > 0 {
-		acceptedCount, err := uc.repo.CountAcceptedApplications(jobID)
-		if err != nil {
-			return nil, err
-		}
-		if acceptedCount >= job.MaxWorkers {
-			return nil, freelance.ErrMaxWorkersReached
-		}
-	}
-
-	initialStatus := freelance.AppPending
-	if job.AutoApproveApplication {
-		initialStatus = freelance.AppAccepted
-	}
-
 	app := &freelance.JobApplication{
 		JobID:    jobID,
 		UserID:   userID,
 		Proposal: input.Proposal,
 		Price:    input.Price,
-		Status:   initialStatus,
+		Status:   freelance.AppPending,
 	}
 	id, err := uc.repo.CreateApplication(app)
 	if err != nil {
 		return nil, err
 	}
 	app.ID = id
-
-	// If auto-approved in assignment mode, debit escrow per application
-	if job.AutoApproveApplication {
-		clientWallet, err := uc.walletRepo.FindByUserID(job.ClientID)
-		if err != nil {
-			return nil, err
-		}
-		if clientWallet.Balance >= app.Price {
-			_ = uc.walletRepo.Debit(clientWallet.ID, app.Price, wallet.TxFreelanceEscrow,
-				fmt.Sprintf("과제 에스크로: %s", job.Title), "freelance_job", job.ID)
-			_ = uc.repo.SetApplicationEscrow(app.ID, app.Price)
-		}
-	}
-
 	return app, nil
 }
 
@@ -241,29 +184,22 @@ func (uc *FreelanceUseCase) AcceptApplication(jobID, applicationID, userID int) 
 		return err
 	}
 
-	isAssignmentMode := job.MaxWorkers != 1
+	// Set freelancer, change job status, reject others
+	if err := uc.repo.SetFreelancer(jobID, app.UserID, app.Price); err != nil {
+		return err
+	}
+	if err := uc.repo.SetEscrow(jobID, app.Price); err != nil {
+		return err
+	}
 
-	if isAssignmentMode {
-		// Assignment mode: per-application escrow, job stays open
-		_ = uc.repo.SetApplicationEscrow(app.ID, app.Price)
-	} else {
-		// Traditional mode: set freelancer, change job status, reject others
-		if err := uc.repo.SetFreelancer(jobID, app.UserID, app.Price); err != nil {
-			return err
-		}
-		if err := uc.repo.SetEscrow(jobID, app.Price); err != nil {
-			return err
-		}
-
-		// Reject other pending applications
-		apps, err := uc.repo.ListApplicationsByJob(jobID)
-		if err != nil {
-			return err
-		}
-		for _, a := range apps {
-			if a.ID != applicationID && a.Status == freelance.AppPending {
-				_ = uc.repo.UpdateApplicationStatus(a.ID, freelance.AppRejected)
-			}
+	// Reject other pending applications
+	apps, err := uc.repo.ListApplicationsByJob(jobID)
+	if err != nil {
+		return err
+	}
+	for _, a := range apps {
+		if a.ID != applicationID && a.Status == freelance.AppPending {
+			_ = uc.repo.UpdateApplicationStatus(a.ID, freelance.AppRejected)
 		}
 	}
 
@@ -281,66 +217,24 @@ func (uc *FreelanceUseCase) CompleteWork(jobID, userID int, input CompleteWorkIn
 	if err != nil {
 		return err
 	}
+	if job.Status != freelance.StatusInProgress {
+		return freelance.ErrJobNotInProgress
+	}
+	if job.FreelancerID == nil || *job.FreelancerID != userID {
+		return freelance.ErrNotFreelancer
+	}
 
-	isAssignmentMode := job.MaxWorkers != 1
+	if err := uc.repo.SetWorkCompleted(jobID); err != nil {
+		return err
+	}
 
-	if isAssignmentMode {
-		// Assignment mode: per-application completion
-		if job.Status != freelance.StatusOpen {
-			return freelance.ErrJobNotOpen
-		}
-
-		// Find the worker's application
-		var app *freelance.JobApplication
-		if input.ApplicationID > 0 {
-			app, err = uc.repo.FindApplicationByID(input.ApplicationID)
-			if err != nil {
-				return err
-			}
-		} else {
-			app, err = uc.repo.FindApplicationByJobAndUser(jobID, userID)
-			if err != nil {
-				return err
-			}
-		}
-		if app == nil || app.JobID != jobID {
-			return freelance.ErrApplicationNotFound
-		}
-		if app.UserID != userID {
-			return freelance.ErrNotFreelancer
-		}
-		if app.Status != freelance.AppAccepted {
-			return freelance.ErrNotFreelancer
-		}
-
+	// Save completion report
+	if input.Report != "" {
 		media := input.Media
 		if media == "" {
 			media = "[]"
 		}
-		if err := uc.repo.SetApplicationWorkCompleted(app.ID, input.Report, media); err != nil {
-			return err
-		}
-	} else {
-		// Traditional mode
-		if job.Status != freelance.StatusInProgress {
-			return freelance.ErrJobNotInProgress
-		}
-		if job.FreelancerID == nil || *job.FreelancerID != userID {
-			return freelance.ErrNotFreelancer
-		}
-
-		if err := uc.repo.SetWorkCompleted(jobID); err != nil {
-			return err
-		}
-
-		// Save completion report
-		if input.Report != "" {
-			media := input.Media
-			if media == "" {
-				media = "[]"
-			}
-			uc.repo.SaveCompletionReport(jobID, input.Report, media)
-		}
+		uc.repo.SaveCompletionReport(jobID, input.Report, media)
 	}
 
 	// Auto-post to 외주마켓 channel
@@ -388,11 +282,7 @@ func (uc *FreelanceUseCase) postToMarketChannel(job *freelance.FreelanceJob, use
 		channelID, userID, content, media, tags)
 }
 
-type ApproveJobInput struct {
-	ApplicationID int `json:"application_id"`
-}
-
-func (uc *FreelanceUseCase) ApproveJob(jobID, userID int, input *ApproveJobInput) error {
+func (uc *FreelanceUseCase) ApproveJob(jobID, userID int) error {
 	job, err := uc.repo.FindByID(jobID)
 	if err != nil {
 		return err
@@ -400,86 +290,37 @@ func (uc *FreelanceUseCase) ApproveJob(jobID, userID int, input *ApproveJobInput
 	if job.ClientID != userID {
 		return freelance.ErrNotClient
 	}
-
-	isAssignmentMode := job.MaxWorkers != 1
-
-	if isAssignmentMode {
-		// Assignment mode: per-application approval
-		if job.Status != freelance.StatusOpen {
-			return freelance.ErrJobNotOpen
-		}
-		if input == nil || input.ApplicationID == 0 {
-			return freelance.ErrApplicationNotFound
-		}
-
-		app, err := uc.repo.FindApplicationByID(input.ApplicationID)
-		if err != nil {
-			return err
-		}
-		if app.JobID != jobID {
-			return freelance.ErrApplicationNotFound
-		}
-		if !app.WorkCompleted {
-			return freelance.ErrWorkNotCompleted
-		}
-
-		// Transfer per-application escrow to freelancer
-		freelancerWallet, err := uc.walletRepo.FindByUserID(app.UserID)
-		if err != nil {
-			return err
-		}
-		escrow := app.EscrowAmount
-		if escrow == 0 {
-			escrow = app.Price
-		}
-		err = uc.walletRepo.Credit(freelancerWallet.ID, escrow, wallet.TxFreelancePay,
-			fmt.Sprintf("과제 대금: %s", job.Title), "freelance_job", job.ID)
-		if err != nil {
-			return err
-		}
-
-		// Clear application escrow
-		_ = uc.repo.SetApplicationEscrow(app.ID, 0)
-
-		// Notify freelancer
-		uc.createNotification(app.UserID, "job_approved",
-			"과제 대금이 지급되었습니다",
-			fmt.Sprintf("'%s' 과제가 승인되어 %d원이 지급되었습니다.", job.Title, escrow),
-			"freelance_job", jobID)
-	} else {
-		// Traditional mode
-		if job.Status != freelance.StatusInProgress {
-			return freelance.ErrJobNotInProgress
-		}
-		if !job.WorkCompleted {
-			return freelance.ErrWorkNotCompleted
-		}
-
-		// Transfer escrow to freelancer wallet
-		freelancerWallet, err := uc.walletRepo.FindByUserID(*job.FreelancerID)
-		if err != nil {
-			return err
-		}
-		err = uc.walletRepo.Credit(freelancerWallet.ID, job.EscrowAmount, wallet.TxFreelancePay,
-			fmt.Sprintf("외주 대금: %s", job.Title), "freelance_job", job.ID)
-		if err != nil {
-			return err
-		}
-
-		// Clear escrow and set completed
-		if err := uc.repo.SetEscrow(jobID, 0); err != nil {
-			return err
-		}
-		if err := uc.repo.SetCompleted(jobID); err != nil {
-			return err
-		}
-
-		// Notify freelancer
-		uc.createNotification(*job.FreelancerID, "job_approved",
-			"외주 대금이 지급되었습니다",
-			fmt.Sprintf("'%s' 작업이 승인되어 %d원이 지급되었습니다.", job.Title, job.EscrowAmount),
-			"freelance_job", jobID)
+	if job.Status != freelance.StatusInProgress {
+		return freelance.ErrJobNotInProgress
 	}
+	if !job.WorkCompleted {
+		return freelance.ErrWorkNotCompleted
+	}
+
+	// Transfer escrow to freelancer wallet
+	freelancerWallet, err := uc.walletRepo.FindByUserID(*job.FreelancerID)
+	if err != nil {
+		return err
+	}
+	err = uc.walletRepo.Credit(freelancerWallet.ID, job.EscrowAmount, wallet.TxFreelancePay,
+		fmt.Sprintf("외주 대금: %s", job.Title), "freelance_job", job.ID)
+	if err != nil {
+		return err
+	}
+
+	// Clear escrow and set completed
+	if err := uc.repo.SetEscrow(jobID, 0); err != nil {
+		return err
+	}
+	if err := uc.repo.SetCompleted(jobID); err != nil {
+		return err
+	}
+
+	// Notify freelancer
+	uc.createNotification(*job.FreelancerID, "job_approved",
+		"외주 대금이 지급되었습니다",
+		fmt.Sprintf("'%s' 작업이 승인되어 %d원이 지급되었습니다.", job.Title, job.EscrowAmount),
+		"freelance_job", jobID)
 
 	return nil
 }
@@ -492,85 +333,34 @@ func (uc *FreelanceUseCase) CancelJob(jobID, userID int) error {
 	if job.ClientID != userID {
 		return freelance.ErrNotClient
 	}
-	if job.Status != freelance.StatusOpen {
-		return freelance.ErrJobNotOpen
+	if job.Status != freelance.StatusOpen && job.Status != freelance.StatusInProgress {
+		return fmt.Errorf("취소할 수 없는 상태입니다")
 	}
 
-	// Refund escrow for all accepted applications
+	// Reject all pending/accepted applications
 	apps, err := uc.repo.ListApplicationsByJob(jobID)
 	if err != nil {
 		return err
 	}
-	clientWallet, _ := uc.walletRepo.FindByUserID(job.ClientID)
 	for _, app := range apps {
-		if app.Status == freelance.AppAccepted && app.EscrowAmount > 0 && clientWallet != nil {
-			_ = uc.walletRepo.Credit(clientWallet.ID, app.EscrowAmount, wallet.TxFreelanceEscrow,
-				fmt.Sprintf("에스크로 환불: %s", job.Title), "freelance_job", job.ID)
-			_ = uc.repo.SetApplicationEscrow(app.ID, 0)
-		}
-		// Reject all pending/accepted applications
 		if app.Status == freelance.AppPending || app.Status == freelance.AppAccepted {
 			_ = uc.repo.UpdateApplicationStatus(app.ID, freelance.AppRejected)
 		}
 	}
 
-	// Also refund traditional mode escrow
-	if job.EscrowAmount > 0 && clientWallet != nil {
-		_ = uc.walletRepo.Credit(clientWallet.ID, job.EscrowAmount, wallet.TxFreelanceEscrow,
-			fmt.Sprintf("에스크로 환불: %s", job.Title), "freelance_job", job.ID)
-		_ = uc.repo.SetEscrow(jobID, 0)
+	// Refund escrow
+	if job.EscrowAmount > 0 {
+		clientWallet, err := uc.walletRepo.FindByUserID(job.ClientID)
+		if err == nil && clientWallet != nil {
+			_ = uc.walletRepo.Credit(clientWallet.ID, job.EscrowAmount, wallet.TxFreelanceEscrow,
+				fmt.Sprintf("에스크로 환불: %s", job.Title), "freelance_job", job.ID)
+			_ = uc.repo.SetEscrow(jobID, 0)
+		}
 	}
 
 	return uc.repo.UpdateStatus(jobID, freelance.StatusCancelled)
 }
 
-func (uc *FreelanceUseCase) CloseJob(jobID, userID int) error {
-	job, err := uc.repo.FindByID(jobID)
-	if err != nil {
-		return err
-	}
-	if job.ClientID != userID {
-		return freelance.ErrNotClient
-	}
-	if job.Status != freelance.StatusOpen {
-		return freelance.ErrJobNotOpen
-	}
-
-	// Only assignment mode jobs can be closed
-	if job.MaxWorkers == 1 {
-		return fmt.Errorf("일반 모드 의뢰는 종료할 수 없습니다")
-	}
-
-	// Reject remaining pending applications & refund unresolved escrow
-	apps, err := uc.repo.ListApplicationsByJob(jobID)
-	if err != nil {
-		return err
-	}
-
-	clientWallet, _ := uc.walletRepo.FindByUserID(job.ClientID)
-
-	for _, app := range apps {
-		if app.Status == freelance.AppPending {
-			// 대기 중 지원: 에스크로 환불 + 거절
-			if app.EscrowAmount > 0 && clientWallet != nil {
-				_ = uc.walletRepo.Credit(clientWallet.ID, app.EscrowAmount, wallet.TxFreelanceEscrow,
-					fmt.Sprintf("종료 에스크로 환불: %s", job.Title), "freelance_job", job.ID)
-				_ = uc.repo.SetApplicationEscrow(app.ID, 0)
-			}
-			_ = uc.repo.UpdateApplicationStatus(app.ID, freelance.AppRejected)
-		} else if app.Status == freelance.AppAccepted && !app.WorkCompleted {
-			// 승인됐지만 미완료: 에스크로 환불 + 거절
-			if app.EscrowAmount > 0 && clientWallet != nil {
-				_ = uc.walletRepo.Credit(clientWallet.ID, app.EscrowAmount, wallet.TxFreelanceEscrow,
-					fmt.Sprintf("종료 에스크로 환불 (미완료): %s", job.Title), "freelance_job", job.ID)
-				_ = uc.repo.SetApplicationEscrow(app.ID, 0)
-			}
-			_ = uc.repo.UpdateApplicationStatus(app.ID, freelance.AppRejected)
-		}
-	}
-
-	return uc.repo.UpdateStatus(jobID, freelance.StatusCompleted)
-}
 
 func (uc *FreelanceUseCase) DisputeJob(jobID, userID int) error {
 	job, err := uc.repo.FindByID(jobID)

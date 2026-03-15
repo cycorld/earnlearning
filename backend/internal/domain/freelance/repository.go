@@ -22,10 +22,6 @@ type Repository interface {
 	FindApplicationByJobAndUser(jobID, userID int) (*JobApplication, error)
 	ListApplicationsByJob(jobID int) ([]*JobApplication, error)
 	UpdateApplicationStatus(id int, status ApplicationStatus) error
-	CountAcceptedApplications(jobID int) (int, error)
-	SetApplicationEscrow(appID, amount int) error
-	SetApplicationWorkCompleted(appID int, report, media string) error
-
 	CreateReview(review *FreelanceReview) (int, error)
 	FindReviewByJobAndReviewer(jobID, reviewerID int) (*FreelanceReview, error)
 	ListReviewsByUser(userID int) ([]*FreelanceReview, error)
