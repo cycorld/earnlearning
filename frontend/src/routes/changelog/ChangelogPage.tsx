@@ -2,7 +2,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ArrowLeft, Calendar, Tag, BookOpen } from 'lucide-react'
+import rehypeHighlight from 'rehype-highlight'
+import 'highlight.js/styles/github-dark.min.css'
+import { ArrowLeft, Calendar, Tag, BookOpen, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
@@ -76,6 +78,10 @@ export default function ChangelogPage() {
   // Detail view
   if (selectedSlug && content) {
     const entry = entries.find((e) => e.slug === selectedSlug)
+    const currentIndex = entries.findIndex((e) => e.slug === selectedSlug)
+    const prevEntry = currentIndex < entries.length - 1 ? entries[currentIndex + 1] : null
+    const nextEntry = currentIndex > 0 ? entries[currentIndex - 1] : null
+
     return (
       <div className="mx-auto max-w-3xl px-4 py-6">
         <Button variant="ghost" size="sm" onClick={goBack} className="mb-4 gap-1">
@@ -83,19 +89,53 @@ export default function ChangelogPage() {
           목록으로
         </Button>
         {entry && (
-          <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span>{entry.date}</span>
-            {entry.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
+          <div className="mb-6">
+            <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span>{entry.date}</span>
+              <span className="text-muted-foreground/50">|</span>
+              <span className="font-mono text-xs">#{entry.slug.split('-')[0]}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {entry.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
           </div>
         )}
-        <article className="prose prose-sm dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-h2:text-lg prose-h2:font-bold prose-h2:border-b prose-h2:pb-2 prose-h2:mt-8 prose-h3:text-base prose-pre:bg-muted prose-pre:text-foreground prose-code:text-sm">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        <article className="changelog-article prose prose-sm dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-h2:text-lg prose-h2:font-bold prose-h2:border-b prose-h2:border-border prose-h2:pb-2 prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-base prose-h3:font-semibold prose-h3:mt-6 prose-p:leading-7 prose-li:leading-7 prose-pre:rounded-lg prose-pre:border prose-pre:border-border prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-strong:text-foreground prose-a:text-primary prose-blockquote:border-l-primary/50 prose-img:rounded-lg">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+            {content}
+          </ReactMarkdown>
         </article>
+
+        {/* Prev / Next navigation */}
+        <div className="mt-10 flex items-stretch gap-3 border-t pt-6">
+          {prevEntry ? (
+            <button
+              onClick={() => selectEntry(prevEntry.slug)}
+              className="flex flex-1 flex-col items-start rounded-lg border p-3 text-left transition-colors hover:bg-accent"
+            >
+              <span className="text-xs text-muted-foreground">이전</span>
+              <span className="mt-1 text-sm font-medium line-clamp-1">{prevEntry.title}</span>
+            </button>
+          ) : (
+            <div className="flex-1" />
+          )}
+          {nextEntry ? (
+            <button
+              onClick={() => selectEntry(nextEntry.slug)}
+              className="flex flex-1 flex-col items-end rounded-lg border p-3 text-right transition-colors hover:bg-accent"
+            >
+              <span className="text-xs text-muted-foreground">다음</span>
+              <span className="mt-1 text-sm font-medium line-clamp-1">{nextEntry.title}</span>
+            </button>
+          ) : (
+            <div className="flex-1" />
+          )}
+        </div>
       </div>
     )
   }
@@ -103,40 +143,52 @@ export default function ChangelogPage() {
   // List view
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
-      <div className="mb-6 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-2">
         <BookOpen className="h-5 w-5 text-primary" />
         <h1 className="text-xl font-bold">개발일지</h1>
+        <Badge variant="outline" className="ml-1 text-xs font-normal">
+          {entries.length}편
+        </Badge>
       </div>
       <p className="mb-6 text-sm text-muted-foreground">
         EarnLearning이 어떻게 만들어지고 있는지, 그 과정을 기록합니다.
         기획부터 배포까지, AI와 함께하는 실전 개발 과정을 살펴보세요.
       </p>
-      <div className="space-y-3">
-        {entries.map((entry) => (
-          <button
-            key={entry.slug}
-            onClick={() => selectEntry(entry.slug)}
-            className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-accent"
-          >
-            <div className="flex items-start justify-between gap-2">
+      <div className="space-y-2">
+        {entries.map((entry, i) => {
+          const num = entry.slug.split('-')[0]
+          return (
+            <button
+              key={entry.slug}
+              onClick={() => selectEntry(entry.slug)}
+              className="group flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent"
+            >
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                {num}
+              </div>
               <div className="min-w-0 flex-1">
-                <h2 className="font-semibold">{entry.title}</h2>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
+                <h2 className="text-sm font-semibold leading-snug">{entry.title}</h2>
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     {entry.date}
                   </span>
-                  {entry.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-[10px]">
-                      <Tag className="mr-0.5 h-2.5 w-2.5" />
+                  {entry.tags.slice(0, 3).map((tag) => (
+                    <Badge key={tag} variant="outline" className="px-1.5 py-0 text-[10px]">
                       {tag}
                     </Badge>
                   ))}
+                  {entry.tags.length > 3 && (
+                    <span className="text-[10px] text-muted-foreground">
+                      +{entry.tags.length - 3}
+                    </span>
+                  )}
                 </div>
               </div>
-            </div>
-          </button>
-        ))}
+              <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          )
+        })}
       </div>
       {entries.length === 0 && (
         <p className="text-center text-muted-foreground">아직 작성된 개발일지가 없습니다.</p>
