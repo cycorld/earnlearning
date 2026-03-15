@@ -1,5 +1,5 @@
 import type { ApiResponse } from '@/types'
-import { getToken } from './auth'
+import { getToken, removeToken } from './auth'
 
 const BASE_URL = '/api'
 
@@ -42,6 +42,11 @@ async function request<T>(
   })
 
   if (!res.ok) {
+    if (res.status === 401) {
+      removeToken()
+      window.location.href = '/login'
+      throw new ApiError('UNAUTHORIZED', '세션이 만료되었습니다. 다시 로그인해주세요.', 401)
+    }
     let errorData: ApiResponse<null> | null = null
     try {
       errorData = await res.json()
