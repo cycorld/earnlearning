@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/earnlearning/backend/internal/domain/grant"
+	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
 
@@ -12,10 +13,11 @@ type GrantUseCase struct {
 	db         *sql.DB
 	repo       grant.Repository
 	walletRepo wallet.Repository
+	notifUC    *NotificationUseCase
 }
 
-func NewGrantUseCase(db *sql.DB, repo grant.Repository, wr wallet.Repository) *GrantUseCase {
-	return &GrantUseCase{db: db, repo: repo, walletRepo: wr}
+func NewGrantUseCase(db *sql.DB, repo grant.Repository, wr wallet.Repository, notifUC *NotificationUseCase) *GrantUseCase {
+	return &GrantUseCase{db: db, repo: repo, walletRepo: wr, notifUC: notifUC}
 }
 
 // --- Input types ---
@@ -109,6 +111,13 @@ func (uc *GrantUseCase) ApplyToGrant(grantID int, input ApplyGrantInput, userID 
 		return nil, err
 	}
 	app.ID = id
+
+	// Notify admin about new application
+	uc.notify(g.AdminID, notification.NotifGrantApplied,
+		"새로운 과제 지원이 접수되었습니다",
+		fmt.Sprintf("'%s' 과제에 새로운 지원이 접수되었습니다.", g.Title),
+		"grant", grantID)
+
 	return app, nil
 }
 
@@ -162,7 +171,7 @@ func (uc *GrantUseCase) ApproveApplication(grantID, applicationID, adminID int) 
 	}
 
 	// Notify applicant
-	uc.createNotification(app.UserID, "grant_approved",
+	uc.notify(app.UserID, notification.NotifGrantApproved,
 		"정부과제가 승인되었습니다",
 		fmt.Sprintf("'%s' 과제가 승인되어 %d원이 지급되었습니다.", g.Title, g.Reward),
 		"grant", grantID)
@@ -182,12 +191,28 @@ func (uc *GrantUseCase) CloseGrant(grantID, adminID int) error {
 		return grant.ErrGrantNotOpen
 	}
 
-	return uc.repo.UpdateStatus(grantID, grant.StatusClosed)
+	if err := uc.repo.UpdateStatus(grantID, grant.StatusClosed); err != nil {
+		return err
+	}
+
+	// Notify pending applicants about closure
+	apps, err := uc.repo.ListApplicationsByGrant(grantID)
+	if err == nil {
+		for _, app := range apps {
+			if app.Status == grant.AppPending {
+				uc.notify(app.UserID, notification.NotifGrantClosed,
+					"정부과제 모집이 종료되었습니다",
+					fmt.Sprintf("'%s' 과제 모집이 종료되었습니다.", g.Title),
+					"grant", grantID)
+			}
+		}
+	}
+
+	return nil
 }
 
-func (uc *GrantUseCase) createNotification(userID int, notifType, title, body, refType string, refID int) {
-	_, _ = uc.db.Exec(`
-		INSERT INTO notifications (user_id, notif_type, title, body, reference_type, reference_id)
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		userID, notifType, title, body, refType, refID)
+func (uc *GrantUseCase) notify(userID int, notifType notification.NotifType, title, body, refType string, refID int) {
+	if uc.notifUC != nil {
+		_ = uc.notifUC.CreateNotification(userID, notifType, title, body, refType, refID)
+	}
 }
