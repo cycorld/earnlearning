@@ -26,7 +26,7 @@ function formatMoney(amount: number): string {
 export default function ProfilePage() {
   const { user, isLoading, logout } = useAuth()
   const { wallet, loading: walletLoading } = useWallet()
-  const { isSupported: pushSupported, isSubscribed, subscribe, unsubscribe } = usePush()
+  const { isSupported: pushSupported, isSubscribed, loading: pushLoading, error: pushError, subscribe, unsubscribe } = usePush()
 
   if (isLoading) {
     return (
@@ -154,20 +154,30 @@ export default function ProfilePage() {
               <Separator />
               <button
                 onClick={isSubscribed ? unsubscribe : subscribe}
-                className="flex w-full items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-accent"
+                disabled={pushLoading}
+                className="flex w-full items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-accent disabled:opacity-50"
               >
-                {isSubscribed ? (
+                {pushLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                ) : isSubscribed ? (
                   <Bell className="h-5 w-5 text-primary" />
                 ) : (
                   <BellOff className="h-5 w-5 text-muted-foreground" />
                 )}
                 <span className="flex-1 text-left text-sm">
-                  푸시 알림 {isSubscribed ? '켜짐' : '꺼짐'}
+                  {pushLoading
+                    ? '처리 중...'
+                    : `푸시 알림 ${isSubscribed ? '켜짐' : '꺼짐'}`}
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {isSubscribed ? '끄기' : '켜기'}
-                </span>
+                {!pushLoading && (
+                  <span className="text-xs text-muted-foreground">
+                    {isSubscribed ? '끄기' : '켜기'}
+                  </span>
+                )}
               </button>
+              {pushError && (
+                <p className="px-3 pb-2 text-xs text-destructive">{pushError}</p>
+              )}
             </>
           )}
           {user.role === 'admin' && (

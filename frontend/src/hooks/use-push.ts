@@ -4,6 +4,8 @@ import { subscribeToPush, unsubscribeFromPush } from '@/lib/push'
 export function usePush() {
   const [isSupported, setIsSupported] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const supported =
@@ -23,15 +25,35 @@ export function usePush() {
   }, [])
 
   const subscribe = useCallback(async () => {
-    const success = await subscribeToPush()
-    setIsSubscribed(success)
-    return success
+    setLoading(true)
+    setError(null)
+    try {
+      const success = await subscribeToPush()
+      setIsSubscribed(success)
+      if (!success) {
+        setError('알림 권한이 거부되었습니다. 설정에서 알림을 허용해주세요.')
+      }
+      return success
+    } catch (e: any) {
+      setError(e.message || '푸시 구독에 실패했습니다.')
+      return false
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   const unsubscribe = useCallback(async () => {
-    await unsubscribeFromPush()
-    setIsSubscribed(false)
+    setLoading(true)
+    setError(null)
+    try {
+      await unsubscribeFromPush()
+      setIsSubscribed(false)
+    } catch (e: any) {
+      setError(e.message || '푸시 해제에 실패했습니다.')
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  return { isSupported, isSubscribed, subscribe, unsubscribe }
+  return { isSupported, isSubscribed, loading, error, subscribe, unsubscribe }
 }
