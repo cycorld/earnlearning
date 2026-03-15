@@ -32,6 +32,13 @@ func main() {
 		log.Printf("seed admin: %v", err)
 	}
 
+	// Dev seed data (SEED_DEV=1 으로 활성화)
+	if os.Getenv("SEED_DEV") == "1" {
+		if err := persistence.SeedDevData(db); err != nil {
+			log.Printf("seed dev data: %v", err)
+		}
+	}
+
 	// Ensure upload directory
 	os.MkdirAll(cfg.UploadPath, 0755)
 

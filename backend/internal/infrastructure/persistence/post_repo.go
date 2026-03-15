@@ -82,13 +82,13 @@ func (r *PostRepo) FindPostByID(postID int) (*post.Post, error) {
 	err := r.db.QueryRow(`
 		SELECT p.id, p.channel_id, p.author_id, p.content, p.post_type, p.media, p.tags,
 		       p.like_count, p.comment_count, p.pinned, p.created_at, p.updated_at,
-		       u.name, u.avatar_url
+		       u.name, u.avatar_url, u.student_id
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
 		WHERE p.id = ?`, postID).Scan(
 		&p.ID, &p.ChannelID, &p.AuthorID, &p.Content, &p.PostType, &p.Media, &p.Tags,
 		&p.LikeCount, &p.CommentCount, &pinned, &p.CreatedAt, &p.UpdatedAt,
-		&p.AuthorName, &p.AuthorAvatar,
+		&p.AuthorName, &p.AuthorAvatar, &p.AuthorStudentID,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("게시글을 찾을 수 없습니다")
@@ -146,7 +146,7 @@ func (r *PostRepo) GetPosts(classroomID, channelID int, page, limit int, tag str
 	query := `
 		SELECT p.id, p.channel_id, p.author_id, p.content, p.post_type, p.media, p.tags,
 		       p.like_count, p.comment_count, p.pinned, p.created_at, p.updated_at,
-		       u.name, u.avatar_url,
+		       u.name, u.avatar_url, u.student_id,
 		       CASE WHEN pl.id IS NOT NULL THEN 1 ELSE 0 END as is_liked
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
@@ -175,7 +175,7 @@ func (r *PostRepo) GetPosts(classroomID, channelID int, page, limit int, tag str
 		if err := rows.Scan(
 			&p.ID, &p.ChannelID, &p.AuthorID, &p.Content, &p.PostType, &p.Media, &p.Tags,
 			&p.LikeCount, &p.CommentCount, &pinned, &p.CreatedAt, &p.UpdatedAt,
-			&p.AuthorName, &p.AuthorAvatar, &isLiked,
+			&p.AuthorName, &p.AuthorAvatar, &p.AuthorStudentID, &isLiked,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan post: %w", err)
 		}
