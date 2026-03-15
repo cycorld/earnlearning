@@ -541,13 +541,30 @@ func (uc *FreelanceUseCase) CloseJob(jobID, userID int) error {
 		return fmt.Errorf("일반 모드 의뢰는 종료할 수 없습니다")
 	}
 
-	// Reject remaining pending applications
+	// Reject remaining pending applications & refund unresolved escrow
 	apps, err := uc.repo.ListApplicationsByJob(jobID)
 	if err != nil {
 		return err
 	}
+
+	clientWallet, _ := uc.walletRepo.FindByUserID(job.ClientID)
+
 	for _, app := range apps {
 		if app.Status == freelance.AppPending {
+			// 대기 중 지원: 에스크로 환불 + 거절
+			if app.EscrowAmount > 0 && clientWallet != nil {
+				_ = uc.walletRepo.Credit(clientWallet.ID, app.EscrowAmount, wallet.TxFreelanceEscrow,
+					fmt.Sprintf("종료 에스크로 환불: %s", job.Title), "freelance_job", job.ID)
+				_ = uc.repo.SetApplicationEscrow(app.ID, 0)
+			}
+			_ = uc.repo.UpdateApplicationStatus(app.ID, freelance.AppRejected)
+		} else if app.Status == freelance.AppAccepted && !app.WorkCompleted {
+			// 승인됐지만 미완료: 에스크로 환불 + 거절
+			if app.EscrowAmount > 0 && clientWallet != nil {
+				_ = uc.walletRepo.Credit(clientWallet.ID, app.EscrowAmount, wallet.TxFreelanceEscrow,
+					fmt.Sprintf("종료 에스크로 환불 (미완료): %s", job.Title), "freelance_job", job.ID)
+				_ = uc.repo.SetApplicationEscrow(app.ID, 0)
+			}
 			_ = uc.repo.UpdateApplicationStatus(app.ID, freelance.AppRejected)
 		}
 	}
