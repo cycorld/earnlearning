@@ -88,3 +88,29 @@ func (h *NotificationHandler) GetVAPIDPublicKey(c echo.Context) error {
 	key := h.uc.GetVAPIDPublicKey()
 	return successResponse(c, http.StatusOK, map[string]string{"vapid_public_key": key})
 }
+
+func (h *NotificationHandler) AdminSendAnnouncement(c echo.Context) error {
+	var input struct {
+		Title   string `json:"title"`
+		Body    string `json:"body"`
+		UserIDs []int  `json:"user_ids"` // 비어있으면 전체 유저에게 전송
+	}
+	if err := c.Bind(&input); err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "입력값이 올바르지 않습니다")
+	}
+	if input.Title == "" {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "제목은 필수입니다")
+	}
+	if input.Body == "" {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "내용은 필수입니다")
+	}
+
+	sent, err := h.uc.SendAnnouncement(input.Title, input.Body, input.UserIDs)
+	if err != nil {
+		return errorResponse(c, http.StatusInternalServerError, "NOTIFICATION_ERROR", err.Error())
+	}
+	return successResponse(c, http.StatusOK, map[string]interface{}{
+		"message": "공지 알림이 전송되었습니다",
+		"sent":    sent,
+	})
+}

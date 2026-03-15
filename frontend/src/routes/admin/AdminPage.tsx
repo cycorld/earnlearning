@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Clock,
   ShieldCheck,
+  Megaphone,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
@@ -80,6 +81,14 @@ export default function AdminPage() {
       icon: BarChart3,
       href: '/admin/kpi',
       color: 'bg-purple-100 text-purple-600',
+      badge: null,
+    },
+    {
+      title: '공지 알림',
+      description: '전체 유저에게 공지 알림 보내기',
+      icon: Megaphone,
+      href: '/admin/announce',
+      color: 'bg-red-100 text-red-600',
       badge: null,
     },
   ]
