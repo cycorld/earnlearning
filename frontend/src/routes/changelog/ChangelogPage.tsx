@@ -105,7 +105,7 @@ export default function ChangelogPage() {
             </div>
           </div>
         )}
-        <article className="changelog-article prose prose-sm dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-h2:text-lg prose-h2:font-bold prose-h2:border-b prose-h2:border-border prose-h2:pb-2 prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-base prose-h3:font-semibold prose-h3:mt-6 prose-p:leading-7 prose-li:leading-7 prose-pre:rounded-lg prose-pre:border prose-pre:border-border prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-strong:text-foreground prose-a:text-primary prose-blockquote:border-l-primary/50 prose-img:rounded-lg">
+        <article className="markdown-body">
           <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
             {content}
           </ReactMarkdown>

@@ -23,7 +23,7 @@ export function MarkdownContent({
   return (
     <div className={className}>
       <div
-        className={`prose prose-sm dark:prose-invert max-w-none break-words ${
+        className={`markdown-body break-words ${
           !expanded && isLong ? 'line-clamp-[8] overflow-hidden' : ''
         }`}
         style={
@@ -48,26 +48,10 @@ export function MarkdownContent({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary underline"
               >
                 {children}
               </a>
             ),
-            pre: ({ children }) => (
-              <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
-                {children}
-              </pre>
-            ),
-            code: ({ children, className: codeClassName }) => {
-              const isInline = !codeClassName
-              return isInline ? (
-                <code className="rounded bg-muted px-1 py-0.5 text-xs">
-                  {children}
-                </code>
-              ) : (
-                <code className={codeClassName}>{children}</code>
-              )
-            },
           }}
         >
           {content}
