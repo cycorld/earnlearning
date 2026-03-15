@@ -94,6 +94,10 @@ deploy_prod() {
 # Stage에서 이미 빌드된 이미지를 그대로 Prod에 사용.
 # 빌드 단계를 완전히 건너뜀 → ~5초
 promote_stage_to_prod() {
+  err "promote는 비활성화되었습니다."
+  err "Stage/Prod 환경변수(VAPID 키 등)가 달라 이미지 재사용이 불가합니다."
+  err "대신 './deploy.sh prod'를 사용하세요."
+  exit 1
   log "=== Stage → Production 프로모트 ==="
 
   # 1. Stage 이미지가 존재하는지 확인
