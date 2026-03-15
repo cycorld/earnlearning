@@ -18,7 +18,7 @@ type Channel struct {
 type Post struct {
 	ID           int       `json:"id"`
 	ChannelID    int       `json:"channel_id"`
-	AuthorID     int       `json:"author_id"`
+	AuthorID     int       `json:"-"`
 	Content      string    `json:"content"`
 	PostType     string    `json:"post_type"`
 	Media        string    `json:"media"`
@@ -29,10 +29,34 @@ type Post struct {
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 
-	// Joined fields (not stored in posts table)
-	AuthorName   string `json:"author_name,omitempty"`
-	AuthorAvatar string `json:"author_avatar,omitempty"`
-	IsLiked      bool   `json:"is_liked"`
+	// Joined fields (not stored in posts table, not serialized directly)
+	AuthorName      string `json:"-"`
+	AuthorAvatar    string `json:"-"`
+	AuthorStudentID string `json:"-"`
+	IsLiked         bool   `json:"is_liked"`
+}
+
+type PostAuthor struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+	StudentID string `json:"student_id"`
+}
+
+func (p Post) MarshalJSON() ([]byte, error) {
+	type Alias Post
+	return json.Marshal(&struct {
+		Alias
+		Author PostAuthor `json:"author"`
+	}{
+		Alias: (Alias)(p),
+		Author: PostAuthor{
+			ID:        p.AuthorID,
+			Name:      p.AuthorName,
+			AvatarURL: p.AuthorAvatar,
+			StudentID: p.AuthorStudentID,
+		},
+	})
 }
 
 type Comment struct {

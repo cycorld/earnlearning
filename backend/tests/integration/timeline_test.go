@@ -57,7 +57,7 @@ func TestTimeline_ContentDisplay(t *testing.T) {
 	userToken := ts.registerAndApprove("student@test.com", "pass1234", "김학생", "2026000001")
 	ts.post("/api/classrooms/join", map[string]string{"code": classroom.Code}, userToken)
 
-	t.Run("admin creates post and author_name is displayed", func(t *testing.T) {
+	t.Run("admin creates post and author object is displayed", func(t *testing.T) {
 		// Admin creates a post
 		createResp := ts.post("/api/channels/"+itoa(freeChannelID)+"/posts", map[string]interface{}{
 			"content": "첫 번째 공지입니다 #테스트",
@@ -74,11 +74,14 @@ func TestTimeline_ContentDisplay(t *testing.T) {
 
 		var result struct {
 			Data []struct {
-				ID           int    `json:"id"`
+				ID      int `json:"id"`
+				Author  struct {
+					ID        int    `json:"id"`
+					Name      string `json:"name"`
+					AvatarURL string `json:"avatar_url"`
+					StudentID string `json:"student_id"`
+				} `json:"author"`
 				ChannelID    int    `json:"channel_id"`
-				AuthorID     int    `json:"author_id"`
-				AuthorName   string `json:"author_name"`
-				AuthorAvatar string `json:"author_avatar"`
 				Content      string `json:"content"`
 				PostType     string `json:"post_type"`
 				LikeCount    int    `json:"like_count"`
@@ -103,12 +106,22 @@ func TestTimeline_ContentDisplay(t *testing.T) {
 
 		post := result.Data[0]
 
-		// author_name must be the admin's seeded name
-		if post.AuthorName == "" {
-			t.Error("author_name is empty, expected admin's name")
+		// author must be a nested object with name
+		if post.Author.Name == "" {
+			t.Error("author.name is empty, expected admin's name")
 		}
-		if post.AuthorName != "최용철" {
-			t.Errorf("author_name = %q, want %q", post.AuthorName, "최용철")
+		if post.Author.Name != "최용철" {
+			t.Errorf("author.name = %q, want %q", post.Author.Name, "최용철")
+		}
+
+		// author.id must be non-zero
+		if post.Author.ID == 0 {
+			t.Error("author.id is 0, expected admin's user ID")
+		}
+
+		// author.student_id must be present
+		if post.Author.StudentID == "" {
+			t.Error("author.student_id is empty")
 		}
 
 		// content must match
@@ -144,7 +157,7 @@ func TestTimeline_ContentDisplay(t *testing.T) {
 		}
 	})
 
-	t.Run("student creates post and their name is displayed", func(t *testing.T) {
+	t.Run("student creates post and author object has their info", func(t *testing.T) {
 		createResp := ts.post("/api/channels/"+itoa(freeChannelID)+"/posts", map[string]interface{}{
 			"content": "학생 게시글입니다",
 		}, userToken)
@@ -159,19 +172,30 @@ func TestTimeline_ContentDisplay(t *testing.T) {
 
 		var result struct {
 			Data []struct {
-				AuthorName string `json:"author_name"`
-				Content    string `json:"content"`
+				Author struct {
+					ID        int    `json:"id"`
+					Name      string `json:"name"`
+					AvatarURL string `json:"avatar_url"`
+					StudentID string `json:"student_id"`
+				} `json:"author"`
+				Content string `json:"content"`
 			} `json:"data"`
 		}
 		json.Unmarshal(postsResp.Data, &result)
 
-		// Find the student's post (ordered by created_at DESC, so it's first)
+		// Find the student's post
 		found := false
 		for _, p := range result.Data {
 			if p.Content == "학생 게시글입니다" {
 				found = true
-				if p.AuthorName != "김학생" {
-					t.Errorf("student post author_name = %q, want %q", p.AuthorName, "김학생")
+				if p.Author.Name != "김학생" {
+					t.Errorf("student post author.name = %q, want %q", p.Author.Name, "김학생")
+				}
+				if p.Author.StudentID != "2026000001" {
+					t.Errorf("student post author.student_id = %q, want %q", p.Author.StudentID, "2026000001")
+				}
+				if p.Author.ID == 0 {
+					t.Error("student post author.id is 0")
 				}
 			}
 		}
