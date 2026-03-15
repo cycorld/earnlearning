@@ -879,13 +879,17 @@ func TestUserStory_ComplexAssignment(t *testing.T) {
 		t.Fatalf("close failed: %v", resp.Error)
 	}
 
-	// 7. 최종 잔액 정합성: 교수는 A,B 대금(6000) 지출, C 에스크로(3000)는 승인 안했으므로 그대로
-	// 교수 = 원래 - 에스크로(9000) + A승인(에스크로→작업자) + B승인(에스크로→작업자) = 원래 - 9000
-	// 실제로 에스크로는 차감만 되고, 승인 시 에스크로에서 작업자에게 지급 (교수 잔액은 추가 변동 없음)
+	// 7. 최종 잔액 정합성: 교수는 A,B 대금(6000) 지출, C 에스크로(3000)는 종료 시 환불
+	// 교수 = 원래 - 에스크로(9000) + C 에스크로 환불(3000) = 원래 - 6000
 	profFinal := getBalance(ts, prof)
-	// 교수: 원래 - 9000(에스크로) = 남은 금액, C의 3000은 아직 에스크로에 묶여있음
-	if profFinal != profBefore-9000 {
-		t.Errorf("교수 최종 잔액 불일치: expected=%d, got=%d", profBefore-9000, profFinal)
+	if profFinal != profBefore-6000 {
+		t.Errorf("교수 최종 잔액 불일치 (미완료 에스크로 환불 후): expected=%d, got=%d", profBefore-6000, profFinal)
+	}
+
+	// 학생C 잔액은 여전히 변동 없어야 함 (보상 받지 않음)
+	s3Final := getBalance(ts, s3)
+	if s3Final != s3Before {
+		t.Errorf("학생C 잔액 변동 없어야 함: before=%d, after=%d", s3Before, s3Final)
 	}
 
 	// 상태 확인
