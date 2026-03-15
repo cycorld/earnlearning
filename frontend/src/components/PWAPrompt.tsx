@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Download, Bell, Share } from 'lucide-react'
+import { X, Download, Bell, Share, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePush } from '@/hooks/use-push'
 
@@ -74,9 +74,27 @@ export function PWAPrompt() {
     setInstallPrompt(null)
   }
 
+  const [pushLoading, setPushLoading] = useState(false)
+  const [pushError, setPushError] = useState<string | null>(null)
+
   const handlePushSubscribe = async () => {
-    await subscribe()
-    setShowPushBanner(false)
+    setPushLoading(true)
+    setPushError(null)
+    try {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('시간 초과. 다시 시도해주세요.')), 15000)
+      )
+      const success = await Promise.race([subscribe(), timeoutPromise])
+      if (success) {
+        setShowPushBanner(false)
+      } else {
+        setPushError('알림 권한이 거부되었습니다. 설정에서 허용해주세요.')
+      }
+    } catch (e: any) {
+      setPushError(e.message || '알림 구독에 실패했습니다.')
+    } finally {
+      setPushLoading(false)
+    }
   }
 
   const dismissInstall = () => {
@@ -171,16 +189,21 @@ export function PWAPrompt() {
               <p className="mt-0.5 text-xs text-muted-foreground">
                 과제 승인, 외주 진행 등 중요 알림을 받아보세요
               </p>
+              {pushError && (
+                <p className="mt-1 text-xs text-destructive">{pushError}</p>
+              )}
               <div className="mt-3 flex gap-2">
-                <Button size="sm" onClick={handlePushSubscribe}>
-                  알림 켜기
+                <Button size="sm" onClick={handlePushSubscribe} disabled={pushLoading}>
+                  {pushLoading ? (
+                    <><Loader2 className="mr-1 h-3 w-3 animate-spin" /> 처리 중...</>
+                  ) : '알림 켜기'}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={dismissPush}>
+                <Button size="sm" variant="ghost" onClick={dismissPush} disabled={pushLoading}>
                   나중에
                 </Button>
               </div>
             </div>
-            <button onClick={dismissPush} className="text-muted-foreground hover:text-foreground">
+            <button onClick={dismissPush} className="text-muted-foreground hover:text-foreground" disabled={pushLoading}>
               <X className="h-4 w-4" />
             </button>
           </div>
