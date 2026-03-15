@@ -26,7 +26,7 @@ type Handlers struct {
 }
 
 // Setup registers all routes on the given Echo instance.
-func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string) {
+func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber string, commitSHA string) {
 	// Request Logger - errors and slow requests
 	e.Use(echomw.LoggerWithConfig(echomw.LoggerConfig{
 		Format: "${time_rfc3339} ${status} ${method} ${uri} ${latency_human} ${error}\n",
@@ -47,6 +47,16 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string) {
 	// ================================================================
 	api.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]interface{}{"success": true, "data": "ok", "error": nil})
+	})
+	api.GET("/version", func(c echo.Context) error {
+		return c.JSON(200, map[string]interface{}{
+			"success": true,
+			"data": map[string]string{
+				"build_number": buildNumber,
+				"commit_sha":   commitSHA,
+			},
+			"error": nil,
+		})
 	})
 	api.POST("/auth/register", h.Auth.Register)
 	api.POST("/auth/login", h.Auth.Login)
