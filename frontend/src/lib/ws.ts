@@ -1,3 +1,5 @@
+import { isTokenExpired, removeToken } from './auth'
+
 type EventCallback = (data: unknown) => void
 
 class WebSocketClient {
@@ -76,6 +78,11 @@ class WebSocketClient {
     this.ws.onclose = () => {
       this.ws = null
       if (!this.intentionalClose && this.token) {
+        if (isTokenExpired(this.token)) {
+          removeToken()
+          window.location.href = '/login'
+          return
+        }
         this.scheduleReconnect()
       }
     }
