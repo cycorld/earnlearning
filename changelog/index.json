@@ -40,5 +40,17 @@
     "title": "CI/CD와 보안: 자동화된 배포와 안전한 운영",
     "date": "2026-03-15",
     "tags": ["CI/CD", "GitHub Actions", "보안", "자동화", "배포"]
+  },
+  {
+    "slug": "008-production-debugging",
+    "title": "운영 환경 트러블슈팅: 배포 후 서비스가 안 될 때",
+    "date": "2026-03-15",
+    "tags": ["트러블슈팅", "Docker", "Nginx", "WebSocket", "디버깅"]
+  },
+  {
+    "slug": "009-token-and-version",
+    "title": "토큰 자동 갱신과 앱 버전 관리: 사용자가 모르게 부드럽게",
+    "date": "2026-03-15",
+    "tags": ["JWT", "인증", "토큰갱신", "버전관리", "UX"]
   }
 ]
