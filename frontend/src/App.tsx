@@ -36,6 +36,9 @@ import ProfilePage from '@/routes/profile/ProfilePage'
 import UserProfilePage from '@/routes/profile/UserProfilePage'
 import NotificationsPage from '@/routes/notifications/NotificationsPage'
 
+// Changelog
+import ChangelogPage from '@/routes/changelog/ChangelogPage'
+
 // Admin pages
 import AdminPage from '@/routes/admin/AdminPage'
 import AdminUsersPage from '@/routes/admin/AdminUsersPage'
@@ -78,6 +81,7 @@ export default function App() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/profile/:id" element={<UserProfilePage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/changelog" element={<ChangelogPage />} />
 
               <Route element={<AdminGuard />}>
                 <Route path="/admin" element={<AdminPage />} />

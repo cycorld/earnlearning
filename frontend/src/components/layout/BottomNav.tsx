@@ -12,6 +12,7 @@ import {
   User,
   Bell,
   Settings,
+  BookOpen,
 } from 'lucide-react'
 import {
   Sheet,
@@ -47,6 +48,7 @@ export default function BottomNav() {
     { label: '은행', icon: <Landmark className="h-5 w-5" />, path: '/bank' },
     { label: '프로필', icon: <User className="h-5 w-5" />, path: '/profile' },
     { label: '알림', icon: <Bell className="h-5 w-5" />, path: '/notifications' },
+    { label: '개발일지', icon: <BookOpen className="h-5 w-5" />, path: '/changelog' },
     ...(user?.role === 'admin'
       ? [{ label: '관리자', icon: <Settings className="h-5 w-5" />, path: '/admin' }]
       : []),
