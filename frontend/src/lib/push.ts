@@ -39,8 +39,9 @@ export async function subscribeToPush(): Promise<boolean> {
       user_agent: navigator.userAgent,
     })
     return true
-  } catch {
-    return false
+  } catch (e) {
+    console.error('Push subscribe error:', e)
+    throw e
   }
 }
 
