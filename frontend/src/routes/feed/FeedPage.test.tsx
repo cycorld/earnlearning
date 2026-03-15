@@ -223,7 +223,7 @@ describe('FeedPage 타임라인', () => {
 describe('FeedPage 좋아요', () => {
   it('좋아요 버튼 클릭 시 API를 호출하고 카운트가 변경된다', async () => {
     const user = userEvent.setup()
-    const post = { ...allMockPosts[0], like_count: 5, is_liked: false }
+    const post = { ...allMockPosts[0], like_count: 77, comment_count: 0, is_liked: false }
     const postsData = paginatePosts([post], 1, 20)
 
     mockApiGet.mockImplementation((path: string) => {
@@ -237,16 +237,16 @@ describe('FeedPage 좋아요', () => {
     renderWithProviders(<FeedPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('5')).toBeInTheDocument()
+      expect(screen.getByText('77')).toBeInTheDocument()
     })
 
-    // 좋아요 버튼 (Heart 아이콘 옆 숫자가 있는 버튼) 클릭
-    const likeButton = screen.getByText('5').closest('button')!
+    // 좋아요 버튼 클릭
+    const likeButton = screen.getByText('77').closest('button')!
     await user.click(likeButton)
 
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith(`/posts/${post.id}/like`)
-      expect(screen.getByText('6')).toBeInTheDocument()
+      expect(screen.getByText('78')).toBeInTheDocument()
     })
   })
 })
