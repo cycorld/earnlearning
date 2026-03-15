@@ -89,7 +89,9 @@ export default function MarketDetailPage() {
   const isClient = user?.id === job?.client?.id
   const isFreelancer = user?.id === job?.freelancer_id
   const isAssignmentMode = job ? job.max_workers !== 1 : false
+  const isFixedPrice = job?.price_type === 'fixed'
   const myApplication = applications.find((a) => a.user?.id === user?.id && a.status === 'accepted')
+  const hasApplied = applications.some((a) => a.user?.id === user?.id)
 
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -97,7 +99,7 @@ export default function MarketDetailPage() {
     try {
       await api.post(`/freelance/jobs/${id}/apply`, {
         proposal,
-        price: Number(price),
+        price: isFixedPrice ? job!.budget : Number(price),
       })
       toast.success('지원이 완료되었습니다.')
       setShowApplyForm(false)
@@ -190,6 +192,11 @@ export default function MarketDetailPage() {
           <div className="flex items-start justify-between">
             <CardTitle className="text-lg">{job.title}</CardTitle>
             <div className="flex gap-1">
+              {isFixedPrice && (
+                <Badge variant="outline" className="text-xs bg-blue-50">
+                  금액 고정
+                </Badge>
+              )}
               {isAssignmentMode && (
                 <Badge variant="outline" className="text-xs">
                   과제 모드{job.max_workers > 0 ? ` (${job.max_workers}명)` : ' (무제한)'}
@@ -223,7 +230,9 @@ export default function MarketDetailPage() {
           <Separator />
           <div className="flex gap-6">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">예산</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                {isFixedPrice ? '금액 (고정)' : '예산 (협의 가능)'}
+              </p>
               <p className="text-lg font-bold text-primary">{formatMoney(job.budget)}</p>
             </div>
             {job.agreed_price > 0 && (
@@ -264,7 +273,7 @@ export default function MarketDetailPage() {
       </Card>
 
       {/* Action Buttons */}
-      {job.status === 'open' && !isClient && (
+      {job.status === 'open' && !isClient && !hasApplied && (
         <Card>
           <CardContent className="p-4">
             {showApplyForm ? (
@@ -278,18 +287,25 @@ export default function MarketDetailPage() {
                     rows={8}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price">희망 금액 (원)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    placeholder="제안 금액"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    required
-                    min={1}
-                  />
-                </div>
+                {isFixedPrice ? (
+                  <div className="rounded-md bg-blue-50 p-3 text-sm">
+                    <p className="font-medium">금액 고정: {formatMoney(job.budget)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">이 의뢰는 고정 금액입니다.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="price">희망 금액 (원)</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      placeholder="제안 금액"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      required
+                      min={1}
+                    />
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button type="submit" className="flex-1" disabled={actionLoading}>
                     {actionLoading ? (
@@ -314,6 +330,15 @@ export default function MarketDetailPage() {
                 이 의뢰에 지원하기
               </Button>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Already applied indicator */}
+      {job.status === 'open' && !isClient && hasApplied && !myApplication && (
+        <Card>
+          <CardContent className="p-4 text-center text-sm text-muted-foreground">
+            이미 지원한 의뢰입니다. 승인을 기다려주세요.
           </CardContent>
         </Card>
       )}

@@ -171,6 +171,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.POST("/loans/weekly-interest", h.Loan.ProcessWeeklyInterest)
 	admin.GET("/loans", h.Loan.AdminListLoans)
 	admin.GET("/companies", h.Company.ListAllCompanies)
+	admin.POST("/users/:id/impersonate", h.Admin.ImpersonateUser)
 
 	// ================================================================
 	// WebSocket
