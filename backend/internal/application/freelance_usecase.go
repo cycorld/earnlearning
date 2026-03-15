@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/earnlearning/backend/internal/domain/freelance"
+	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
 
@@ -12,10 +13,11 @@ type FreelanceUseCase struct {
 	db         *sql.DB
 	repo       freelance.Repository
 	walletRepo wallet.Repository
+	notifUC    *NotificationUseCase
 }
 
-func NewFreelanceUseCase(db *sql.DB, repo freelance.Repository, wr wallet.Repository) *FreelanceUseCase {
-	return &FreelanceUseCase{db: db, repo: repo, walletRepo: wr}
+func NewFreelanceUseCase(db *sql.DB, repo freelance.Repository, wr wallet.Repository, notifUC *NotificationUseCase) *FreelanceUseCase {
+	return &FreelanceUseCase{db: db, repo: repo, walletRepo: wr, notifUC: notifUC}
 }
 
 // --- Input types ---
@@ -140,6 +142,13 @@ func (uc *FreelanceUseCase) ApplyToJob(jobID int, input ApplyJobInput, userID in
 		return nil, err
 	}
 	app.ID = id
+
+	// Notify client about new application
+	uc.notify(job.ClientID, notification.NotifJobApplied,
+		"새로운 외주 지원이 접수되었습니다",
+		fmt.Sprintf("'%s' 의뢰에 새로운 지원이 접수되었습니다.", job.Title),
+		"freelance_job", jobID)
+
 	return app, nil
 }
 
@@ -203,8 +212,8 @@ func (uc *FreelanceUseCase) AcceptApplication(jobID, applicationID, userID int) 
 		}
 	}
 
-	// Create notification for freelancer
-	uc.createNotification(app.UserID, "job_accepted",
+	// Notify freelancer
+	uc.notify(app.UserID, notification.NotifJobAccepted,
 		"외주 지원이 수락되었습니다",
 		fmt.Sprintf("'%s' 작업에 대한 지원이 수락되었습니다.", job.Title),
 		"freelance_job", jobID)
@@ -241,7 +250,7 @@ func (uc *FreelanceUseCase) CompleteWork(jobID, userID int, input CompleteWorkIn
 	uc.postToMarketChannel(job, userID, input)
 
 	// Notify client
-	uc.createNotification(job.ClientID, "work_completed",
+	uc.notify(job.ClientID, notification.NotifJobWorkDone,
 		"외주 작업이 완료되었습니다",
 		fmt.Sprintf("'%s' 작업이 완료되었습니다. 검수 후 승인해주세요.", job.Title),
 		"freelance_job", jobID)
@@ -317,7 +326,7 @@ func (uc *FreelanceUseCase) ApproveJob(jobID, userID int) error {
 	}
 
 	// Notify freelancer
-	uc.createNotification(*job.FreelancerID, "job_approved",
+	uc.notify(*job.FreelancerID, notification.NotifJobCompleted,
 		"외주 대금이 지급되었습니다",
 		fmt.Sprintf("'%s' 작업이 승인되어 %d원이 지급되었습니다.", job.Title, job.EscrowAmount),
 		"freelance_job", jobID)
@@ -358,6 +367,14 @@ func (uc *FreelanceUseCase) CancelJob(jobID, userID int) error {
 		}
 	}
 
+	// Notify freelancer about cancellation
+	if job.FreelancerID != nil {
+		uc.notify(*job.FreelancerID, notification.NotifJobCancelled,
+			"외주 의뢰가 취소되었습니다",
+			fmt.Sprintf("'%s' 의뢰가 취소되었습니다.", job.Title),
+			"freelance_job", jobID)
+	}
+
 	return uc.repo.UpdateStatus(jobID, freelance.StatusCancelled)
 }
 
@@ -389,7 +406,7 @@ func (uc *FreelanceUseCase) DisputeJob(jobID, userID int) error {
 	} else {
 		notifyUserID = job.ClientID
 	}
-	uc.createNotification(notifyUserID, "job_disputed",
+	uc.notify(notifyUserID, notification.NotifJobDisputed,
 		"외주 작업에 분쟁이 제기되었습니다",
 		fmt.Sprintf("'%s' 작업에 분쟁이 제기되었습니다.", job.Title),
 		"freelance_job", jobID)
@@ -447,9 +464,8 @@ func (uc *FreelanceUseCase) ReviewJob(jobID int, input ReviewJobInput, userID in
 	return review, nil
 }
 
-func (uc *FreelanceUseCase) createNotification(userID int, notifType, title, body, refType string, refID int) {
-	_, _ = uc.db.Exec(`
-		INSERT INTO notifications (user_id, notif_type, title, body, reference_type, reference_id)
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		userID, notifType, title, body, refType, refID)
+func (uc *FreelanceUseCase) notify(userID int, notifType notification.NotifType, title, body, refType string, refID int) {
+	if uc.notifUC != nil {
+		_ = uc.notifUC.CreateNotification(userID, notifType, title, body, refType, refID)
+	}
 }

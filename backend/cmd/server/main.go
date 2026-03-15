@@ -76,13 +76,13 @@ func main() {
 	companyUC := application.NewCompanyUsecase(companyRepo, userRepo, walletRepo)
 	postUC := application.NewPostUsecase(postRepo, walletRepo)
 	uploadUC := application.NewUploadUsecase(postRepo, cfg.UploadPath)
-	freelanceUC := application.NewFreelanceUseCase(db, freelanceRepo, walletRepo)
-	grantUC := application.NewGrantUseCase(db, grantRepo, walletRepo)
+	notifUC := application.NewNotificationUseCase(notifRepo, pushSvc, hub)
+	freelanceUC := application.NewFreelanceUseCase(db, freelanceRepo, walletRepo, notifUC)
+	grantUC := application.NewGrantUseCase(db, grantRepo, walletRepo, notifUC)
 	investmentUC := application.NewInvestmentUseCase(db, investmentRepo, companyRepo, walletRepo)
 	exchangeUC := application.NewExchangeUseCase(exchangeRepo, companyRepo, walletRepo)
 	exchangeUC.SetShareholderUpdater(shareholderUpdater)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
-	notifUC := application.NewNotificationUseCase(notifRepo, pushSvc, hub)
 
 	// Handlers
 	handlers := &router.Handlers{

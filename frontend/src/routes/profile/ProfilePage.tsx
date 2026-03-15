@@ -13,8 +13,11 @@ import {
   ChevronRight,
   Building2,
   GraduationCap,
+  Bell,
+  BellOff,
   Loader2,
 } from 'lucide-react'
+import { usePush } from '@/hooks/use-push'
 
 function formatMoney(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(amount) + '원'
@@ -23,6 +26,7 @@ function formatMoney(amount: number): string {
 export default function ProfilePage() {
   const { user, isLoading, logout } = useAuth()
   const { wallet, loading: walletLoading } = useWallet()
+  const { isSupported: pushSupported, isSubscribed, subscribe, unsubscribe } = usePush()
 
   if (isLoading) {
     return (
@@ -145,6 +149,27 @@ export default function ProfilePage() {
             <span className="flex-1 text-sm">거래 내역</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
+          {pushSupported && (
+            <>
+              <Separator />
+              <button
+                onClick={isSubscribed ? unsubscribe : subscribe}
+                className="flex w-full items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-accent"
+              >
+                {isSubscribed ? (
+                  <Bell className="h-5 w-5 text-primary" />
+                ) : (
+                  <BellOff className="h-5 w-5 text-muted-foreground" />
+                )}
+                <span className="flex-1 text-left text-sm">
+                  푸시 알림 {isSubscribed ? '켜짐' : '꺼짐'}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {isSubscribed ? '끄기' : '켜기'}
+                </span>
+              </button>
+            </>
+          )}
           {user.role === 'admin' && (
             <>
               <Separator />

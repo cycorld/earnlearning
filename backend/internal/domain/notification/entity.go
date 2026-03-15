@@ -19,6 +19,16 @@ const (
 	NotifUserApproved      NotifType = "user_approved"
 	NotifNewAssignment     NotifType = "new_assignment"
 	NotifKpiRevenue        NotifType = "kpi_revenue"
+
+	// Freelance
+	NotifJobApplied        NotifType = "job_applied"
+	NotifJobDisputed       NotifType = "job_disputed"
+	NotifJobCancelled      NotifType = "job_cancelled"
+
+	// Grant
+	NotifGrantApproved     NotifType = "grant_approved"
+	NotifGrantApplied      NotifType = "grant_applied"
+	NotifGrantClosed       NotifType = "grant_closed"
 )
 
 // PushEligibleTypes are notification types that should trigger push notifications.
@@ -37,6 +47,12 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifUserApproved:      true,
 	NotifNewAssignment:     true,
 	NotifKpiRevenue:        true,
+	NotifJobApplied:        true,
+	NotifJobDisputed:       true,
+	NotifJobCancelled:      true,
+	NotifGrantApproved:     true,
+	NotifGrantApplied:      true,
+	NotifGrantClosed:       true,
 }
 
 type Notification struct {
