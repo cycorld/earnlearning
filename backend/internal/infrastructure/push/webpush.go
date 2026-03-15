@@ -3,6 +3,7 @@ package push
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -83,7 +84,8 @@ func (s *WebPushService) sendToSubscription(sub *notification.PushSubscription, 
 			log.Printf("push: delete expired subscription: %v", err)
 		}
 	} else if resp.StatusCode >= 400 {
-		log.Printf("push: send failed with status %d for endpoint %s", resp.StatusCode, sub.Endpoint)
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("push: send failed with status %d for endpoint %s body=%s", resp.StatusCode, sub.Endpoint, string(body))
 	}
 }
 
