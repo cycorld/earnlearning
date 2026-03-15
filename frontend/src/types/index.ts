@@ -139,6 +139,8 @@ export interface FreelanceJob {
   agreed_price: number
   application_count?: number
   work_completed: boolean
+  max_workers: number
+  auto_approve_application: boolean
   created_at: string
 }
 
@@ -149,6 +151,9 @@ export interface JobApplication {
   proposal: string
   price: number
   status: string
+  escrow_amount: number
+  work_completed: boolean
+  completion_report?: string
   created_at: string
 }
 

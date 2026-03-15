@@ -17,6 +17,8 @@ export default function MarketNewPage() {
     budget: '',
     deadline: '',
     required_skills: '',
+    max_workers: '1',
+    auto_approve_application: false,
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -36,6 +38,8 @@ export default function MarketNewPage() {
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean),
+        max_workers: Number(form.max_workers),
+        auto_approve_application: form.auto_approve_application,
       })
       navigate(`/market/${job.id}`)
     } catch (err) {
@@ -114,6 +118,34 @@ export default function MarketNewPage() {
                 value={form.required_skills}
                 onChange={(e) => setForm({ ...form, required_skills: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="max_workers">최대 작업자 수</Label>
+              <Input
+                id="max_workers"
+                type="number"
+                placeholder="1 (기본), 0 = 무제한"
+                value={form.max_workers}
+                onChange={(e) => setForm({ ...form, max_workers: e.target.value })}
+                min={0}
+              />
+              <p className="text-xs text-muted-foreground">
+                0 = 무제한, 1 = 기존 방식 (1명만), 2+ = 해당 인원까지 허용
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="auto_approve"
+                type="checkbox"
+                checked={form.auto_approve_application}
+                onChange={(e) =>
+                  setForm({ ...form, auto_approve_application: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="auto_approve" className="cursor-pointer">
+                지원 즉시 자동 승인 (과제 모드)
+              </Label>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
