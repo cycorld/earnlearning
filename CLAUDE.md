@@ -94,6 +94,63 @@ VAPID_SUBJECT=mailto:cyc@snu.ac.kr
 - **Backend 테스트**: `go test ./tests/integration/ -timeout 60s`
 - **Frontend 테스트**: `cd frontend && npm test`
 
+## 트러블슈팅
+
+### Prod → Stage DB 복사
+SQLite WAL 모드 + Docker 볼륨 마운트 차이로 인한 주의사항.
+
+**핵심 함정**: Docker Compose에서 `stage_db:/data/db`로 마운트하면 볼륨 루트가 `/data/db/`에 매핑됨. temp container에서 같은 볼륨을 `/data`에 마운트하면 파일 경로가 달라진다.
+
+| 컨테이너 | 마운트 | DB 경로 |
+|----------|--------|---------|
+| backend | `stage_db:/data/db` | `/data/db/earnlearning.db` |
+| temp alpine | `stage_db:/data` | `/data/earnlearning.db` ← **여기에 복사** |
+
+```bash
+ssh earnlearning
+
+# 1. Stage 중지 (DB 락 해제)
+sudo docker stop earnlearning-stage-backend-1
+
+# 2. Prod WAL checkpoint (WAL 데이터를 main DB로 병합)
+sudo docker exec earnlearning-prod-backend-1 sh -c \
+  'apk add sqlite > /dev/null 2>&1; sqlite3 /data/db/earnlearning.db "PRAGMA wal_checkpoint(TRUNCATE);"'
+
+# 3. Prod DB를 호스트로 복사
+sudo docker cp earnlearning-prod-backend-1:/data/db/earnlearning.db /tmp/prod_earnlearning.db
+
+# 4. Stage 볼륨에 복사 (경로 주의: /data/earnlearning.db)
+sudo docker run --rm \
+  -v earnlearning-stage_stage_db:/data \
+  -v /tmp:/host \
+  alpine sh -c '
+    rm -f /data/earnlearning.db /data/earnlearning.db-wal /data/earnlearning.db-shm
+    cp /host/prod_earnlearning.db /data/earnlearning.db
+    chmod 666 /data/earnlearning.db
+  '
+
+# 5. Stage 재시작 & 검증
+sudo docker start earnlearning-stage-backend-1
+sudo docker exec earnlearning-stage-backend-1 sh -c \
+  'apk add sqlite > /dev/null 2>&1; sqlite3 /data/db/earnlearning.db "SELECT COUNT(*) FROM users;"'
+```
+
+**체크리스트**:
+- [ ] WAL checkpoint 먼저 실행 (안 하면 최신 데이터 누락)
+- [ ] temp container에서 `/data/earnlearning.db`에 복사 (NOT `/data/db/earnlearning.db`)
+- [ ] WAL/SHM 파일 삭제 (구 stage 잔여 파일이 충돌 유발)
+- [ ] 복사 후 `SELECT COUNT(*)` 로 데이터 확인
+
+### SQLite WAL 관련 문제
+- **증상**: DB 파일 크기는 작은데 데이터가 있어야 할 때 → WAL 파일에 데이터가 있음
+- **해결**: `PRAGMA wal_checkpoint(TRUNCATE)` 로 WAL을 main DB에 병합
+- **증상**: "disk I/O error" → 오래된 WAL/SHM 파일 삭제 후 재시작
+
+### Frontend 빌드 실패 (테스트 파일)
+- **증상**: `tsc -b` 에서 `vi` not found, `test` property 에러
+- **원인**: 테스트 파일이 프로덕션 빌드에 포함됨
+- **해결**: `tsconfig.app.json`에서 테스트 파일 exclude, `vite.config.ts`에서 `vitest/config` import
+
 ## 커밋 규칙
 - 매 프롬프트 작업 완료 시 반드시 커밋한다.
 - 커밋 전 반드시 스모크 테스트 통과 확인.
