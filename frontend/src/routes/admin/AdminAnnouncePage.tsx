@@ -6,33 +6,33 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft, Send, Megaphone } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useToast } from '@/hooks/use-toast'
 
 export default function AdminAnnouncePage() {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
-  const { toast } = useToast()
+  const [result, setResult] = useState<string | null>(null)
 
   const handleSend = async () => {
     if (!title.trim() || !body.trim()) {
-      toast({ title: '제목과 내용을 모두 입력해주세요', variant: 'destructive' })
+      alert('제목과 내용을 모두 입력해주세요')
       return
     }
 
     if (!confirm('전체 유저에게 공지 알림을 보내시겠습니까?')) return
 
     setSending(true)
+    setResult(null)
     try {
-      const result = await api.post<{ message: string; sent: number }>(
+      const res = await api.post<{ message: string; sent: number }>(
         '/admin/notifications/announce',
         { title: title.trim(), body: body.trim() },
       )
-      toast({ title: `${result.sent}명에게 공지 알림을 보냈습니다` })
+      setResult(`${res.sent}명에게 공지 알림을 보냈습니다`)
       setTitle('')
       setBody('')
     } catch (e: any) {
-      toast({ title: e.message || '전송 실패', variant: 'destructive' })
+      alert(e.message || '전송 실패')
     } finally {
       setSending(false)
     }
@@ -78,6 +78,9 @@ export default function AdminAnnouncePage() {
             <Send className="mr-2 h-4 w-4" />
             {sending ? '전송 중...' : '전체 유저에게 공지 보내기'}
           </Button>
+          {result && (
+            <p className="text-center text-sm text-green-600 font-medium">{result}</p>
+          )}
         </CardContent>
       </Card>
     </div>
