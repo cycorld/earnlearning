@@ -58,5 +58,11 @@
     "title": "캐시 문제 해결: 새 버전이 안 보일 때",
     "date": "2026-03-15",
     "tags": ["캐시", "Service Worker", "PWA", "Nginx", "배포"]
+  },
+  {
+    "slug": "011-brand-and-design",
+    "title": "브랜드 디자인과 AI 이미지 생성: 서비스에 정체성 입히기",
+    "date": "2026-03-15",
+    "tags": ["브랜드", "디자인", "AI", "Gemini", "PWA", "파비콘"]
   }
 ]
