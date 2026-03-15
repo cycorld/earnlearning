@@ -108,7 +108,7 @@ func setupTestServer(t *testing.T) *testServer {
 
 	e := echo.New()
 	e.HideBanner = true
-	router.Setup(e, handlers, hub, testJWTSecret)
+	router.Setup(e, handlers, hub, testJWTSecret, "test", "abc1234")
 
 	ts := httptest.NewServer(e)
 	t.Cleanup(func() { ts.Close() })

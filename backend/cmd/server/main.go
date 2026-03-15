@@ -15,6 +15,12 @@ import (
 	"github.com/earnlearning/backend/internal/interfaces/ws"
 )
 
+// Set via -ldflags at build time
+var (
+	BuildNumber = "dev"
+	CommitSHA   = "local"
+)
+
 func main() {
 	cfg := config.Load()
 
@@ -100,7 +106,7 @@ func main() {
 	e.Static("/uploads", cfg.UploadPath)
 
 	// Set up all routes
-	router.Setup(e, handlers, hub, cfg.JWTSecret)
+	router.Setup(e, handlers, hub, cfg.JWTSecret, BuildNumber, CommitSHA)
 
 	log.Printf("EarnLearning LMS starting on :%s", cfg.Port)
 	e.Logger.Fatal(e.Start(":" + cfg.Port))

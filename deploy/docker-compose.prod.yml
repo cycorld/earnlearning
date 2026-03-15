@@ -1,7 +1,11 @@
 version: '3.8'
 services:
   backend:
-    build: ../backend
+    build:
+      context: ../backend
+      args:
+        - BUILD_NUMBER=${BUILD_NUMBER:-dev}
+        - COMMIT_SHA=${COMMIT_SHA:-local}
     restart: always
     volumes:
       - prod_db:/data/db

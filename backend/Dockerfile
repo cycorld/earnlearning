@@ -4,7 +4,11 @@ RUN apk add --no-cache gcc musl-dev
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=1 GOOS=linux go build -o server ./cmd/server
+ARG BUILD_NUMBER=dev
+ARG COMMIT_SHA=local
+RUN CGO_ENABLED=1 GOOS=linux go build \
+    -ldflags "-X main.BuildNumber=${BUILD_NUMBER} -X main.CommitSHA=${COMMIT_SHA}" \
+    -o server ./cmd/server
 
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates sqlite-libs
