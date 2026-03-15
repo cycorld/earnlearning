@@ -19,6 +19,7 @@ export default function MarketNewPage() {
     required_skills: '',
     max_workers: '1',
     auto_approve_application: false,
+    price_type: 'negotiable' as 'fixed' | 'negotiable',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -40,6 +41,7 @@ export default function MarketNewPage() {
           .filter(Boolean),
         max_workers: Number(form.max_workers),
         auto_approve_application: form.auto_approve_application,
+        price_type: form.price_type,
       })
       navigate(`/market/${job.id}`)
     } catch (err) {
@@ -90,7 +92,35 @@ export default function MarketNewPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="budget">예산 (원)</Label>
+              <Label>금액 방식</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={form.price_type === 'negotiable' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setForm({ ...form, price_type: 'negotiable' })}
+                  className="flex-1"
+                >
+                  협의 가능
+                </Button>
+                <Button
+                  type="button"
+                  variant={form.price_type === 'fixed' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setForm({ ...form, price_type: 'fixed' })}
+                  className="flex-1"
+                >
+                  금액 고정
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {form.price_type === 'fixed'
+                  ? '지원자는 설정한 금액으로만 지원할 수 있습니다.'
+                  : '지원자가 희망 금액을 자유롭게 제안할 수 있습니다.'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="budget">{form.price_type === 'fixed' ? '금액 (원)' : '예산 (원)'}</Label>
               <Input
                 id="budget"
                 type="number"

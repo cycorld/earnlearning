@@ -151,7 +151,7 @@ export default function MarketPage() {
                     )}
                     <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">
-                        예산 {formatMoney(job.budget)}
+                        {job.price_type === 'fixed' ? '고정' : '예산'} {formatMoney(job.budget)}
                       </span>
                       {job.deadline && (
                         <span className="flex items-center gap-1">

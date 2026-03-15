@@ -141,6 +141,7 @@ export interface FreelanceJob {
   work_completed: boolean
   max_workers: number
   auto_approve_application: boolean
+  price_type: 'fixed' | 'negotiable'
   created_at: string
 }
 

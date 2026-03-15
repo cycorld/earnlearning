@@ -28,6 +28,7 @@ type CreateJobInput struct {
 	RequiredSkills         freelance.SkillsList `json:"required_skills"`
 	MaxWorkers             *int                 `json:"max_workers"`
 	AutoApproveApplication bool                 `json:"auto_approve_application"`
+	PriceType              string               `json:"price_type"`
 }
 
 type ApplyJobInput struct {
@@ -73,6 +74,14 @@ func (uc *FreelanceUseCase) CreateJob(input CreateJobInput, clientID int) (*free
 		maxWorkers = *input.MaxWorkers
 	}
 
+	priceType := "negotiable" // default
+	if input.PriceType != "" {
+		if input.PriceType != "fixed" && input.PriceType != "negotiable" {
+			return nil, freelance.ErrInvalidPriceType
+		}
+		priceType = input.PriceType
+	}
+
 	job := &freelance.FreelanceJob{
 		ClientID:               clientID,
 		Title:                  input.Title,
@@ -82,6 +91,7 @@ func (uc *FreelanceUseCase) CreateJob(input CreateJobInput, clientID int) (*free
 		Status:                 freelance.StatusOpen,
 		MaxWorkers:             maxWorkers,
 		AutoApproveApplication: input.AutoApproveApplication,
+		PriceType:              priceType,
 	}
 
 	id, err := uc.repo.Create(job)
@@ -134,6 +144,11 @@ func (uc *FreelanceUseCase) ApplyToJob(jobID int, input ApplyJobInput, userID in
 	}
 	if existing != nil {
 		return nil, freelance.ErrAlreadyApplied
+	}
+
+	// Fixed price: worker must apply with exact budget price
+	if job.PriceType == "fixed" && input.Price != job.Budget {
+		return nil, freelance.ErrFixedPriceMismatch
 	}
 
 	// Check max_workers limit (0 = unlimited)

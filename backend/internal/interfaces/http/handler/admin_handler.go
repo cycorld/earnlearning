@@ -85,3 +85,17 @@ func (h *AdminHandler) ListUsers(c echo.Context) error {
 		"total_pages": result.TotalPages,
 	})
 }
+
+func (h *AdminHandler) ImpersonateUser(c echo.Context) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_ID", "유효하지 않은 ID입니다")
+	}
+
+	resp, err := h.authUC.ImpersonateUser(id)
+	if err != nil {
+		return errorResponse(c, http.StatusNotFound, "NOT_FOUND", "사용자를 찾을 수 없습니다")
+	}
+
+	return successResponse(c, http.StatusOK, resp)
+}

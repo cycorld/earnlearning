@@ -79,8 +79,9 @@ type FreelanceJob struct {
 	EscrowAmount   int        `json:"escrow_amount"`
 	AgreedPrice    int        `json:"agreed_price"`
 	WorkCompleted  bool       `json:"work_completed"`
-	MaxWorkers             int  `json:"max_workers"`
-	AutoApproveApplication bool `json:"auto_approve_application"`
+	MaxWorkers             int    `json:"max_workers"`
+	AutoApproveApplication bool   `json:"auto_approve_application"`
+	PriceType              string `json:"price_type"`
 	CreatedAt      time.Time  `json:"created_at"`
 	CompletedAt    *time.Time `json:"completed_at"`
 
