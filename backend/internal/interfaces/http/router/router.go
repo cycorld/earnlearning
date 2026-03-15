@@ -19,6 +19,7 @@ type Handlers struct {
 	Post         *handler.PostHandler
 	Upload       *handler.UploadHandler
 	Freelance    *handler.FreelanceHandler
+	Grant        *handler.GrantHandler
 	Investment   *handler.InvestmentHandler
 	Exchange     *handler.ExchangeHandler
 	Loan         *handler.LoanHandler
@@ -113,6 +114,11 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	// Upload
 	approved.POST("/upload", h.Upload.Upload)
 
+	// Government Grants (정부과제) — list/get/apply for all, create/approve/close for admin
+	approved.GET("/grants", h.Grant.ListGrants)
+	approved.GET("/grants/:id", h.Grant.GetGrant)
+	approved.POST("/grants/:id/apply", h.Grant.ApplyToGrant)
+
 	// Freelance Market
 	approved.GET("/freelance/jobs", h.Freelance.ListJobs)
 	approved.POST("/freelance/jobs", h.Freelance.CreateJob)
@@ -123,7 +129,6 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.POST("/freelance/jobs/:id/complete", h.Freelance.CompleteWork)
 	approved.POST("/freelance/jobs/:id/approve", h.Freelance.ApproveJob)
 	approved.POST("/freelance/jobs/:id/cancel", h.Freelance.CancelJob)
-	approved.POST("/freelance/jobs/:id/close", h.Freelance.CloseJob)
 	approved.POST("/freelance/jobs/:id/dispute", h.Freelance.DisputeJob)
 	approved.POST("/freelance/jobs/:id/review", h.Freelance.ReviewJob)
 
@@ -173,6 +178,11 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.GET("/loans", h.Loan.AdminListLoans)
 	admin.GET("/companies", h.Company.ListAllCompanies)
 	admin.POST("/users/:id/impersonate", h.Admin.ImpersonateUser)
+
+	// Grant admin routes
+	admin.POST("/grants", h.Grant.CreateGrant)
+	admin.POST("/grants/:id/approve/:appId", h.Grant.ApproveApplication)
+	admin.POST("/grants/:id/close", h.Grant.CloseGrant)
 
 	// ================================================================
 	// WebSocket

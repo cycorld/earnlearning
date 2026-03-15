@@ -55,5 +55,33 @@ func RunMigrations(db *sql.DB) error {
 		db.Exec(stmt) // ignore "duplicate column" errors
 	}
 
+	// Create grants tables (idempotent)
+	grantTables := []string{
+		`CREATE TABLE IF NOT EXISTS grants (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			admin_id INTEGER NOT NULL REFERENCES users(id),
+			title TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			reward INTEGER NOT NULL DEFAULT 0,
+			max_applicants INTEGER NOT NULL DEFAULT 0,
+			status TEXT NOT NULL DEFAULT 'open',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS grant_applications (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			grant_id INTEGER NOT NULL REFERENCES grants(id),
+			user_id INTEGER NOT NULL REFERENCES users(id),
+			proposal TEXT NOT NULL DEFAULT '',
+			status TEXT NOT NULL DEFAULT 'pending',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(grant_id, user_id)
+		)`,
+	}
+	for _, stmt := range grantTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create grant tables: %w", err)
+		}
+	}
+
 	return nil
 }

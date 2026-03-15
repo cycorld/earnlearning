@@ -17,7 +17,4 @@ var (
 	ErrNotParticipant     = errors.New("작업 참여자만 수행할 수 있습니다")
 	ErrApplicationNotFound = errors.New("지원을 찾을 수 없습니다")
 	ErrInsufficientFunds  = errors.New("잔액이 부족합니다")
-	ErrMaxWorkersReached  = errors.New("최대 작업자 수에 도달했습니다")
-	ErrFixedPriceMismatch = errors.New("고정 금액 의뢰는 예산과 동일한 금액으로만 지원할 수 있습니다")
-	ErrInvalidPriceType   = errors.New("price_type은 'fixed' 또는 'negotiable'이어야 합니다")
 )
