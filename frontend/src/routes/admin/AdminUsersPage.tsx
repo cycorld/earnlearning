@@ -25,7 +25,9 @@ import {
   Send,
   UserCheck,
   Clock,
+  LogIn,
 } from 'lucide-react'
+import { setToken } from '@/lib/auth'
 
 function formatMoney(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(amount) + '원'
@@ -115,6 +117,19 @@ export default function AdminUsersPage() {
     setTransferOpen(true)
   }
 
+  const handleImpersonate = async (userId: number, userName: string) => {
+    try {
+      const data = await api.post<{ token: string; user: User }>(
+        `/admin/users/${userId}/impersonate`,
+      )
+      setToken(data.token)
+      toast.success(`${userName}(으)로 로그인했습니다.`)
+      window.location.href = '/' // full reload to reset auth state
+    } catch (err: any) {
+      toast.error(err.message || '로그인 전환에 실패했습니다.')
+    }
+  }
+
   const statusLabel = (status: string) => {
     switch (status) {
       case 'approved':
@@ -199,14 +214,24 @@ export default function AdminUsersPage() {
           </>
         )}
         {user.status === 'approved' && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => openTransfer(user.id)}
-            title="송금"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleImpersonate(user.id, user.name)}
+              title="이 사용자로 로그인"
+            >
+              <LogIn className="h-4 w-4 text-blue-600" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => openTransfer(user.id)}
+              title="송금"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </>
         )}
       </div>
     </div>

@@ -46,6 +46,13 @@
 - **학생 대상**: 친절한 교재처럼 작성. 기술 용어는 설명 포함.
 - **index.json 업데이트**: 새 엔트리 추가 시 `changelog/index.json`에도 항목 추가
 
+## DB 마이그레이션 규칙 (⚠️ 프로덕션 안전)
+- **001_init.sql 수정 금지**: 이미 배포된 init 마이그레이션은 절대 수정하지 않는다.
+- **ALTER TABLE 사용 필수**: 새 컬럼 추가는 반드시 `sqlite.go`의 `RunMigrations()` 내 `alterStatements` 배열에 `ALTER TABLE ... ADD COLUMN` 문을 추가한다.
+- **DEFAULT 값 필수**: 새 컬럼에는 반드시 DEFAULT 값을 지정하여 기존 데이터와 호환되게 한다.
+- **DROP/DELETE 절대 금지**: 테이블 삭제, 컬럼 삭제, 데이터 삭제 절대 금지. 프로덕션에 실제 학생/교수 데이터가 있다.
+- **에러 무시 패턴**: `db.Exec(stmt)` — SQLite에서 "duplicate column" 에러를 무시하여 재실행에도 안전하게 동작한다.
+
 ## 커밋 규칙
 - 매 프롬프트 작업 완료 시 반드시 커밋한다.
 - 커밋 전 반드시 스모크 테스트 통과 확인.

@@ -123,6 +123,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.POST("/freelance/jobs/:id/complete", h.Freelance.CompleteWork)
 	approved.POST("/freelance/jobs/:id/approve", h.Freelance.ApproveJob)
 	approved.POST("/freelance/jobs/:id/cancel", h.Freelance.CancelJob)
+	approved.POST("/freelance/jobs/:id/close", h.Freelance.CloseJob)
 	approved.POST("/freelance/jobs/:id/dispute", h.Freelance.DisputeJob)
 	approved.POST("/freelance/jobs/:id/review", h.Freelance.ReviewJob)
 
@@ -171,6 +172,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.POST("/loans/weekly-interest", h.Loan.ProcessWeeklyInterest)
 	admin.GET("/loans", h.Loan.AdminListLoans)
 	admin.GET("/companies", h.Company.ListAllCompanies)
+	admin.POST("/users/:id/impersonate", h.Admin.ImpersonateUser)
 
 	// ================================================================
 	// WebSocket

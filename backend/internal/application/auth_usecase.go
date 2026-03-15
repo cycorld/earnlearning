@@ -206,6 +206,20 @@ func (uc *AuthUseCase) RefreshToken(tokenStr string) (*AuthResponse, error) {
 	return &AuthResponse{Token: newToken, User: u}, nil
 }
 
+func (uc *AuthUseCase) ImpersonateUser(userID int) (*AuthResponse, error) {
+	u, err := uc.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, user.ErrInvalidCreds
+	}
+
+	token, err := uc.generateToken(u)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthResponse{Token: token, User: u}, nil
+}
+
 func (uc *AuthUseCase) generateToken(u *user.User) (string, error) {
 	claims := jwtClaims{
 		UserID: u.ID,
