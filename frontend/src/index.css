@@ -1,7 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource/noto-sans-kr/300.css";
+@import "@fontsource/noto-sans-kr/400.css";
+@import "@fontsource/jetbrains-mono/400.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -16,75 +19,92 @@
   html {
     @apply font-sans;
   }
+  /* Brand typography: Plus Jakarta Sans for headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+  /* Brand typography: JetBrains Mono for code */
+  code, pre, kbd, samp {
+    font-family: var(--font-mono);
+  }
 }
 
+/* ============================================
+   Brand Colors — EarnLearning Brand Guide
+   Primary: Deep Dive Teal #005F69
+   Accent:  Momentum Coral #FF6B6B
+   Text:    Graphite #212529
+   Canvas:  Cloud White #F8F9FA
+   ============================================ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.5 0.17 280);
-  --primary-foreground: oklch(0.985 0.005 280);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
+  --background: #F8F9FA;
+  --foreground: #212529;
+  --card: #FFFFFF;
+  --card-foreground: #212529;
+  --popover: #FFFFFF;
+  --popover-foreground: #212529;
+  --primary: #005F69;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E9ECEF;
+  --secondary-foreground: #212529;
+  --muted: #E9ECEF;
+  --muted-foreground: #6C757D;
+  --accent: #E9ECEF;
+  --accent-foreground: #212529;
+  --destructive: #DC3545;
+  --border: #DEE2E6;
+  --input: #DEE2E6;
+  --ring: #005F69;
+  --chart-1: #005F69;
+  --chart-2: #FF6B6B;
+  --chart-3: #28A745;
+  --chart-4: #FFC107;
+  --chart-5: #1AA8B5;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --coral: #FF6B6B;
+  --sidebar: #F8F9FA;
+  --sidebar-foreground: #212529;
+  --sidebar-primary: #005F69;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E9ECEF;
+  --sidebar-accent-foreground: #212529;
+  --sidebar-border: #DEE2E6;
+  --sidebar-ring: #005F69;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.65 0.17 280);
-  --primary-foreground: oklch(0.205 0.015 286);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #1A1D21;
+  --foreground: #F8F9FA;
+  --card: #212529;
+  --card-foreground: #F8F9FA;
+  --popover: #212529;
+  --popover-foreground: #F8F9FA;
+  --primary: #1AA8B5;
+  --primary-foreground: #1A1D21;
+  --secondary: #343A40;
+  --secondary-foreground: #F8F9FA;
+  --muted: #343A40;
+  --muted-foreground: #ADB5BD;
+  --accent: #343A40;
+  --accent-foreground: #F8F9FA;
+  --destructive: #E85D6A;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #1AA8B5;
+  --chart-1: #1AA8B5;
+  --chart-2: #FF8A8A;
+  --chart-3: #4DCC6A;
+  --chart-4: #FFD54F;
+  --chart-5: #005F69;
+  --coral: #FF8A8A;
+  --sidebar: #212529;
+  --sidebar-foreground: #F8F9FA;
+  --sidebar-primary: #1AA8B5;
+  --sidebar-primary-foreground: #F8F9FA;
+  --sidebar-accent: #343A40;
+  --sidebar-accent-foreground: #F8F9FA;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #1AA8B5;
 }
 
 /* ============================================
@@ -183,7 +203,6 @@
   font-size: 85%;
   background: var(--muted);
   border-radius: var(--radius-sm);
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 /* Code blocks */
@@ -224,7 +243,7 @@
 }
 
 .markdown-body tr:nth-child(even) {
-  background: oklch(from var(--muted) l c h / 0.5);
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
 }
 
 /* Horizontal rule */
@@ -264,7 +283,10 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Noto Sans KR', 'Plus Jakarta Sans Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Plus Jakarta Sans Variable', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --color-coral: var(--coral);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
