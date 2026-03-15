@@ -98,7 +98,7 @@ docker compose up -d
 | `DB_PATH` | SQLite DB 경로 | ./data/earnlearning.db |
 | `VAPID_PUBLIC_KEY` | Web Push 공개키 | (선택) |
 | `VAPID_PRIVATE_KEY` | Web Push 비공개키 | (선택) |
-| `VAPID_SUBJECT` | Web Push 연락처 | mailto:${CONTACT_EMAIL} |
+| `VAPID_SUBJECT` | Web Push 연락처 | mailto:admin@example.com |
 | `ADMIN_EMAIL` | 초기 관리자 이메일 | admin@ewha.ac.kr |
 | `ADMIN_PASSWORD` | 초기 관리자 비밀번호 | (필수) |
 

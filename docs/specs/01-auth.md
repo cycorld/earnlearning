@@ -100,9 +100,9 @@ CREATE TABLE users (
 -- 서버 최초 기동 시 실행 (이미 존재하면 스킵)
 INSERT OR IGNORE INTO users (email, password, name, department, student_id, role, status)
 VALUES (
-    '${CONTACT_EMAIL}',
-    '$2a$10$...', -- bcrypt('test1234')
-    '최용철',
+    ${ADMIN_EMAIL},       -- .env 참조
+    '$2a$10$...', -- bcrypt(${ADMIN_PASSWORD})
+    '관리자',
     '관리자',
     '0000000000',
     'admin',

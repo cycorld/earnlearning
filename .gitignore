@@ -13,7 +13,10 @@ backend/earnlearning
 
 # Environment
 .env
+.env.*
 .env.local
+.envrc
+!.env.example
 
 # IDE
 .vscode/

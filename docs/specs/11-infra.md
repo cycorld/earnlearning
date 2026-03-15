@@ -20,9 +20,9 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
-      - VAPID_SUBJECT=mailto:${CONTACT_EMAIL}
-      - ADMIN_EMAIL=${CONTACT_EMAIL}
-      - ADMIN_PASSWORD=test1234
+      - VAPID_SUBJECT=${VAPID_SUBJECT}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
 
   frontend:
     build:
@@ -161,12 +161,12 @@ PRAGMA foreign_keys = ON;
 | `DB_PATH` | SQLite DB 경로 | `/data/db/earnlearning.db` |
 | `UPLOAD_PATH` | 업로드 파일 경로 | `/data/uploads` |
 | `JWT_SECRET` | JWT 서명 키 | (필수) |
-| `ADMIN_EMAIL` | Admin 시드 이메일 | `${CONTACT_EMAIL}` |
-| `ADMIN_PASSWORD` | Admin 시드 비밀번호 | `test1234` |
+| `ADMIN_EMAIL` | Admin 시드 이메일 | (`.env` 참조) |
+| `ADMIN_PASSWORD` | Admin 시드 비밀번호 | (`.env` 참조) |
 | `PORT` | 서버 포트 | `8080` |
 | `VAPID_PUBLIC_KEY` | Web Push VAPID 공개키 | (필수) |
 | `VAPID_PRIVATE_KEY` | Web Push VAPID 비밀키 | (필수) |
-| `VAPID_SUBJECT` | VAPID 연락처 | `mailto:${CONTACT_EMAIL}` |
+| `VAPID_SUBJECT` | VAPID 연락처 | (`.env` 참조) |
 
 ---
 

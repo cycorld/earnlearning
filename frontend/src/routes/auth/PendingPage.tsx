@@ -37,10 +37,10 @@ export default function PendingPage() {
           <p className="text-sm text-muted-foreground">
             문의:{' '}
             <a
-              href="mailto:${CONTACT_EMAIL}"
+              href={`mailto:${import.meta.env.VITE_CONTACT_EMAIL || 'admin@earnlearning.com'}`}
               className="text-primary hover:underline"
             >
-              ${CONTACT_EMAIL}
+              {import.meta.env.VITE_CONTACT_EMAIL || 'admin@earnlearning.com'}
             </a>
           </p>
         </div>

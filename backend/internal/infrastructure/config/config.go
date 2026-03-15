@@ -20,11 +20,11 @@ func Load() *Config {
 		DBPath:          getEnv("DB_PATH", "./data/earnlearning.db"),
 		UploadPath:      getEnv("UPLOAD_PATH", "./data/uploads"),
 		JWTSecret:       getEnv("JWT_SECRET", "dev-secret-change-in-production"),
-		AdminEmail:      getEnv("ADMIN_EMAIL", "a@a.com"),
-		AdminPassword:   getEnv("ADMIN_PASSWORD", "asdfasdf"),
+		AdminEmail:      getEnv("ADMIN_EMAIL", "admin@example.com"),
+		AdminPassword:   getEnv("ADMIN_PASSWORD", "change-this"),
 		VAPIDPublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),
 		VAPIDPrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
-		VAPIDSubject:    getEnv("VAPID_SUBJECT", "mailto:${CONTACT_EMAIL}"),
+		VAPIDSubject:    getEnv("VAPID_SUBJECT", "mailto:admin@example.com"),
 	}
 }
 

@@ -13,9 +13,9 @@ services:
       - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
-      - VAPID_SUBJECT=mailto:${CONTACT_EMAIL}
-      - ADMIN_EMAIL=${CONTACT_EMAIL}
-      - ADMIN_PASSWORD=test1234
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:admin@example.com}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-change-this}
 
   frontend:
     build:

@@ -8,8 +8,8 @@ CONTAINER="earnlearning-prod-backend-1"
 DB_PATH="/data/db/earnlearning.db"
 
 # Cloudflare R2 (S3-compatible)
-R2_ENDPOINT="https://<CLOUDFLARE_ACCOUNT_ID>.r2.cloudflarestorage.com"
-R2_BUCKET="earnlearning-backups"
+R2_ENDPOINT="${R2_ENDPOINT:-https://<ACCOUNT_ID>.r2.cloudflarestorage.com}"
+R2_BUCKET="${R2_BUCKET:-earnlearning-backups}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p "$BACKUP_DIR"
