@@ -28,7 +28,10 @@ export function usePush() {
     setLoading(true)
     setError(null)
     try {
-      const success = await subscribeToPush()
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('구독 요청 시간이 초과되었습니다. 다시 시도해주세요.')), 15000)
+      )
+      const success = await Promise.race([subscribeToPush(), timeoutPromise])
       setIsSubscribed(success)
       if (!success) {
         setError('알림 권한이 거부되었습니다. 설정에서 알림을 허용해주세요.')
