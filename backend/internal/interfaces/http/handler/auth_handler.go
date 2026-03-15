@@ -61,6 +61,22 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	return successResponse(c, http.StatusOK, resp)
 }
 
+func (h *AuthHandler) Refresh(c echo.Context) error {
+	// Extract token from Authorization header
+	auth := c.Request().Header.Get("Authorization")
+	if len(auth) < 8 || auth[:7] != "Bearer " {
+		return errorResponse(c, http.StatusUnauthorized, "NO_TOKEN", "토큰이 없습니다")
+	}
+	tokenStr := auth[7:]
+
+	resp, err := h.authUC.RefreshToken(tokenStr)
+	if err != nil {
+		return errorResponse(c, http.StatusUnauthorized, "REFRESH_FAILED", "토큰 갱신에 실패했습니다")
+	}
+
+	return successResponse(c, http.StatusOK, resp)
+}
+
 func (h *AuthHandler) GetMe(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	u, err := h.authUC.GetMe(userID)
