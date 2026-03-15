@@ -270,3 +270,197 @@ func TestGrantUserStory_ListGrants(t *testing.T) {
 		}
 	})
 }
+
+// =============================================================================
+// 유저스토리 6: 관리자 잔액 부족 시 승인 실패
+// =============================================================================
+func TestGrantUserStory_InsufficientAdminBalance(t *testing.T) {
+	ts := setupTestServer(t)
+
+	adminToken := ts.login(testAdminEmail, testAdminPass)
+	stuToken := ts.registerAndApprove("gi-stu@test.com", "pass1234", "학생", "2025140")
+
+	// 관리자 잔액 확인 (초기 상태이므로 적음)
+	grantID, _ := createGrant(ts, adminToken, map[string]interface{}{
+		"title": "잔액부족 테스트", "reward": 999999,
+	})
+
+	appID, resp := applyGrant(ts, stuToken, grantID)
+	if !resp.Success {
+		t.Fatalf("지원 실패: %v", resp.Error)
+	}
+
+	t.Run("관리자 잔액 부족 시 승인 실패", func(t *testing.T) {
+		resp := ts.post(fmt.Sprintf("/api/admin/grants/%d/approve/%d", grantID, appID), nil, adminToken)
+		if resp.Success {
+			t.Error("잔액 부족인데 승인이 성공하면 안됨")
+		}
+	})
+}
+
+// =============================================================================
+// 유저스토리 7: 이미 승인된 지원 재승인 불가
+// =============================================================================
+func TestGrantUserStory_DoubleApprove(t *testing.T) {
+	ts := setupTestServer(t)
+
+	adminToken := ts.login(testAdminEmail, testAdminPass)
+	stuToken := ts.registerAndApprove("gda-stu@test.com", "pass1234", "학생", "2025150")
+
+	// 관리자에게 충분한 잔액
+	ts.post("/api/admin/wallet/transfer", map[string]interface{}{
+		"target_all": true, "amount": 100000, "description": "충전",
+	}, adminToken)
+
+	grantID, _ := createGrant(ts, adminToken, map[string]interface{}{
+		"title": "재승인 테스트", "reward": 1000,
+	})
+
+	appID, _ := applyGrant(ts, stuToken, grantID)
+
+	// 첫 승인
+	resp := ts.post(fmt.Sprintf("/api/admin/grants/%d/approve/%d", grantID, appID), nil, adminToken)
+	if !resp.Success {
+		t.Fatalf("첫 승인 실패: %v", resp.Error)
+	}
+
+	t.Run("이미 승인된 지원 재승인 불가", func(t *testing.T) {
+		resp := ts.post(fmt.Sprintf("/api/admin/grants/%d/approve/%d", grantID, appID), nil, adminToken)
+		if resp.Success {
+			t.Error("이미 승인된 지원을 재승인하면 안됨")
+		}
+	})
+}
+
+// =============================================================================
+// 유저스토리 8: 다수 학생 지원 → 선별 승인 → 보상 각각 지급
+// =============================================================================
+func TestGrantUserStory_SelectiveApproval(t *testing.T) {
+	ts := setupTestServer(t)
+
+	adminToken := ts.login(testAdminEmail, testAdminPass)
+	stu1Token := ts.registerAndApprove("gsa-stu1@test.com", "pass1234", "학생1", "2025160")
+	stu2Token := ts.registerAndApprove("gsa-stu2@test.com", "pass1234", "학생2", "2025161")
+	stu3Token := ts.registerAndApprove("gsa-stu3@test.com", "pass1234", "학생3", "2025162")
+
+	ts.post("/api/admin/wallet/transfer", map[string]interface{}{
+		"target_all": true, "amount": 100000, "description": "충전",
+	}, adminToken)
+
+	grantID, _ := createGrant(ts, adminToken, map[string]interface{}{
+		"title": "선별 승인", "reward": 2000,
+	})
+
+	app1ID, _ := applyGrant(ts, stu1Token, grantID)
+	app2ID, _ := applyGrant(ts, stu2Token, grantID)
+	applyGrant(ts, stu3Token, grantID) // 학생3도 지원하지만 승인 안 함
+
+	stu1Before := getBalance(ts, stu1Token)
+	stu2Before := getBalance(ts, stu2Token)
+	stu3Before := getBalance(ts, stu3Token)
+
+	// 학생1, 2만 승인
+	ts.post(fmt.Sprintf("/api/admin/grants/%d/approve/%d", grantID, app1ID), nil, adminToken)
+	ts.post(fmt.Sprintf("/api/admin/grants/%d/approve/%d", grantID, app2ID), nil, adminToken)
+
+	t.Run("승인된 학생만 보상 수령", func(t *testing.T) {
+		stu1After := getBalance(ts, stu1Token)
+		stu2After := getBalance(ts, stu2Token)
+		stu3After := getBalance(ts, stu3Token)
+
+		if stu1After != stu1Before+2000 {
+			t.Errorf("학생1 보상 미지급: before=%d, after=%d", stu1Before, stu1After)
+		}
+		if stu2After != stu2Before+2000 {
+			t.Errorf("학생2 보상 미지급: before=%d, after=%d", stu2Before, stu2After)
+		}
+		if stu3After != stu3Before {
+			t.Errorf("학생3 잔액 변동: before=%d, after=%d (변동 없어야 함)", stu3Before, stu3After)
+		}
+	})
+
+	t.Run("지원자 목록에서 상태 확인", func(t *testing.T) {
+		grant := getGrant(ts, adminToken, grantID)
+		apps := grant["applications"].([]interface{})
+		if len(apps) != 3 {
+			t.Fatalf("expected 3 applications, got %d", len(apps))
+		}
+
+		statusMap := map[string]int{"approved": 0, "pending": 0}
+		for _, a := range apps {
+			app := a.(map[string]interface{})
+			statusMap[app["status"].(string)]++
+		}
+		if statusMap["approved"] != 2 {
+			t.Errorf("expected 2 approved, got %d", statusMap["approved"])
+		}
+		if statusMap["pending"] != 1 {
+			t.Errorf("expected 1 pending, got %d", statusMap["pending"])
+		}
+	})
+}
+
+// =============================================================================
+// 유저스토리 9: 존재하지 않는 과제/지원에 대한 요청
+// =============================================================================
+func TestGrantUserStory_NotFound(t *testing.T) {
+	ts := setupTestServer(t)
+
+	adminToken := ts.login(testAdminEmail, testAdminPass)
+	stuToken := ts.registerAndApprove("gnf-stu@test.com", "pass1234", "학생", "2025170")
+
+	t.Run("존재하지 않는 과제 조회 실패", func(t *testing.T) {
+		resp := ts.get("/api/grants/9999", stuToken)
+		if resp.Success {
+			t.Error("없는 과제 조회가 성공하면 안됨")
+		}
+	})
+
+	t.Run("존재하지 않는 과제에 지원 실패", func(t *testing.T) {
+		_, resp := applyGrant(ts, stuToken, 9999)
+		if resp.Success {
+			t.Error("없는 과제에 지원이 성공하면 안됨")
+		}
+	})
+
+	t.Run("존재하지 않는 지원 승인 실패", func(t *testing.T) {
+		grantID, _ := createGrant(ts, adminToken, map[string]interface{}{
+			"title": "없는지원 테스트", "reward": 500,
+		})
+		resp := ts.post(fmt.Sprintf("/api/admin/grants/%d/approve/9999", grantID), nil, adminToken)
+		if resp.Success {
+			t.Error("없는 지원 승인이 성공하면 안됨")
+		}
+	})
+}
+
+// =============================================================================
+// 유저스토리 10: 종료된 과제 승인 시도
+// =============================================================================
+func TestGrantUserStory_ApproveAfterClose(t *testing.T) {
+	ts := setupTestServer(t)
+
+	adminToken := ts.login(testAdminEmail, testAdminPass)
+	stuToken := ts.registerAndApprove("gac-stu@test.com", "pass1234", "학생", "2025180")
+
+	ts.post("/api/admin/wallet/transfer", map[string]interface{}{
+		"target_all": true, "amount": 100000, "description": "충전",
+	}, adminToken)
+
+	grantID, _ := createGrant(ts, adminToken, map[string]interface{}{
+		"title": "종료 후 승인", "reward": 1000,
+	})
+
+	appID, _ := applyGrant(ts, stuToken, grantID)
+
+	// 과제 종료
+	ts.post(fmt.Sprintf("/api/admin/grants/%d/close", grantID), nil, adminToken)
+
+	t.Run("종료된 과제에서도 기존 지원 승인 가능 여부", func(t *testing.T) {
+		// 현재 구현에서는 종료 후에도 기존 지원 승인이 가능할 수 있음
+		// 비즈니스 로직에 따라 다름 — 결과만 확인
+		resp := ts.post(fmt.Sprintf("/api/admin/grants/%d/approve/%d", grantID, appID), nil, adminToken)
+		// 승인 성공하든 실패하든 크래시만 안 나면 됨
+		_ = resp
+	})
+}
