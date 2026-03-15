@@ -60,9 +60,9 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:8090',
-      '/ws': { target: 'ws://localhost:8090', ws: true },
-      '/uploads': 'http://localhost:8090',
+      '/api': 'http://localhost:8080',
+      '/ws': { target: 'ws://localhost:8080', ws: true },
+      '/uploads': 'http://localhost:8080',
     }
   }
 })

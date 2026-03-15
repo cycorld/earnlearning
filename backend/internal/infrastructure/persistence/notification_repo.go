@@ -169,3 +169,21 @@ func (r *NotificationRepo) DeleteSubscriptionByEndpoint(endpoint string) error {
 	}
 	return nil
 }
+
+func (r *NotificationRepo) GetApprovedUserIDs() ([]int, error) {
+	rows, err := r.db.Query("SELECT id FROM users WHERE status = 'approved'")
+	if err != nil {
+		return nil, fmt.Errorf("get approved user ids: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}

@@ -158,3 +158,24 @@ func (uc *NotificationUseCase) GetVAPIDPublicKey() string {
 	}
 	return ""
 }
+
+// SendAnnouncement sends a notification to all approved users (or specific users).
+func (uc *NotificationUseCase) SendAnnouncement(title, body string, targetUserIDs []int) (int, error) {
+	userIDs := targetUserIDs
+	if len(userIDs) == 0 {
+		var err error
+		userIDs, err = uc.notifRepo.GetApprovedUserIDs()
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	sent := 0
+	for _, uid := range userIDs {
+		if err := uc.CreateNotification(uid, "admin_transfer", title, body, "", 0); err != nil {
+			continue
+		}
+		sent++
+	}
+	return sent, nil
+}
