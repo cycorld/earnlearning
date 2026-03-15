@@ -16,7 +16,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
-      - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:admin@example.com}
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:cyc@ewha.ac.kr}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@ewha.ac.kr}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     networks:
