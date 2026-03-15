@@ -73,6 +73,10 @@ func (uc *FreelanceUseCase) CreateJob(input CreateJobInput, clientID int) (*free
 	if input.MaxWorkers != nil {
 		maxWorkers = *input.MaxWorkers
 	}
+	// 자동 승인(과제 모드)인데 max_workers=1이면 무제한으로 변경
+	if input.AutoApproveApplication && maxWorkers == 1 {
+		maxWorkers = 0
+	}
 
 	priceType := "negotiable" // default
 	if input.PriceType != "" {
@@ -491,7 +495,64 @@ func (uc *FreelanceUseCase) CancelJob(jobID, userID int) error {
 	if job.Status != freelance.StatusOpen {
 		return freelance.ErrJobNotOpen
 	}
+
+	// Refund escrow for all accepted applications
+	apps, err := uc.repo.ListApplicationsByJob(jobID)
+	if err != nil {
+		return err
+	}
+	clientWallet, _ := uc.walletRepo.FindByUserID(job.ClientID)
+	for _, app := range apps {
+		if app.Status == freelance.AppAccepted && app.EscrowAmount > 0 && clientWallet != nil {
+			_ = uc.walletRepo.Credit(clientWallet.ID, app.EscrowAmount, wallet.TxFreelanceEscrow,
+				fmt.Sprintf("에스크로 환불: %s", job.Title), "freelance_job", job.ID)
+			_ = uc.repo.SetApplicationEscrow(app.ID, 0)
+		}
+		// Reject all pending/accepted applications
+		if app.Status == freelance.AppPending || app.Status == freelance.AppAccepted {
+			_ = uc.repo.UpdateApplicationStatus(app.ID, freelance.AppRejected)
+		}
+	}
+
+	// Also refund traditional mode escrow
+	if job.EscrowAmount > 0 && clientWallet != nil {
+		_ = uc.walletRepo.Credit(clientWallet.ID, job.EscrowAmount, wallet.TxFreelanceEscrow,
+			fmt.Sprintf("에스크로 환불: %s", job.Title), "freelance_job", job.ID)
+		_ = uc.repo.SetEscrow(jobID, 0)
+	}
+
 	return uc.repo.UpdateStatus(jobID, freelance.StatusCancelled)
+}
+
+func (uc *FreelanceUseCase) CloseJob(jobID, userID int) error {
+	job, err := uc.repo.FindByID(jobID)
+	if err != nil {
+		return err
+	}
+	if job.ClientID != userID {
+		return freelance.ErrNotClient
+	}
+	if job.Status != freelance.StatusOpen {
+		return freelance.ErrJobNotOpen
+	}
+
+	// Only assignment mode jobs can be closed
+	if job.MaxWorkers == 1 {
+		return fmt.Errorf("일반 모드 의뢰는 종료할 수 없습니다")
+	}
+
+	// Reject remaining pending applications
+	apps, err := uc.repo.ListApplicationsByJob(jobID)
+	if err != nil {
+		return err
+	}
+	for _, app := range apps {
+		if app.Status == freelance.AppPending {
+			_ = uc.repo.UpdateApplicationStatus(app.ID, freelance.AppRejected)
+		}
+	}
+
+	return uc.repo.UpdateStatus(jobID, freelance.StatusCompleted)
 }
 
 func (uc *FreelanceUseCase) DisputeJob(jobID, userID int) error {
