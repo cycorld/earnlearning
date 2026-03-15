@@ -426,3 +426,166 @@ func TestUserStory_Review(t *testing.T) {
 		}
 	})
 }
+
+// =============================================================================
+// 유저스토리 6: 잔액 부족 시 에스크로 실패
+// =============================================================================
+func TestUserStory_InsufficientBalance(t *testing.T) {
+	ts := setupTestServer(t)
+
+	client := ts.registerAndApprove("bal-client@test.com", "pass1234", "의뢰인", "2025080")
+	worker := ts.registerAndApprove("bal-worker@test.com", "pass1234", "작업자", "2025081")
+
+	// 초기자금 없이 시작 (잔액 0)
+
+	jobID, _ := createJob(ts, client, map[string]interface{}{
+		"title": "잔액부족 테스트", "budget": 5000,
+	})
+
+	_, resp := applyJob(ts, worker, jobID, 5000)
+	if !resp.Success {
+		t.Fatalf("지원 실패: %v", resp.Error)
+	}
+
+	apps := getApplications(ts, client, jobID)
+	appID := int(apps[0]["id"].(float64))
+
+	t.Run("잔액 부족 시 수락 실패", func(t *testing.T) {
+		resp := ts.post(fmt.Sprintf("/api/freelance/jobs/%d/accept", jobID), map[string]interface{}{
+			"application_id": appID,
+		}, client)
+		if resp.Success {
+			t.Error("잔액 부족인데 수락이 성공하면 안됨")
+		}
+	})
+
+	t.Run("잔액 충전 후 수락 성공", func(t *testing.T) {
+		adminToken := ts.login(testAdminEmail, testAdminPass)
+		ts.post("/api/admin/wallet/transfer", map[string]interface{}{
+			"target_all": true, "amount": 50000, "description": "충전",
+		}, adminToken)
+
+		resp := ts.post(fmt.Sprintf("/api/freelance/jobs/%d/accept", jobID), map[string]interface{}{
+			"application_id": appID,
+		}, client)
+		if !resp.Success {
+			t.Fatalf("충전 후 수락 실패: %v", resp.Error)
+		}
+	})
+}
+
+// =============================================================================
+// 유저스토리 7: 여러 지원자 중 1명만 수락
+// =============================================================================
+func TestUserStory_MultipleApplicants(t *testing.T) {
+	ts := setupTestServer(t)
+
+	client := ts.registerAndApprove("ma-client@test.com", "pass1234", "의뢰인", "2025090")
+	worker1 := ts.registerAndApprove("ma-w1@test.com", "pass1234", "작업자1", "2025091")
+	worker2 := ts.registerAndApprove("ma-w2@test.com", "pass1234", "작업자2", "2025092")
+	worker3 := ts.registerAndApprove("ma-w3@test.com", "pass1234", "작업자3", "2025093")
+
+	adminToken := ts.login(testAdminEmail, testAdminPass)
+	ts.post("/api/admin/wallet/transfer", map[string]interface{}{
+		"target_all": true, "amount": 50000, "description": "초기자금",
+	}, adminToken)
+
+	jobID, _ := createJob(ts, client, map[string]interface{}{
+		"title": "다수 지원자", "budget": 3000,
+	})
+
+	// 3명 지원
+	applyJob(ts, worker1, jobID, 2000)
+	applyJob(ts, worker2, jobID, 2500)
+	applyJob(ts, worker3, jobID, 3000)
+
+	t.Run("3명 지원 확인", func(t *testing.T) {
+		apps := getApplications(ts, client, jobID)
+		if len(apps) != 3 {
+			t.Fatalf("expected 3 applications, got %d", len(apps))
+		}
+	})
+
+	t.Run("1명 수락 후 다른 지원자 수락 불가", func(t *testing.T) {
+		apps := getApplications(ts, client, jobID)
+		app1ID := int(apps[0]["id"].(float64))
+		app2ID := int(apps[1]["id"].(float64))
+
+		// 첫 번째 수락
+		resp := ts.post(fmt.Sprintf("/api/freelance/jobs/%d/accept", jobID), map[string]interface{}{
+			"application_id": app1ID,
+		}, client)
+		if !resp.Success {
+			t.Fatalf("첫 수락 실패: %v", resp.Error)
+		}
+
+		// 두 번째 수락 시도 — 실패해야 함
+		resp = ts.post(fmt.Sprintf("/api/freelance/jobs/%d/accept", jobID), map[string]interface{}{
+			"application_id": app2ID,
+		}, client)
+		if resp.Success {
+			t.Error("이미 수락된 의뢰에 또 수락이 성공하면 안됨")
+		}
+
+		// job 상태가 in_progress
+		job := getJob(ts, client, jobID)
+		if job["status"] != "in_progress" {
+			t.Errorf("expected in_progress, got %v", job["status"])
+		}
+	})
+}
+
+// =============================================================================
+// 유저스토리 8: 작업 완료 전 승인 시도 불가
+// =============================================================================
+func TestUserStory_ApproveBeforeComplete(t *testing.T) {
+	ts := setupTestServer(t)
+
+	client := ts.registerAndApprove("abc-client@test.com", "pass1234", "의뢰인", "2025200")
+	worker := ts.registerAndApprove("abc-worker@test.com", "pass1234", "작업자", "2025201")
+
+	adminToken := ts.login(testAdminEmail, testAdminPass)
+	ts.post("/api/admin/wallet/transfer", map[string]interface{}{
+		"target_all": true, "amount": 50000, "description": "초기자금",
+	}, adminToken)
+
+	jobID, _ := createJob(ts, client, map[string]interface{}{
+		"title": "승인순서 테스트", "budget": 2000,
+	})
+
+	applyJob(ts, worker, jobID, 2000)
+	apps := getApplications(ts, client, jobID)
+	appID := int(apps[0]["id"].(float64))
+
+	ts.post(fmt.Sprintf("/api/freelance/jobs/%d/accept", jobID), map[string]interface{}{
+		"application_id": appID,
+	}, client)
+
+	t.Run("작업 완료 전 승인 시도 실패", func(t *testing.T) {
+		resp := ts.post(fmt.Sprintf("/api/freelance/jobs/%d/approve", jobID), nil, client)
+		if resp.Success {
+			t.Error("완료 보고 전에 승인이 성공하면 안됨")
+		}
+	})
+
+	t.Run("작업자가 아닌 사람이 완료 보고 불가", func(t *testing.T) {
+		resp := ts.post(fmt.Sprintf("/api/freelance/jobs/%d/complete", jobID), map[string]interface{}{
+			"report": "남의 작업 완료",
+		}, client)
+		if resp.Success {
+			t.Error("의뢰인이 완료 보고에 성공하면 안됨")
+		}
+	})
+
+	t.Run("작업자가 아닌 사람이 승인 불가", func(t *testing.T) {
+		// 완료 처리
+		ts.post(fmt.Sprintf("/api/freelance/jobs/%d/complete", jobID), map[string]interface{}{
+			"report": "완료",
+		}, worker)
+
+		resp := ts.post(fmt.Sprintf("/api/freelance/jobs/%d/approve", jobID), nil, worker)
+		if resp.Success {
+			t.Error("작업자가 승인에 성공하면 안됨")
+		}
+	})
+}
