@@ -41,12 +41,13 @@ export default defineConfig({
         name: 'EarnLearning',
         short_name: 'EarnLearning',
         description: '스타트업을 위한 코딩입문 LMS',
-        theme_color: '#6d28d9',
-        background_color: '#ffffff',
+        theme_color: '#005F69',
+        background_color: '#F8F9FA',
         display: 'standalone',
         icons: [
           { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
         ],
       }
     })
