@@ -31,6 +31,8 @@ export async function subscribeToPush(): Promise<boolean> {
     const existingSub = await registration.pushManager.getSubscription()
     if (existingSub) {
       await existingSub.unsubscribe()
+      // iOS Safari에서 unsubscribe 직후 subscribe 시 hang 방지
+      await new Promise((r) => setTimeout(r, 500))
     }
 
     const subscription = await registration.pushManager.subscribe({
