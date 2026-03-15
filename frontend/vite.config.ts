@@ -6,6 +6,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 export default defineConfig({
+  define: {
+    __BUILD_NUMBER__: JSON.stringify(process.env.BUILD_NUMBER || 'dev'),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __COMMIT_SHA__: JSON.stringify(process.env.COMMIT_SHA || 'local'),
+  },
   test: {
     globals: true,
     environment: 'jsdom',
@@ -33,9 +38,9 @@ export default defineConfig({
         ]
       },
       manifest: {
-        name: 'EarnLearning LMS',
+        name: 'EarnLearning',
         short_name: 'EarnLearning',
-        description: '게임화 창업 교육 LMS',
+        description: '스타트업을 위한 코딩입문 LMS',
         theme_color: '#6d28d9',
         background_color: '#ffffff',
         display: 'standalone',

@@ -37,6 +37,11 @@ export default function Header() {
       <div className="flex h-14 items-center justify-between px-4">
         <Link to="/feed" className="flex items-center gap-2">
           <span className="text-lg font-bold text-primary">EarnLearning</span>
+          <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+            {__BUILD_NUMBER__ !== 'dev' ? `#${__BUILD_NUMBER__}` : 'dev'}
+            {' · '}
+            {__COMMIT_SHA__ !== 'local' ? __COMMIT_SHA__.slice(0, 7) : 'local'}
+          </span>
         </Link>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" asChild className="relative">

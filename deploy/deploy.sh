@@ -12,6 +12,10 @@ DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$DEPLOY_DIR")"
 STARTED_AT=$(date +%s)
 
+# Build info (from CI env or git)
+export BUILD_NUMBER="${BUILD_NUMBER:-dev}"
+export COMMIT_SHA="${COMMIT_SHA:-$(cd "$PROJECT_DIR" && git rev-parse HEAD 2>/dev/null || echo 'unknown')}"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -35,10 +39,12 @@ pull_latest() {
 # ─── Stage 배포 (빠른 모드) ────────────────────────────────────
 deploy_stage() {
   log "=== Stage 배포 시작 ==="
+  log "Build #${BUILD_NUMBER} / ${COMMIT_SHA:0:7}"
   pull_latest
 
   cd "$DEPLOY_DIR"
-  sudo docker compose \
+  BUILD_NUMBER="$BUILD_NUMBER" COMMIT_SHA="$COMMIT_SHA" \
+  sudo -E docker compose \
     -f docker-compose.stage.yml \
     -p earnlearning-stage \
     --env-file .env.stage \
@@ -62,7 +68,8 @@ deploy_prod() {
     warn "Full build (no cache)"
   fi
 
-  sudo docker compose \
+  BUILD_NUMBER="$BUILD_NUMBER" COMMIT_SHA="$COMMIT_SHA" \
+  sudo -E docker compose \
     -f docker-compose.prod.yml \
     -p earnlearning-prod \
     --env-file .env.prod \
