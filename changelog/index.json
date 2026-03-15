@@ -1,0 +1,44 @@
+[
+  {
+    "slug": "001-project-kickoff",
+    "title": "프로젝트 기획과 설계: 아이디어를 문서로 만들기",
+    "date": "2026-03-13",
+    "tags": ["기획", "설계", "PRD", "기술스펙", "PWA"]
+  },
+  {
+    "slug": "002-full-implementation",
+    "title": "전체 기능 구현: 설계 문서를 동작하는 코드로",
+    "date": "2026-03-13",
+    "tags": ["구현", "풀스택", "Go", "React", "API"]
+  },
+  {
+    "slug": "003-testing-and-bugfix",
+    "title": "테스트와 버그 수정: 코드가 진짜로 동작하는지 확인하기",
+    "date": "2026-03-13",
+    "tags": ["테스트", "E2E", "버그수정", "품질보증", "스모크테스트"]
+  },
+  {
+    "slug": "004-ux-enhancements",
+    "title": "UX 개선: 사용자 경험을 한 단계 끌어올리기",
+    "date": "2026-03-14",
+    "tags": ["UX", "마크다운", "파일업로드", "태그", "에디터"]
+  },
+  {
+    "slug": "005-deployment",
+    "title": "배포: 내 컴퓨터에서 세상으로 나가기",
+    "date": "2026-03-14",
+    "tags": ["배포", "AWS", "Docker", "Nginx", "Cloudflare", "백업"]
+  },
+  {
+    "slug": "006-tdd-and-quality",
+    "title": "TDD와 코드 품질: 테스트가 개발을 이끄는 방식",
+    "date": "2026-03-15",
+    "tags": ["TDD", "테스트", "회귀테스트", "빌드", "품질"]
+  },
+  {
+    "slug": "007-cicd-and-security",
+    "title": "CI/CD와 보안: 자동화된 배포와 안전한 운영",
+    "date": "2026-03-15",
+    "tags": ["CI/CD", "GitHub Actions", "보안", "자동화", "배포"]
+  }
+]

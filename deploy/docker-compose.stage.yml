@@ -20,7 +20,8 @@ services:
 
   frontend:
     build:
-      context: ../frontend
+      context: ..
+      dockerfile: frontend/Dockerfile
       args:
         - VITE_API_URL=/api
         - VITE_VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}

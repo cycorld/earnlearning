@@ -1,8 +1,9 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
+COPY frontend/package*.json ./
 RUN npm ci --legacy-peer-deps
-COPY . .
+COPY frontend/ .
+COPY changelog/ public/changelog/
 ARG VITE_API_URL=/api
 ARG VITE_WS_URL=
 ARG VITE_VAPID_PUBLIC_KEY=
