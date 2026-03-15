@@ -88,6 +88,10 @@ export default function MarketDetailPage() {
 
   const isClient = user?.id === job?.client?.id
   const isFreelancer = user?.id === job?.freelancer_id
+  const isAssignmentMode = job ? job.max_workers !== 1 : false
+  const isFixedPrice = job?.price_type === 'fixed'
+  const myApplication = applications.find((a) => a.user?.id === user?.id && a.status === 'accepted')
+  const hasApplied = applications.some((a) => a.user?.id === user?.id)
 
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,7 +99,7 @@ export default function MarketDetailPage() {
     try {
       await api.post(`/freelance/jobs/${id}/apply`, {
         proposal,
-        price: Number(price),
+        price: isFixedPrice ? job!.budget : Number(price),
       })
       toast.success('지원이 완료되었습니다.')
       setShowApplyForm(false)
@@ -122,7 +126,7 @@ export default function MarketDetailPage() {
     }
   }
 
-  const handleComplete = async () => {
+  const handleComplete = async (applicationId?: number) => {
     if (!reportContent.trim()) {
       toast.error('완료 보고서를 작성해주세요.')
       return
@@ -131,11 +135,12 @@ export default function MarketDetailPage() {
     try {
       await api.post(`/freelance/jobs/${id}/complete`, {
         report: reportContent,
+        ...(applicationId ? { application_id: applicationId } : {}),
       })
       toast.success('작업 완료를 보고했습니다. 외주마켓 게시판에 자동 포스팅됩니다.')
       setShowReportForm(false)
       setReportContent('')
-      await fetchJob()
+      await Promise.all([fetchJob(), fetchApplications()])
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '완료 처리에 실패했습니다.')
     } finally {
@@ -143,12 +148,14 @@ export default function MarketDetailPage() {
     }
   }
 
-  const handleApprove = async () => {
+  const handleApprove = async (applicationId?: number) => {
     setActionLoading(true)
     try {
-      await api.post(`/freelance/jobs/${id}/approve`)
+      await api.post(`/freelance/jobs/${id}/approve`, {
+        ...(applicationId ? { application_id: applicationId } : {}),
+      })
       toast.success('작업을 승인했습니다.')
-      await fetchJob()
+      await Promise.all([fetchJob(), fetchApplications()])
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '승인에 실패했습니다.')
     } finally {
@@ -184,9 +191,21 @@ export default function MarketDetailPage() {
         <CardHeader>
           <div className="flex items-start justify-between">
             <CardTitle className="text-lg">{job.title}</CardTitle>
-            <Badge variant={statusVariant[job.status] || 'secondary'}>
-              {statusLabels[job.status] || job.status}
-            </Badge>
+            <div className="flex gap-1">
+              {isFixedPrice && (
+                <Badge variant="outline" className="text-xs bg-blue-50">
+                  금액 고정
+                </Badge>
+              )}
+              {isAssignmentMode && (
+                <Badge variant="outline" className="text-xs">
+                  과제 모드{job.max_workers > 0 ? ` (${job.max_workers}명)` : ' (무제한)'}
+                </Badge>
+              )}
+              <Badge variant={statusVariant[job.status] || 'secondary'}>
+                {statusLabels[job.status] || job.status}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -211,7 +230,10 @@ export default function MarketDetailPage() {
           <Separator />
           <div className="flex gap-6">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">예산</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                {isFixedPrice ? '금액 (고정)' : '예산 (협의 가능)'}
+                {isAssignmentMode && ' / 1인당'}
+              </p>
               <p className="text-lg font-bold text-primary">{formatMoney(job.budget)}</p>
             </div>
             {job.agreed_price > 0 && (
@@ -252,7 +274,7 @@ export default function MarketDetailPage() {
       </Card>
 
       {/* Action Buttons */}
-      {job.status === 'open' && !isClient && (
+      {job.status === 'open' && !isClient && !hasApplied && (
         <Card>
           <CardContent className="p-4">
             {showApplyForm ? (
@@ -266,18 +288,25 @@ export default function MarketDetailPage() {
                     rows={8}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price">희망 금액 (원)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    placeholder="제안 금액"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    required
-                    min={1}
-                  />
-                </div>
+                {isFixedPrice ? (
+                  <div className="rounded-md bg-blue-50 p-3 text-sm">
+                    <p className="font-medium">금액 고정: {formatMoney(job.budget)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">이 의뢰는 고정 금액입니다.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="price">희망 금액 (원)</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      placeholder="제안 금액"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      required
+                      min={1}
+                    />
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button type="submit" className="flex-1" disabled={actionLoading}>
                     {actionLoading ? (
@@ -306,8 +335,17 @@ export default function MarketDetailPage() {
         </Card>
       )}
 
-      {/* Freelancer: Complete work */}
-      {job.status === 'in_progress' && isFreelancer && !job.work_completed && (
+      {/* Already applied indicator */}
+      {job.status === 'open' && !isClient && hasApplied && !myApplication && (
+        <Card>
+          <CardContent className="p-4 text-center text-sm text-muted-foreground">
+            이미 지원한 의뢰입니다. 승인을 기다려주세요.
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Freelancer: Complete work (traditional mode) */}
+      {!isAssignmentMode && job.status === 'in_progress' && isFreelancer && !job.work_completed && (
         <Card>
           <CardContent className="p-4">
             {showReportForm ? (
@@ -328,7 +366,7 @@ export default function MarketDetailPage() {
                 <div className="flex gap-2">
                   <Button
                     className="flex-1"
-                    onClick={handleComplete}
+                    onClick={() => handleComplete()}
                     disabled={actionLoading || !reportContent.trim()}
                   >
                     {actionLoading ? (
@@ -356,15 +394,85 @@ export default function MarketDetailPage() {
         </Card>
       )}
 
-      {/* Client: Approve completed work */}
-      {job.status === 'in_progress' && isClient && job.work_completed && (
-        <Button className="w-full" onClick={handleApprove} disabled={actionLoading}>
+      {/* Assignment mode: Worker submits completion per-application */}
+      {isAssignmentMode && myApplication && !myApplication.work_completed && (
+        <Card>
+          <CardContent className="p-4">
+            {showReportForm ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <h3 className="text-sm font-semibold">과제 완료 보고서</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  과제 내용을 정리하여 보고서를 작성해주세요.
+                </p>
+                <MarkdownEditor
+                  value={reportContent}
+                  onChange={setReportContent}
+                  placeholder="과제 결과물을 마크다운으로 작성하세요. 파일 첨부도 가능합니다."
+                  rows={8}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() => handleComplete(myApplication.id)}
+                    disabled={actionLoading || !reportContent.trim()}
+                  >
+                    {actionLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                    )}
+                    완료 보고 제출
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowReportForm(false)}>
+                    취소
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button className="w-full" onClick={() => setShowReportForm(true)}>
+                <FileText className="mr-2 h-4 w-4" />
+                과제 완료 보고
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Client: Approve completed work (traditional mode) */}
+      {!isAssignmentMode && job.status === 'in_progress' && isClient && job.work_completed && (
+        <Button className="w-full" onClick={() => handleApprove()} disabled={actionLoading}>
           {actionLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <CheckCircle className="mr-2 h-4 w-4" />
           )}
           작업 승인하기
+        </Button>
+      )}
+
+      {/* Client: Close assignment mode job */}
+      {isAssignmentMode && isClient && job.status === 'open' && (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={async () => {
+            setActionLoading(true)
+            try {
+              await api.post(`/freelance/jobs/${id}/close`, {})
+              toast.success('의뢰가 종료되었습니다.')
+              await fetchJob()
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : '종료에 실패했습니다.')
+            } finally {
+              setActionLoading(false)
+            }
+          }}
+          disabled={actionLoading}
+        >
+          과제 모집 종료
         </Button>
       )}
 
@@ -404,21 +512,40 @@ export default function MarketDetailPage() {
                   <span className="text-sm font-medium">
                     희망 금액: {formatMoney(app.price)}
                   </span>
-                  {isClient && job.status === 'open' && app.status === 'pending' && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleAccept(app.id)}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? (
-                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                      ) : (
-                        <CheckCircle className="mr-1 h-3 w-3" />
-                      )}
-                      수락
-                    </Button>
-                  )}
+                  <div className="flex gap-1">
+                    {isClient && job.status === 'open' && app.status === 'pending' && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleAccept(app.id)}
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        ) : (
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                        )}
+                        수락
+                      </Button>
+                    )}
+                    {isAssignmentMode && isClient && app.status === 'accepted' && app.work_completed && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleApprove(app.id)}
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        ) : (
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                        )}
+                        승인
+                      </Button>
+                    )}
+                  </div>
                 </div>
+                {isAssignmentMode && app.work_completed && (
+                  <div className="mt-1 text-xs text-green-600">✅ 작업 완료</div>
+                )}
               </div>
             ))}
           </CardContent>

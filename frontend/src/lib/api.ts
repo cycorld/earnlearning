@@ -42,7 +42,7 @@ async function request<T>(
   })
 
   if (!res.ok) {
-    if (res.status === 401 && path !== '/auth/refresh') {
+    if (res.status === 401 && !path.startsWith('/auth/')) {
       // Try to refresh the token before giving up
       const refreshed = await tryRefreshToken()
       if (refreshed) {

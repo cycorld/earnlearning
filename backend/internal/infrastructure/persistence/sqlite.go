@@ -43,6 +43,13 @@ func RunMigrations(db *sql.DB) error {
 	alterStatements := []string{
 		`ALTER TABLE freelance_jobs ADD COLUMN completion_report TEXT DEFAULT ''`,
 		`ALTER TABLE freelance_jobs ADD COLUMN completion_media TEXT DEFAULT '[]'`,
+		`ALTER TABLE freelance_jobs ADD COLUMN max_workers INTEGER NOT NULL DEFAULT 1`,
+		`ALTER TABLE freelance_jobs ADD COLUMN auto_approve_application INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE job_applications ADD COLUMN escrow_amount INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE job_applications ADD COLUMN work_completed INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE job_applications ADD COLUMN completion_report TEXT DEFAULT ''`,
+		`ALTER TABLE job_applications ADD COLUMN completion_media TEXT DEFAULT '[]'`,
+		`ALTER TABLE freelance_jobs ADD COLUMN price_type TEXT NOT NULL DEFAULT 'negotiable'`,
 	}
 	for _, stmt := range alterStatements {
 		db.Exec(stmt) // ignore "duplicate column" errors

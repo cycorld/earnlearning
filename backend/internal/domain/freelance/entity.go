@@ -79,6 +79,9 @@ type FreelanceJob struct {
 	EscrowAmount   int        `json:"escrow_amount"`
 	AgreedPrice    int        `json:"agreed_price"`
 	WorkCompleted  bool       `json:"work_completed"`
+	MaxWorkers             int    `json:"max_workers"`
+	AutoApproveApplication bool   `json:"auto_approve_application"`
+	PriceType              string `json:"price_type"`
 	CreatedAt      time.Time  `json:"created_at"`
 	CompletedAt    *time.Time `json:"completed_at"`
 
@@ -93,13 +96,17 @@ type FreelanceJob struct {
 }
 
 type JobApplication struct {
-	ID        int               `json:"id"`
-	JobID     int               `json:"job_id"`
-	UserID    int               `json:"-"`
-	Proposal  string            `json:"proposal"`
-	Price     int               `json:"price"`
-	Status    ApplicationStatus `json:"status"`
-	CreatedAt time.Time         `json:"created_at"`
+	ID               int               `json:"id"`
+	JobID            int               `json:"job_id"`
+	UserID           int               `json:"-"`
+	Proposal         string            `json:"proposal"`
+	Price            int               `json:"price"`
+	Status           ApplicationStatus `json:"status"`
+	EscrowAmount     int               `json:"escrow_amount"`
+	WorkCompleted    bool              `json:"work_completed"`
+	CompletionReport string            `json:"completion_report,omitempty"`
+	CompletionMedia  string            `json:"completion_media,omitempty"`
+	CreatedAt        time.Time         `json:"created_at"`
 
 	// Nested reference for JSON output
 	User *UserRef `json:"user,omitempty"`
