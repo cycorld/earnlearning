@@ -149,9 +149,7 @@ func (h *FreelanceHandler) ApproveJob(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 ID입니다"))
 	}
-	var input application.ApproveJobInput
-	_ = c.Bind(&input) // optional body
-	if err := h.uc.ApproveJob(jobID, userID, &input); err != nil {
+	if err := h.uc.ApproveJob(jobID, userID); err != nil {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
 	}
 	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "작업이 승인되었습니다"}))
@@ -169,17 +167,6 @@ func (h *FreelanceHandler) CancelJob(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "작업이 취소되었습니다"}))
 }
 
-func (h *FreelanceHandler) CloseJob(c echo.Context) error {
-	userID := middleware.GetUserID(c)
-	jobID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 ID입니다"))
-	}
-	if err := h.uc.CloseJob(jobID, userID); err != nil {
-		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
-	}
-	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "의뢰가 종료되었습니다"}))
-}
 
 func (h *FreelanceHandler) DisputeJob(c echo.Context) error {
 	userID := middleware.GetUserID(c)

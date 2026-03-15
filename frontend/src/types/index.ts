@@ -158,6 +158,28 @@ export interface JobApplication {
   created_at: string
 }
 
+export interface Grant {
+  id: number
+  admin_id: number
+  title: string
+  description: string
+  reward: number
+  max_applicants: number
+  status: 'open' | 'closed'
+  applications?: GrantApplication[]
+  created_at: string
+}
+
+export interface GrantApplication {
+  id: number
+  grant_id: number
+  user_id: number
+  user?: { id: number; name: string; student_id: string }
+  proposal: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+}
+
 export interface InvestmentRound {
   id: number
   company?: { id: number; name: string; valuation: number; logo_url: string }
