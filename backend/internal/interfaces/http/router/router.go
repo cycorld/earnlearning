@@ -163,7 +163,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string) {
 	// ================================================================
 	// WebSocket
 	// ================================================================
-	e.GET("/ws", func(c echo.Context) error {
+	api.GET("/ws", func(c echo.Context) error {
 		return ws.ServeWS(hub, jwtSecret, c)
 	})
 }
