@@ -22,7 +22,8 @@ export async function subscribeToPush(): Promise<boolean> {
       return false
     }
 
-    const vapidKey = await api.get<string>('/push/vapid-public-key')
+    const result = await api.get<{ vapid_public_key: string }>('/notifications/push/vapid-key')
+    const vapidKey = result.vapid_public_key
 
     const registration = await navigator.serviceWorker.ready
     const subscription = await registration.pushManager.subscribe({
@@ -30,7 +31,13 @@ export async function subscribeToPush(): Promise<boolean> {
       applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
     })
 
-    await api.post('/push/subscribe', subscription.toJSON())
+    const subJSON = subscription.toJSON()
+    await api.post('/notifications/push/subscribe', {
+      endpoint: subJSON.endpoint,
+      p256dh: subJSON.keys?.p256dh,
+      auth: subJSON.keys?.auth,
+      user_agent: navigator.userAgent,
+    })
     return true
   } catch {
     return false
@@ -44,9 +51,7 @@ export async function unsubscribeFromPush(): Promise<void> {
     const registration = await navigator.serviceWorker.ready
     const subscription = await registration.pushManager.getSubscription()
     if (subscription) {
-      await api.post('/push/unsubscribe', {
-        endpoint: subscription.endpoint,
-      })
+      await api.del('/notifications/push/subscribe', { endpoint: subscription.endpoint })
       await subscription.unsubscribe()
     }
   } catch {
