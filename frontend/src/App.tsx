@@ -36,6 +36,11 @@ import ProfilePage from '@/routes/profile/ProfilePage'
 import UserProfilePage from '@/routes/profile/UserProfilePage'
 import NotificationsPage from '@/routes/notifications/NotificationsPage'
 
+// Grants
+import GrantListPage from '@/routes/grant/GrantListPage'
+import GrantDetailPage from '@/routes/grant/GrantDetailPage'
+import GrantNewPage from '@/routes/grant/GrantNewPage'
+
 // Changelog
 import ChangelogPage from '@/routes/changelog/ChangelogPage'
 
@@ -76,6 +81,9 @@ export default function App() {
               <Route path="/invest/:id" element={<InvestDetailPage />} />
               <Route path="/exchange" element={<ExchangePage />} />
               <Route path="/exchange/:id" element={<ExchangeDetailPage />} />
+              <Route path="/grant" element={<GrantListPage />} />
+              <Route path="/grant/new" element={<GrantNewPage />} />
+              <Route path="/grant/:id" element={<GrantDetailPage />} />
               <Route path="/bank" element={<BankPage />} />
               <Route path="/bank/apply" element={<LoanApplyPage />} />
               <Route path="/profile" element={<ProfilePage />} />

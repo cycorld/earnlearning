@@ -66,6 +66,7 @@ func setupTestServer(t *testing.T) *testServer {
 	companyRepo := persistence.NewCompanyRepo(db)
 	postRepo := persistence.NewPostRepo(db)
 	freelanceRepo := persistence.NewFreelanceRepo(db)
+	grantRepo := persistence.NewGrantRepo(db)
 	investmentRepo := persistence.NewInvestmentRepo(db)
 	exchangeRepo := persistence.NewExchangeRepo(db)
 	loanRepo := persistence.NewLoanRepo(db)
@@ -85,6 +86,7 @@ func setupTestServer(t *testing.T) *testServer {
 	postUC := application.NewPostUsecase(postRepo, walletRepo)
 	uploadUC := application.NewUploadUsecase(postRepo, testUploadPath)
 	freelanceUC := application.NewFreelanceUseCase(db, freelanceRepo, walletRepo)
+	grantUC := application.NewGrantUseCase(db, grantRepo, walletRepo)
 	investmentUC := application.NewInvestmentUseCase(db, investmentRepo, companyRepo, walletRepo)
 	exchangeUC := application.NewExchangeUseCase(exchangeRepo, companyRepo, walletRepo)
 	exchangeUC.SetShareholderUpdater(shareholderUpdater)
@@ -100,6 +102,7 @@ func setupTestServer(t *testing.T) *testServer {
 		Post:         handler.NewPostHandler(postUC),
 		Upload:       handler.NewUploadHandler(uploadUC),
 		Freelance:    handler.NewFreelanceHandler(freelanceUC),
+		Grant:        handler.NewGrantHandler(grantUC),
 		Investment:   handler.NewInvestmentHandler(investmentUC),
 		Exchange:     handler.NewExchangeHandler(exchangeUC),
 		Loan:         handler.NewLoanHandler(loanUC),

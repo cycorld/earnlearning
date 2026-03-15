@@ -361,26 +361,6 @@ func (r *FreelanceRepo) FindReviewByJobAndReviewer(jobID, reviewerID int) (*free
 	return review, nil
 }
 
-func (r *FreelanceRepo) CountAcceptedApplications(jobID int) (int, error) {
-	var count int
-	err := r.db.QueryRow(
-		"SELECT COUNT(*) FROM job_applications WHERE job_id = ? AND status = 'accepted'", jobID,
-	).Scan(&count)
-	return count, err
-}
-
-func (r *FreelanceRepo) SetApplicationEscrow(appID, amount int) error {
-	_, err := r.db.Exec("UPDATE job_applications SET escrow_amount = ? WHERE id = ?", amount, appID)
-	return err
-}
-
-func (r *FreelanceRepo) SetApplicationWorkCompleted(appID int, report, media string) error {
-	_, err := r.db.Exec(
-		"UPDATE job_applications SET work_completed = 1, completion_report = ?, completion_media = ? WHERE id = ?",
-		report, media, appID,
-	)
-	return err
-}
 
 func boolToInt(b bool) int {
 	if b {
