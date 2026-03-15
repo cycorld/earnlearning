@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Download, Bell } from 'lucide-react'
+import { X, Download, Bell, Share } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePush } from '@/hooks/use-push'
 
@@ -8,21 +8,28 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+function isIOS(): boolean {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+}
+
+function isInStandaloneMode(): boolean {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || (navigator as { standalone?: boolean }).standalone === true
+}
+
 export function PWAPrompt() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
+  const [showIOSInstallBanner, setShowIOSInstallBanner] = useState(false)
   const [showPushBanner, setShowPushBanner] = useState(false)
   const { isSupported: pushSupported, isSubscribed, subscribe } = usePush()
 
   useEffect(() => {
-    // Check if already installed (standalone mode)
-    const isInstalled = window.matchMedia('(display-mode: standalone)').matches
-      || (navigator as { standalone?: boolean }).standalone === true
+    const isInstalled = isInStandaloneMode()
 
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault()
       setInstallPrompt(e as BeforeInstallPromptEvent)
-      // Show banner if not dismissed recently
       const dismissed = localStorage.getItem('pwa-install-dismissed')
       if (!dismissed || Date.now() - Number(dismissed) > 7 * 24 * 60 * 60 * 1000) {
         setShowInstallBanner(true)
@@ -30,7 +37,16 @@ export function PWAPrompt() {
     }
 
     if (!isInstalled) {
+      // Android/Chrome: beforeinstallprompt 이벤트 사용
       window.addEventListener('beforeinstallprompt', handleBeforeInstall)
+
+      // iOS Safari: beforeinstallprompt가 없으므로 수동 안내
+      if (isIOS()) {
+        const dismissed = localStorage.getItem('pwa-ios-install-dismissed')
+        if (!dismissed || Date.now() - Number(dismissed) > 7 * 24 * 60 * 60 * 1000) {
+          setTimeout(() => setShowIOSInstallBanner(true), 3000)
+        }
+      }
     }
 
     // Show push banner after install or if already installed
@@ -68,12 +84,17 @@ export function PWAPrompt() {
     localStorage.setItem('pwa-install-dismissed', String(Date.now()))
   }
 
+  const dismissIOSInstall = () => {
+    setShowIOSInstallBanner(false)
+    localStorage.setItem('pwa-ios-install-dismissed', String(Date.now()))
+  }
+
   const dismissPush = () => {
     setShowPushBanner(false)
     localStorage.setItem('pwa-push-dismissed', String(Date.now()))
   }
 
-  if (!showInstallBanner && !showPushBanner) return null
+  if (!showInstallBanner && !showIOSInstallBanner && !showPushBanner) return null
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-50 md:left-auto md:right-4 md:max-w-sm">
@@ -104,7 +125,42 @@ export function PWAPrompt() {
         </div>
       )}
 
-      {showPushBanner && !showInstallBanner && (
+      {showIOSInstallBanner && !showInstallBanner && (
+        <div className="rounded-xl border bg-card p-4 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-primary/10 p-2">
+              <Share className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">홈 화면에 추가하기</p>
+              <div className="mt-1.5 space-y-1.5">
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium">1.</span> 하단의 <span className="inline-flex items-center"><Share className="mx-0.5 inline h-3 w-3" /></span> 공유 버튼 탭
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium">2.</span> <span className="font-medium">"홈 화면에 추가"</span> 선택
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium">3.</span> 우측 상단 <span className="font-medium">"추가"</span> 탭
+                </p>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                앱처럼 사용하고, 푸시 알림도 받을 수 있어요!
+              </p>
+              <div className="mt-3">
+                <Button size="sm" variant="ghost" onClick={dismissIOSInstall}>
+                  확인
+                </Button>
+              </div>
+            </div>
+            <button onClick={dismissIOSInstall} className="text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showPushBanner && !showInstallBanner && !showIOSInstallBanner && (
         <div className="rounded-xl border bg-card p-4 shadow-lg">
           <div className="flex items-start gap-3">
             <div className="rounded-lg bg-primary/10 p-2">
