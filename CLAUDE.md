@@ -15,7 +15,8 @@
 배포 관련 상세 가이드는 [docs/DEPLOY.md](docs/DEPLOY.md) 참조.
 - **Production**: https://earnlearning.com
 - **Staging**: https://stage.earnlearning.com
-- **CI/CD**: main 머지 → Stage 자동 배포 (~33초) → 확인 → `promote` (~5초)
+- **CI/CD**: main 머지 → Stage 자동 배포 (~33초) → 확인 → `./deploy.sh prod` (~2분)
+- **promote 사용 금지**: Stage/Prod VAPID 키가 달라 이미지 재사용 불가. 반드시 `./deploy.sh prod`로 full build.
 
 ## 테스트 규칙
 - **TDD 방식 필수**: 버그 수정 및 새 기능 개발 시 반드시 TDD로 진행한다.
