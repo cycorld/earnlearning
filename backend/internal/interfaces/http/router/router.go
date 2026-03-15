@@ -49,6 +49,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		return c.JSON(200, map[string]interface{}{"success": true, "data": "ok", "error": nil})
 	})
 	api.GET("/version", func(c echo.Context) error {
+		c.Response().Header().Set("Cache-Control", "no-store")
 		return c.JSON(200, map[string]interface{}{
 			"success": true,
 			"data": map[string]string{
