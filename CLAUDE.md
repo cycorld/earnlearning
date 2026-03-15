@@ -39,13 +39,26 @@
 ### 배포 명령어
 ```bash
 ssh earnlearning
-cd /home/ubuntu/lms && git pull
+cd /home/ubuntu/lms/deploy
 
-# Production 배포 (--force-recreate로 nginx도 함께 재시작)
-cd deploy && sudo docker compose -f docker-compose.prod.yml -p earnlearning-prod --env-file .env.prod up -d --build --force-recreate
+# Stage 배포 (빌드 + 배포)
+./deploy.sh stage
 
-# Staging 배포
-cd deploy && sudo docker compose -f docker-compose.stage.yml -p earnlearning-stage --env-file .env.stage up -d --build --force-recreate
+# Production 배포 (빌드 + 배포 + 헬스체크)
+./deploy.sh prod
+
+# Stage → Production 프로모트 (빌드 스킵, ~5초)
+./deploy.sh promote
+
+# Production 풀 빌드 (캐시 무시, Dockerfile 변경 시)
+./deploy.sh prod --full
+```
+
+**권장 배포 플로우**: `stage` → 스테이지 확인 → `promote`
+```bash
+./deploy.sh stage           # Stage 배포 (~30s 캐시 히트, ~3분 풀빌드)
+# stage.earnlearning.com 에서 확인
+./deploy.sh promote         # Stage 이미지를 Prod로 프로모트 (~5초)
 ```
 
 ### 환경변수 (서버: /home/ubuntu/lms/deploy/)
