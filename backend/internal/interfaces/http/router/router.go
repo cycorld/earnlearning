@@ -50,6 +50,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string) {
 	})
 	api.POST("/auth/register", h.Auth.Register)
 	api.POST("/auth/login", h.Auth.Login)
+	api.POST("/auth/refresh", h.Auth.Refresh)
 	api.GET("/push/vapid-public-key", h.Notification.GetVAPIDPublicKey)
 
 	// ================================================================

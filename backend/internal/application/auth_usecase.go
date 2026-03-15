@@ -174,6 +174,38 @@ type jwtClaims struct {
 	jwt.RegisteredClaims
 }
 
+// RefreshToken validates an existing token (even if recently expired within grace period)
+// and returns a new token with refreshed expiry. Grace period: 7 days after expiry.
+func (uc *AuthUseCase) RefreshToken(tokenStr string) (*AuthResponse, error) {
+	claims := &jwtClaims{}
+
+	// Parse with a lenient clock skew to allow expired tokens within grace period
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
+		return []byte(uc.jwtSecret), nil
+	}, jwt.WithLeeway(7*24*time.Hour))
+
+	if err != nil || !token.Valid {
+		return nil, user.ErrInvalidCreds
+	}
+
+	// Look up fresh user data (status may have changed)
+	u, err := uc.userRepo.FindByID(claims.UserID)
+	if err != nil {
+		return nil, user.ErrInvalidCreds
+	}
+
+	if u.Status == user.StatusRejected {
+		return nil, user.ErrRejected
+	}
+
+	newToken, err := uc.generateToken(u)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthResponse{Token: newToken, User: u}, nil
+}
+
 func (uc *AuthUseCase) generateToken(u *user.User) (string, error) {
 	claims := jwtClaims{
 		UserID: u.ID,

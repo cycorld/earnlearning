@@ -1,4 +1,4 @@
-import { isTokenExpired, removeToken } from './auth'
+import { isTokenExpired, removeToken, setToken } from './auth'
 
 type EventCallback = (data: unknown) => void
 
@@ -79,8 +79,22 @@ class WebSocketClient {
       this.ws = null
       if (!this.intentionalClose && this.token) {
         if (isTokenExpired(this.token)) {
-          removeToken()
-          window.location.href = '/login'
+          // Token expired — try refresh via API, then reconnect
+          fetch('/api/auth/refresh', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${this.token}` },
+          })
+            .then(res => res.ok ? res.json() : Promise.reject())
+            .then(data => {
+              const newToken = data.data.token
+              this.token = newToken
+              setToken(newToken)
+              this.createConnection()
+            })
+            .catch(() => {
+              removeToken()
+              window.location.href = '/login'
+            })
           return
         }
         this.scheduleReconnect()

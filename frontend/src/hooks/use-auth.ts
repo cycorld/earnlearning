@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import { createElement } from 'react'
 import type { User } from '@/types'
 import { api } from '@/lib/api'
-import { getToken, setToken, removeToken, isTokenExpired } from '@/lib/auth'
+import { getToken, setToken, removeToken, isTokenExpired, parseToken } from '@/lib/auth'
 import { wsClient } from '@/lib/ws'
 
 interface RegisterData {
@@ -64,6 +64,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       wsClient.disconnect()
     }
   }, [fetchUser])
+
+  // Auto-refresh token 1 hour before expiry
+  useEffect(() => {
+    const checkAndRefresh = () => {
+      const token = getToken()
+      if (!token) return
+
+      const payload = parseToken(token)
+      if (!payload) return
+
+      const msUntilExpiry = payload.exp * 1000 - Date.now()
+      // Refresh if less than 1 hour remaining
+      if (msUntilExpiry > 0 && msUntilExpiry < 60 * 60 * 1000) {
+        api.post<{ token: string; user: User }>('/auth/refresh').then((result) => {
+          setToken(result.token)
+          setUser(result.user)
+          wsClient.disconnect()
+          wsClient.connect(result.token)
+        }).catch(() => {
+          // Refresh failed, will retry on next interval
+        })
+      }
+    }
+
+    const interval = setInterval(checkAndRefresh, 5 * 60 * 1000) // Check every 5 minutes
+    return () => clearInterval(interval)
+  }, [])
 
   const login = useCallback(
     async (email: string, password: string) => {
