@@ -1,0 +1,23 @@
+name: Deploy to Stage
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Stage via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/lms
+            git pull --ff-only
+            cd deploy
+            BUILD_NUMBER=${{ github.run_number }} \
+            COMMIT_SHA=${{ github.sha }} \
+            ./deploy.sh stage
