@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/earnlearning/backend/internal/domain/notification"
@@ -65,8 +66,10 @@ func (s *WebPushService) sendToSubscription(sub *notification.PushSubscription, 
 		},
 	}
 
+	// webpush-go adds "mailto:" prefix automatically, so strip it if present
+	subscriber := strings.TrimPrefix(s.vapidSubject, "mailto:")
 	resp, err := webpush.SendNotification(body, wpSub, &webpush.Options{
-		Subscriber:      s.vapidSubject,
+		Subscriber:      subscriber,
 		VAPIDPublicKey:  s.vapidPublicKey,
 		VAPIDPrivateKey: s.vapidPrivateKey,
 		TTL:             60,
