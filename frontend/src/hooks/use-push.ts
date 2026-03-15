@@ -29,7 +29,7 @@ export function usePush() {
     setError(null)
     try {
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('구독 요청 시간이 초과되었습니다. 다시 시도해주세요.')), 15000)
+        setTimeout(() => reject(new Error('구독 요청 시간 초과 (30초). 앱을 삭제 후 재설치해주세요.')), 30000)
       )
       const success = await Promise.race([subscribeToPush(), timeoutPromise])
       setIsSubscribed(success)
