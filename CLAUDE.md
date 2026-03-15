@@ -164,6 +164,13 @@ sudo docker exec earnlearning-stage-backend-1 sh -c \
 - **원인**: 테스트 파일이 프로덕션 빌드에 포함됨
 - **해결**: `tsconfig.app.json`에서 테스트 파일 exclude, `vite.config.ts`에서 `vitest/config` import
 
+## 개발 워크플로우 (PR 기반)
+- **main 직접 푸시 금지**: 모든 개발은 feature 브랜치에서 진행한다.
+- **PR 생성 필수**: 작업 완료 후 PR을 생성하고 사용자가 리뷰 후 머지한다.
+- **CI/CD**: main에 머지되면 GitHub Actions가 자동으로 Stage에 배포한다.
+- **브랜치 네이밍**: `feat/기능명`, `fix/버그명`, `chore/작업명` 형식 사용.
+- **Production 배포**: Stage 확인 후 `./deploy.sh promote`로 수동 프로모트.
+
 ## 커밋 규칙
 - 매 프롬프트 작업 완료 시 반드시 커밋한다.
 - 커밋 전 반드시 스모크 테스트 통과 확인.
