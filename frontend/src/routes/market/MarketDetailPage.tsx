@@ -232,6 +232,7 @@ export default function MarketDetailPage() {
             <div>
               <p className="text-sm font-medium text-muted-foreground">
                 {isFixedPrice ? '금액 (고정)' : '예산 (협의 가능)'}
+                {isAssignmentMode && ' / 1인당'}
               </p>
               <p className="text-lg font-bold text-primary">{formatMoney(job.budget)}</p>
             </div>
@@ -449,6 +450,29 @@ export default function MarketDetailPage() {
             <CheckCircle className="mr-2 h-4 w-4" />
           )}
           작업 승인하기
+        </Button>
+      )}
+
+      {/* Client: Close assignment mode job */}
+      {isAssignmentMode && isClient && job.status === 'open' && (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={async () => {
+            setActionLoading(true)
+            try {
+              await api.post(`/freelance/jobs/${id}/close`, {})
+              toast.success('의뢰가 종료되었습니다.')
+              await fetchJob()
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : '종료에 실패했습니다.')
+            } finally {
+              setActionLoading(false)
+            }
+          }}
+          disabled={actionLoading}
+        >
+          과제 모집 종료
         </Button>
       )}
 

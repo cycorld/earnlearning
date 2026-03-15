@@ -168,9 +168,15 @@ export default function MarketNewPage() {
                 id="auto_approve"
                 type="checkbox"
                 checked={form.auto_approve_application}
-                onChange={(e) =>
-                  setForm({ ...form, auto_approve_application: e.target.checked })
-                }
+                onChange={(e) => {
+                  const checked = e.target.checked
+                  setForm({
+                    ...form,
+                    auto_approve_application: checked,
+                    // 과제 모드 켜면 무제한(0)으로 자동 변경
+                    max_workers: checked && form.max_workers === '1' ? '0' : form.max_workers,
+                  })
+                }}
                 className="h-4 w-4 rounded border-gray-300"
               />
               <Label htmlFor="auto_approve" className="cursor-pointer">
