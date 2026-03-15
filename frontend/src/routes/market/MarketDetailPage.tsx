@@ -308,7 +308,7 @@ export default function MarketDetailPage() {
       )}
 
       {/* Already applied indicator */}
-      {job.status === 'open' && !isClient && hasApplied && !myApplication && (
+      {job.status === 'open' && !isClient && hasApplied && (
         <Card>
           <CardContent className="p-4 text-center text-sm text-muted-foreground">
             이미 지원한 의뢰입니다. 승인을 기다려주세요.
