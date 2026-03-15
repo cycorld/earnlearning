@@ -33,11 +33,14 @@
 
 
 ## 개발 워크플로우 (PR 기반)
+> 📋 상세 브랜치 전략은 Claude memory `feedback_pr_workflow.md` 참조
+
 - **main 직접 푸시 금지**: 모든 개발은 feature 브랜치에서 진행한다.
 - **PR 생성 필수**: 작업 완료 후 PR을 생성하고 사용자가 리뷰 후 머지한다.
 - **CI/CD**: main에 머지되면 GitHub Actions가 자동으로 Stage에 배포한다.
 - **브랜치 네이밍**: `feat/기능명`, `fix/버그명`, `chore/작업명` 형식 사용.
 - **Production 배포**: Stage 확인 후 `./deploy.sh promote`로 수동 프로모트.
+- **Stage 수동 배포 금지**: PR 머지 후 수동 배포하지 않는다 (GitHub Actions 자동 배포와 충돌).
 
 ## 개발일지 (Changelog)
 - **PR 생성 시 필수**: 모든 PR에 대해 `changelog/`에 교육용 개발일지 엔트리를 추가한다.
