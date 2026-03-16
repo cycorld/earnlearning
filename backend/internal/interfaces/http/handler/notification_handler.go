@@ -115,9 +115,10 @@ func (h *NotificationHandler) UpdateEmailPreference(c echo.Context) error {
 
 func (h *NotificationHandler) AdminSendAnnouncement(c echo.Context) error {
 	var input struct {
-		Title   string `json:"title"`
-		Body    string `json:"body"`
-		UserIDs []int  `json:"user_ids"` // 비어있으면 전체 유저에게 전송
+		Title      string `json:"title"`
+		Body       string `json:"body"`
+		UserIDs    []int  `json:"user_ids"`     // 비어있으면 전체 유저에게 전송
+		SendNotify *bool  `json:"send_notify"`  // true면 푸시+이메일도 전송 (기본: true)
 	}
 	if err := c.Bind(&input); err != nil {
 		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "입력값이 올바르지 않습니다")
@@ -129,7 +130,12 @@ func (h *NotificationHandler) AdminSendAnnouncement(c echo.Context) error {
 		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "내용은 필수입니다")
 	}
 
-	sent, err := h.uc.SendAnnouncement(input.Title, input.Body, input.UserIDs)
+	sendNotify := true
+	if input.SendNotify != nil {
+		sendNotify = *input.SendNotify
+	}
+
+	sent, err := h.uc.SendAnnouncement(input.Title, input.Body, input.UserIDs, sendNotify)
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, "NOTIFICATION_ERROR", err.Error())
 	}
