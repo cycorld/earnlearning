@@ -14,10 +14,11 @@ type FreelanceUseCase struct {
 	repo       freelance.Repository
 	walletRepo wallet.Repository
 	notifUC    *NotificationUseCase
+	autoPoster *AutoPoster
 }
 
 func NewFreelanceUseCase(db *sql.DB, repo freelance.Repository, wr wallet.Repository, notifUC *NotificationUseCase) *FreelanceUseCase {
-	return &FreelanceUseCase{db: db, repo: repo, walletRepo: wr, notifUC: notifUC}
+	return &FreelanceUseCase{db: db, repo: repo, walletRepo: wr, notifUC: notifUC, autoPoster: NewAutoPoster(db)}
 }
 
 // --- Input types ---
@@ -82,6 +83,16 @@ func (uc *FreelanceUseCase) CreateJob(input CreateJobInput, clientID int) (*free
 	if err != nil {
 		return nil, err
 	}
+
+	// Auto-post to 외주마켓 channel
+	skills := ""
+	if string(input.RequiredSkills) != "" {
+		skills = fmt.Sprintf("**필요 스킬:** %s\n", string(input.RequiredSkills))
+	}
+	content := fmt.Sprintf("## 💼 외주 의뢰: %s\n\n%s\n\n**예산:** %s\n%s\n👉 [자세히 보기](/freelance/%d)",
+		input.Title, input.Description, formatMoney(input.Budget), skills, id)
+	uc.autoPoster.PostToChannel("market", clientID, content, []string{"외주의뢰", "구인"})
+
 	return uc.repo.FindByID(id)
 }
 
@@ -247,7 +258,7 @@ func (uc *FreelanceUseCase) CompleteWork(jobID, userID int, input CompleteWorkIn
 	}
 
 	// Auto-post to 외주마켓 channel
-	uc.postToMarketChannel(job, userID, input)
+	uc.autoPoster.PostToChannel("market", userID, fmt.Sprintf("## ✅ 외주 완료 보고: %s\n\n%s", job.Title, input.Report), []string{"외주완료", "작업보고"})
 
 	// Notify client
 	uc.notify(job.ClientID, notification.NotifJobWorkDone,
@@ -256,39 +267,6 @@ func (uc *FreelanceUseCase) CompleteWork(jobID, userID int, input CompleteWorkIn
 		"freelance_job", jobID)
 
 	return nil
-}
-
-func (uc *FreelanceUseCase) postToMarketChannel(job *freelance.FreelanceJob, userID int, input CompleteWorkInput) {
-	// Find market channel across all classrooms the user belongs to
-	var channelID int
-	err := uc.db.QueryRow(`
-		SELECT c.id FROM channels c
-		JOIN classroom_members cm ON cm.classroom_id = c.classroom_id
-		WHERE c.slug = 'market' AND cm.user_id = ?
-		LIMIT 1`, userID).Scan(&channelID)
-	if err != nil || channelID == 0 {
-		return
-	}
-
-	report := input.Report
-	if report == "" {
-		report = "(보고서 없음)"
-	}
-
-	content := fmt.Sprintf("## 📋 외주 완료 보고: %s\n\n**의뢰자:** 사용자 #%d\n**합의 금액:** %d원\n\n---\n\n%s",
-		job.Title, job.ClientID, job.AgreedPrice, report)
-
-	media := input.Media
-	if media == "" {
-		media = "[]"
-	}
-
-	tags := `["외주완료","작업보고"]`
-
-	_, _ = uc.db.Exec(`
-		INSERT INTO posts (channel_id, author_id, content, post_type, media, tags)
-		VALUES (?, ?, ?, 'normal', ?, ?)`,
-		channelID, userID, content, media, tags)
 }
 
 func (uc *FreelanceUseCase) ApproveJob(jobID, userID int) error {
