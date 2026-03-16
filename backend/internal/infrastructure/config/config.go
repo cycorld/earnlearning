@@ -12,6 +12,11 @@ type Config struct {
 	VAPIDPublicKey  string
 	VAPIDPrivateKey string
 	VAPIDSubject    string
+	// SES Email
+	SESRegion          string
+	SESAccessKeyID     string
+	SESSecretAccessKey string
+	SESFromEmail       string
 }
 
 func Load() *Config {
@@ -24,7 +29,11 @@ func Load() *Config {
 		AdminPassword:   getEnv("ADMIN_PASSWORD", "change-this"),
 		VAPIDPublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),
 		VAPIDPrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
-		VAPIDSubject:    getEnv("VAPID_SUBJECT", "mailto:admin@example.com"),
+		VAPIDSubject:       getEnv("VAPID_SUBJECT", "mailto:admin@example.com"),
+		SESRegion:          getEnv("SES_REGION", "ap-northeast-2"),
+		SESAccessKeyID:     getEnv("AWS_ACCESS_KEY_ID", ""),
+		SESSecretAccessKey: getEnv("AWS_SECRET_ACCESS_KEY", ""),
+		SESFromEmail:       getEnv("SES_FROM_EMAIL", ""),
 	}
 }
 

@@ -17,4 +17,11 @@ type Repository interface {
 
 	// User query for announcements
 	GetApprovedUserIDs() ([]int, error)
+
+	// Email preference operations
+	GetEmailPreference(userID int) (*EmailPreference, error)
+	SaveEmailPreference(pref *EmailPreference) error
+
+	// User email query (for sending emails)
+	GetUserEmail(userID int) (string, error)
 }
