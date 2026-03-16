@@ -96,7 +96,36 @@ func (uc *NotificationUseCase) MarkAllRead(userID int) error {
 	return uc.notifRepo.MarkAllRead(userID)
 }
 
-// CreateNotification creates a notification and sends it via WebSocket and Push.
+// CreateNotificationQuiet creates a notification without sending push/email (WebSocket only).
+func (uc *NotificationUseCase) CreateNotificationQuiet(userID int, notifType notification.NotifType, title, body, refType string, refID int) error {
+	n := &notification.Notification{
+		UserID:        userID,
+		NotifType:     notifType,
+		Title:         title,
+		Body:          body,
+		ReferenceType: refType,
+		ReferenceID:   refID,
+	}
+
+	id, err := uc.notifRepo.Create(n)
+	if err != nil {
+		return err
+	}
+	n.ID = id
+
+	// Send via WebSocket only
+	if uc.wsBroadcast != nil {
+		wsMsg := map[string]interface{}{
+			"type": "notification",
+			"data": n,
+		}
+		uc.wsBroadcast.SendToUser(userID, wsMsg)
+	}
+
+	return nil
+}
+
+// CreateNotification creates a notification and sends it via WebSocket, Push, and Email.
 func (uc *NotificationUseCase) CreateNotification(userID int, notifType notification.NotifType, title, body, refType string, refID int) error {
 	n := &notification.Notification{
 		UserID:        userID,
@@ -208,7 +237,8 @@ func (uc *NotificationUseCase) UpdateEmailPreference(userID int, emailEnabled bo
 }
 
 // SendAnnouncement sends a notification to all approved users (or specific users).
-func (uc *NotificationUseCase) SendAnnouncement(title, body string, targetUserIDs []int) (int, error) {
+// If sendNotify is true, push and email notifications are also sent.
+func (uc *NotificationUseCase) SendAnnouncement(title, body string, targetUserIDs []int, sendNotify bool) (int, error) {
 	userIDs := targetUserIDs
 	if len(userIDs) == 0 {
 		var err error
@@ -220,7 +250,13 @@ func (uc *NotificationUseCase) SendAnnouncement(title, body string, targetUserID
 
 	sent := 0
 	for _, uid := range userIDs {
-		if err := uc.CreateNotification(uid, "admin_transfer", title, body, "", 0); err != nil {
+		var err error
+		if sendNotify {
+			err = uc.CreateNotification(uid, "admin_transfer", title, body, "", 0)
+		} else {
+			err = uc.CreateNotificationQuiet(uid, "admin_transfer", title, body, "", 0)
+		}
+		if err != nil {
 			continue
 		}
 		sent++
