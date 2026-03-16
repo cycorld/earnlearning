@@ -85,7 +85,7 @@ func setupTestServer(t *testing.T) *testServer {
 	companyUC := application.NewCompanyUsecase(companyRepo, userRepo, walletRepo)
 	postUC := application.NewPostUsecase(postRepo, walletRepo)
 	uploadUC := application.NewUploadUsecase(postRepo, testUploadPath)
-	notifUC := application.NewNotificationUseCase(notifRepo, pushSvc, hub)
+	notifUC := application.NewNotificationUseCase(notifRepo, pushSvc, nil, hub)
 	freelanceUC := application.NewFreelanceUseCase(db, freelanceRepo, walletRepo, notifUC)
 	grantUC := application.NewGrantUseCase(db, grantRepo, walletRepo, notifUC)
 	investmentUC := application.NewInvestmentUseCase(db, investmentRepo, companyRepo, walletRepo)
