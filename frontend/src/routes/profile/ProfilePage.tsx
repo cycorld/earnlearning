@@ -18,6 +18,8 @@ import {
   Loader2,
 } from 'lucide-react'
 import { usePush } from '@/hooks/use-push'
+import { useEmailPreference } from '@/hooks/use-email-preference'
+import { Mail, MailX } from 'lucide-react'
 
 function formatMoney(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(amount) + '원'
@@ -27,6 +29,7 @@ export default function ProfilePage() {
   const { user, isLoading, logout } = useAuth()
   const { wallet, loading: walletLoading } = useWallet()
   const { isSupported: pushSupported, isSubscribed, loading: pushLoading, error: pushError, subscribe, unsubscribe } = usePush()
+  const { emailEnabled, loading: emailLoading, updating: emailUpdating, updatePreference } = useEmailPreference()
 
   if (isLoading) {
     return (
@@ -180,6 +183,32 @@ export default function ProfilePage() {
               )}
             </>
           )}
+          <Separator />
+          <button
+            onClick={() => updatePreference(!emailEnabled)}
+            disabled={emailLoading || emailUpdating}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-accent disabled:opacity-50"
+          >
+            {emailLoading || emailUpdating ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : emailEnabled ? (
+              <Mail className="h-5 w-5 text-primary" />
+            ) : (
+              <MailX className="h-5 w-5 text-muted-foreground" />
+            )}
+            <span className="flex-1 text-left text-sm">
+              {emailLoading
+                ? '로딩 중...'
+                : emailUpdating
+                  ? '변경 중...'
+                  : `이메일 알림 ${emailEnabled ? '켜짐' : '꺼짐'}`}
+            </span>
+            {!emailLoading && !emailUpdating && (
+              <span className="text-xs text-muted-foreground">
+                {emailEnabled ? '끄기' : '켜기'}
+              </span>
+            )}
+          </button>
           {user.role === 'admin' && (
             <>
               <Separator />

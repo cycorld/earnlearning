@@ -170,6 +170,54 @@ func (r *NotificationRepo) DeleteSubscriptionByEndpoint(endpoint string) error {
 	return nil
 }
 
+func (r *NotificationRepo) GetEmailPreference(userID int) (*notification.EmailPreference, error) {
+	pref := &notification.EmailPreference{
+		UserID:       userID,
+		EmailEnabled: true, // default: enabled
+	}
+
+	var emailEnabled int
+	err := r.db.QueryRow("SELECT email_enabled FROM email_preferences WHERE user_id = ?", userID).Scan(&emailEnabled)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return pref, nil // no row = defaults (all enabled)
+		}
+		return nil, fmt.Errorf("get email preference: %w", err)
+	}
+	pref.EmailEnabled = emailEnabled == 1
+	return pref, nil
+}
+
+func (r *NotificationRepo) SaveEmailPreference(pref *notification.EmailPreference) error {
+	emailEnabled := 0
+	if pref.EmailEnabled {
+		emailEnabled = 1
+	}
+
+	_, err := r.db.Exec(`
+		INSERT INTO email_preferences (user_id, email_enabled)
+		VALUES (?, ?)
+		ON CONFLICT(user_id) DO UPDATE SET email_enabled = ?`,
+		pref.UserID, emailEnabled, emailEnabled,
+	)
+	if err != nil {
+		return fmt.Errorf("save email preference: %w", err)
+	}
+	return nil
+}
+
+func (r *NotificationRepo) GetUserEmail(userID int) (string, error) {
+	var email string
+	err := r.db.QueryRow("SELECT email FROM users WHERE id = ?", userID).Scan(&email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("user not found: %d", userID)
+		}
+		return "", fmt.Errorf("get user email: %w", err)
+	}
+	return email, nil
+}
+
 func (r *NotificationRepo) GetApprovedUserIDs() ([]int, error) {
 	rows, err := r.db.Query("SELECT id FROM users WHERE status = 'approved'")
 	if err != nil {

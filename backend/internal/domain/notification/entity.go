@@ -76,3 +76,10 @@ type PushSubscription struct {
 	UserAgent string    `json:"user_agent"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+// EmailPreference stores per-user email notification settings.
+// All fields default to true (email notifications enabled by default).
+type EmailPreference struct {
+	UserID       int  `json:"user_id"`
+	EmailEnabled bool `json:"email_enabled"` // master switch
+}

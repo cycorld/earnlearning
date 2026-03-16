@@ -89,6 +89,30 @@ func (h *NotificationHandler) GetVAPIDPublicKey(c echo.Context) error {
 	return successResponse(c, http.StatusOK, map[string]string{"vapid_public_key": key})
 }
 
+func (h *NotificationHandler) GetEmailPreference(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	pref, err := h.uc.GetEmailPreference(userID)
+	if err != nil {
+		return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "서버 오류가 발생했습니다")
+	}
+	return successResponse(c, http.StatusOK, pref)
+}
+
+func (h *NotificationHandler) UpdateEmailPreference(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	var input struct {
+		EmailEnabled bool `json:"email_enabled"`
+	}
+	if err := c.Bind(&input); err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "입력값이 올바르지 않습니다")
+	}
+
+	if err := h.uc.UpdateEmailPreference(userID, input.EmailEnabled); err != nil {
+		return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "서버 오류가 발생했습니다")
+	}
+	return successResponse(c, http.StatusOK, map[string]string{"message": "이메일 알림 설정이 변경되었습니다"})
+}
+
 func (h *NotificationHandler) AdminSendAnnouncement(c echo.Context) error {
 	var input struct {
 		Title   string `json:"title"`
