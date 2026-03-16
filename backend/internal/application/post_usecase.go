@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/post"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
@@ -16,6 +17,7 @@ var tagRegex = regexp.MustCompile(`#([^\s#]+)`)
 type PostUsecase struct {
 	postRepo   post.PostRepository
 	walletRepo wallet.Repository
+	notifUC    *NotificationUseCase
 }
 
 func NewPostUsecase(pr post.PostRepository, wr wallet.Repository) *PostUsecase {
@@ -23,6 +25,10 @@ func NewPostUsecase(pr post.PostRepository, wr wallet.Repository) *PostUsecase {
 		postRepo:   pr,
 		walletRepo: wr,
 	}
+}
+
+func (uc *PostUsecase) SetNotificationUseCase(notifUC *NotificationUseCase) {
+	uc.notifUC = notifUC
 }
 
 func (uc *PostUsecase) GetChannels(classroomID int) ([]*post.Channel, error) {
@@ -392,6 +398,16 @@ func (uc *PostUsecase) GradeAssignment(input GradeAssignmentInput) error {
 				rewarded = true
 			}
 		}
+	}
+
+	// Notify student about grade
+	if uc.notifUC != nil {
+		msg := fmt.Sprintf("과제 점수: %d/%d점", input.Grade, assignment.MaxScore)
+		if reward > 0 {
+			msg += fmt.Sprintf(" (보상: %d원)", reward)
+		}
+		_ = uc.notifUC.CreateNotification(submission.StudentID, notification.NotifAssignmentGraded,
+			"과제가 채점되었습니다", msg, "assignment", assignment.ID)
 	}
 
 	// Update submission grade

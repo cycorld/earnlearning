@@ -14,10 +14,11 @@ type GrantUseCase struct {
 	repo       grant.Repository
 	walletRepo wallet.Repository
 	notifUC    *NotificationUseCase
+	autoPoster *AutoPoster
 }
 
 func NewGrantUseCase(db *sql.DB, repo grant.Repository, wr wallet.Repository, notifUC *NotificationUseCase) *GrantUseCase {
-	return &GrantUseCase{db: db, repo: repo, walletRepo: wr, notifUC: notifUC}
+	return &GrantUseCase{db: db, repo: repo, walletRepo: wr, notifUC: notifUC, autoPoster: NewAutoPoster(db)}
 }
 
 // --- Input types ---
@@ -53,6 +54,12 @@ func (uc *GrantUseCase) CreateGrant(input CreateGrantInput, adminID int) (*grant
 	if err != nil {
 		return nil, err
 	}
+
+	// Auto-post to 과제 channel
+	content := fmt.Sprintf("## 📋 새 정부과제 공고: %s\n\n%s\n\n**보상:** %s | **모집 인원:** %d명\n\n👉 [지원하러 가기](/grants/%d)",
+		input.Title, input.Description, formatMoney(input.Reward), input.MaxApplicants, id)
+	uc.autoPoster.PostToChannelAsAdmin("assignment", content, []string{"정부과제", "공고"})
+
 	return uc.repo.FindByID(id)
 }
 

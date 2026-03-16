@@ -3,8 +3,11 @@ package application
 import (
 	"fmt"
 
+	"database/sql"
+
 	"github.com/earnlearning/backend/internal/domain/company"
 	"github.com/earnlearning/backend/internal/domain/exchange"
+	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
 
@@ -14,10 +17,13 @@ type ShareholderUpdater interface {
 }
 
 type ExchangeUseCase struct {
+	db                 *sql.DB
 	exchangeRepo       exchange.Repository
 	companyRepo        company.CompanyRepository
 	walletRepo         wallet.Repository
 	shareholderUpdater ShareholderUpdater
+	notifUC            *NotificationUseCase
+	autoPoster         *AutoPoster
 }
 
 func NewExchangeUseCase(er exchange.Repository, cr company.CompanyRepository, wr wallet.Repository) *ExchangeUseCase {
@@ -30,6 +36,21 @@ func NewExchangeUseCase(er exchange.Repository, cr company.CompanyRepository, wr
 
 func (uc *ExchangeUseCase) SetShareholderUpdater(updater ShareholderUpdater) {
 	uc.shareholderUpdater = updater
+}
+
+func (uc *ExchangeUseCase) SetDB(db *sql.DB) {
+	uc.db = db
+	uc.autoPoster = NewAutoPoster(db)
+}
+
+func (uc *ExchangeUseCase) SetNotificationUseCase(notifUC *NotificationUseCase) {
+	uc.notifUC = notifUC
+}
+
+func (uc *ExchangeUseCase) notify(userID int, notifType notification.NotifType, title, body, refType string, refID int) {
+	if uc.notifUC != nil {
+		_ = uc.notifUC.CreateNotification(userID, notifType, title, body, refType, refID)
+	}
 }
 
 func (uc *ExchangeUseCase) ListCompanies() ([]*exchange.ListedCompany, error) {
@@ -303,6 +324,23 @@ func (uc *ExchangeUseCase) runMatching(order *exchange.StockOrder, comp *company
 		comp.Valuation = trade.PricePerShare * comp.TotalShares
 		if err := uc.companyRepo.Update(comp); err != nil {
 			return trades, err
+		}
+
+		// Notify buyer and seller
+		uc.notify(match.BuyOrder.UserID, notification.NotifStockTrade,
+			"주식 매수 체결",
+			fmt.Sprintf("%s %d주를 %s에 매수했습니다.", comp.Name, match.Shares, formatMoney(trade.TotalAmount)),
+			"trade", tradeID)
+		uc.notify(match.SellOrder.UserID, notification.NotifStockTrade,
+			"주식 매도 체결",
+			fmt.Sprintf("%s %d주를 %s에 매도했습니다.", comp.Name, match.Shares, formatMoney(trade.TotalAmount)),
+			"trade", tradeID)
+
+		// Auto-post to 거래소 channel
+		if uc.autoPoster != nil {
+			content := fmt.Sprintf("## 📊 거래 체결: %s\n\n**%d주** × **%s** = **%s**",
+				comp.Name, match.Shares, formatMoney(match.Price), formatMoney(trade.TotalAmount))
+			uc.autoPoster.PostToChannelAsAdmin("exchange", content, []string{"거래체결", comp.Name})
 		}
 
 		trades = append(trades, trade)

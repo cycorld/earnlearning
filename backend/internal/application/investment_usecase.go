@@ -7,6 +7,7 @@ import (
 
 	"github.com/earnlearning/backend/internal/domain/company"
 	"github.com/earnlearning/backend/internal/domain/investment"
+	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
 
@@ -15,6 +16,8 @@ type InvestmentUseCase struct {
 	repo        investment.Repository
 	companyRepo company.CompanyRepository
 	walletRepo  wallet.Repository
+	notifUC     *NotificationUseCase
+	autoPoster  *AutoPoster
 }
 
 func NewInvestmentUseCase(
@@ -23,7 +26,11 @@ func NewInvestmentUseCase(
 	cr company.CompanyRepository,
 	wr wallet.Repository,
 ) *InvestmentUseCase {
-	return &InvestmentUseCase{db: db, repo: repo, companyRepo: cr, walletRepo: wr}
+	return &InvestmentUseCase{db: db, repo: repo, companyRepo: cr, walletRepo: wr, autoPoster: NewAutoPoster(db)}
+}
+
+func (uc *InvestmentUseCase) SetNotificationUseCase(notifUC *NotificationUseCase) {
+	uc.notifUC = notifUC
 }
 
 // --- Input types ---
@@ -105,6 +112,12 @@ func (uc *InvestmentUseCase) CreateRound(input CreateRoundInput, userID int) (*i
 	if err != nil {
 		return nil, err
 	}
+
+	// Auto-post to 투자라운지 channel
+	content := fmt.Sprintf("## 📈 투자 라운드 오픈: %s\n\n**목표 금액:** %s\n**지분 제공:** %.1f%%\n**주당 가격:** %s\n\n👉 [투자하러 가기](/investment)",
+		c.Name, formatMoney(input.TargetAmount), input.OfferedPercent*100, formatMoney(int(pricePerShare)))
+	uc.autoPoster.PostToChannel("invest", userID, content, []string{"투자라운드", c.Name})
+
 	return uc.repo.FindRoundByID(id)
 }
 
@@ -197,9 +210,15 @@ func (uc *InvestmentUseCase) Invest(roundID, userID int) (*investment.Investment
 	inv.ID = invID
 
 	// Notify company owner
-	uc.createNotification(c.OwnerID, "investment_funded",
+	uc.notify(c.OwnerID, "investment_funded",
 		"투자가 완료되었습니다",
 		fmt.Sprintf("%s에 %d원 투자가 완료되었습니다.", c.Name, investAmount),
+		"investment_round", round.ID)
+
+	// Notify investor
+	uc.notify(userID, "investment_received",
+		"투자가 완료되었습니다",
+		fmt.Sprintf("%s에 %s을 투자하여 %d주를 취득했습니다.", c.Name, formatMoney(investAmount), round.NewShares),
 		"investment_round", round.ID)
 
 	return inv, nil
@@ -337,9 +356,9 @@ func (uc *InvestmentUseCase) ExecuteDividend(input ExecuteDividendInput, userID 
 		payments = append(payments, payment)
 
 		// Notify each shareholder
-		uc.createNotification(sh.UserID, "dividend_received",
+		uc.notify(sh.UserID, "dividend_received",
 			"배당금을 받았습니다",
-			fmt.Sprintf("%s에서 %d원의 배당금을 받았습니다.", c.Name, payAmount),
+			fmt.Sprintf("%s에서 %s의 배당금을 받았습니다.", c.Name, formatMoney(payAmount)),
 			"dividend", dividendID)
 	}
 	dividend.Payments = payments
@@ -396,9 +415,8 @@ func (uc *InvestmentUseCase) AddKpiRevenue(input AddKpiRevenueInput, adminUserID
 	return rev, nil
 }
 
-func (uc *InvestmentUseCase) createNotification(userID int, notifType, title, body, refType string, refID int) {
-	_, _ = uc.db.Exec(`
-		INSERT INTO notifications (user_id, notif_type, title, body, reference_type, reference_id)
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		userID, notifType, title, body, refType, refID)
+func (uc *InvestmentUseCase) notify(userID int, notifType, title, body, refType string, refID int) {
+	if uc.notifUC != nil {
+		_ = uc.notifUC.CreateNotification(userID, notification.NotifType(notifType), title, body, refType, refID)
+	}
 }

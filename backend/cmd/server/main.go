@@ -89,8 +89,12 @@ func main() {
 	freelanceUC := application.NewFreelanceUseCase(db, freelanceRepo, walletRepo, notifUC)
 	grantUC := application.NewGrantUseCase(db, grantRepo, walletRepo, notifUC)
 	investmentUC := application.NewInvestmentUseCase(db, investmentRepo, companyRepo, walletRepo)
+	investmentUC.SetNotificationUseCase(notifUC)
 	exchangeUC := application.NewExchangeUseCase(exchangeRepo, companyRepo, walletRepo)
 	exchangeUC.SetShareholderUpdater(shareholderUpdater)
+	exchangeUC.SetDB(db)
+	exchangeUC.SetNotificationUseCase(notifUC)
+	postUC.SetNotificationUseCase(notifUC)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
 
 	// Handlers
