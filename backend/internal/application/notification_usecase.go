@@ -1,7 +1,10 @@
 package application
 
 import (
+	"log"
+
 	"github.com/earnlearning/backend/internal/domain/notification"
+	"github.com/earnlearning/backend/internal/infrastructure/email"
 	"github.com/earnlearning/backend/internal/infrastructure/push"
 )
 
@@ -11,16 +14,18 @@ type WSBroadcaster interface {
 }
 
 type NotificationUseCase struct {
-	notifRepo   notification.Repository
-	pushService *push.WebPushService
-	wsBroadcast WSBroadcaster
+	notifRepo    notification.Repository
+	pushService  *push.WebPushService
+	emailService *email.SESService
+	wsBroadcast  WSBroadcaster
 }
 
-func NewNotificationUseCase(repo notification.Repository, pushSvc *push.WebPushService, ws WSBroadcaster) *NotificationUseCase {
+func NewNotificationUseCase(repo notification.Repository, pushSvc *push.WebPushService, emailSvc *email.SESService, ws WSBroadcaster) *NotificationUseCase {
 	return &NotificationUseCase{
-		notifRepo:   repo,
-		pushService: pushSvc,
-		wsBroadcast: ws,
+		notifRepo:    repo,
+		pushService:  pushSvc,
+		emailService: emailSvc,
+		wsBroadcast:  ws,
 	}
 }
 
@@ -123,6 +128,11 @@ func (uc *NotificationUseCase) CreateNotification(userID int, notifType notifica
 		go uc.pushService.SendToUser(userID, payload)
 	}
 
+	// Send via Email if applicable
+	if notification.PushEligibleTypes[notifType] && uc.emailService != nil && uc.emailService.IsEnabled() {
+		go uc.sendEmailNotification(userID, n)
+	}
+
 	return nil
 }
 
@@ -157,6 +167,44 @@ func (uc *NotificationUseCase) GetVAPIDPublicKey() string {
 		return uc.pushService.GetVAPIDPublicKey()
 	}
 	return ""
+}
+
+func (uc *NotificationUseCase) sendEmailNotification(userID int, n *notification.Notification) {
+	// Check user email preference
+	pref, err := uc.notifRepo.GetEmailPreference(userID)
+	if err != nil {
+		log.Printf("email: get preference for user %d: %v", userID, err)
+		return
+	}
+	if !pref.EmailEnabled {
+		return
+	}
+
+	// Get user email
+	userEmail, err := uc.notifRepo.GetUserEmail(userID)
+	if err != nil {
+		log.Printf("email: get email for user %d: %v", userID, err)
+		return
+	}
+
+	subject, html, text := email.FormatNotificationEmail(n.Title, n.Body, n.ReferenceType, n.ReferenceID)
+	if err := uc.emailService.SendEmail(userEmail, subject, html, text); err != nil {
+		log.Printf("email: send to user %d (%s): %v", userID, userEmail, err)
+	}
+}
+
+// GetEmailPreference returns the email notification preference for a user.
+func (uc *NotificationUseCase) GetEmailPreference(userID int) (*notification.EmailPreference, error) {
+	return uc.notifRepo.GetEmailPreference(userID)
+}
+
+// UpdateEmailPreference updates the email notification preference for a user.
+func (uc *NotificationUseCase) UpdateEmailPreference(userID int, emailEnabled bool) error {
+	pref := &notification.EmailPreference{
+		UserID:       userID,
+		EmailEnabled: emailEnabled,
+	}
+	return uc.notifRepo.SaveEmailPreference(pref)
 }
 
 // SendAnnouncement sends a notification to all approved users (or specific users).

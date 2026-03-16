@@ -55,6 +55,15 @@ func RunMigrations(db *sql.DB) error {
 		db.Exec(stmt) // ignore "duplicate column" errors
 	}
 
+	// Create email_preferences table (idempotent)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS email_preferences (
+		user_id INTEGER PRIMARY KEY REFERENCES users(id),
+		email_enabled INTEGER NOT NULL DEFAULT 1
+	)`)
+	if err != nil {
+		return fmt.Errorf("create email_preferences table: %w", err)
+	}
+
 	// Create grants tables (idempotent)
 	grantTables := []string{
 		`CREATE TABLE IF NOT EXISTS grants (

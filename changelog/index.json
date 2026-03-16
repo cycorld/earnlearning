@@ -76,5 +76,11 @@
     "title": "공지 알림 + iOS 웹 푸시: 삽질의 기록",
     "date": "2026-03-15",
     "tags": ["알림", "푸시", "관리자", "WebPush", "iOS", "VAPID", "트러블슈팅"]
+  },
+  {
+    "slug": "014-email-notifications",
+    "title": "이메일 알림 시스템: AWS SES로 알림을 이메일로도 보내기",
+    "date": "2026-03-16",
+    "tags": ["이메일", "AWS SES", "알림", "IAM", "DNS", "DKIM"]
   }
 ]

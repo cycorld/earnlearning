@@ -9,6 +9,7 @@ import (
 	"github.com/earnlearning/backend/internal/application"
 	"github.com/earnlearning/backend/internal/infrastructure/config"
 	"github.com/earnlearning/backend/internal/infrastructure/persistence"
+	"github.com/earnlearning/backend/internal/infrastructure/email"
 	"github.com/earnlearning/backend/internal/infrastructure/push"
 	"github.com/earnlearning/backend/internal/interfaces/http/handler"
 	"github.com/earnlearning/backend/internal/interfaces/http/router"
@@ -69,6 +70,14 @@ func main() {
 	// Push service
 	pushSvc := push.NewWebPushService(cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject, notifRepo)
 
+	// Email service (SES)
+	emailSvc := email.NewSESService(email.Config{
+		Region:          cfg.SESRegion,
+		AccessKeyID:     cfg.SESAccessKeyID,
+		SecretAccessKey:  cfg.SESSecretAccessKey,
+		FromEmail:       cfg.SESFromEmail,
+	})
+
 	// Use Cases
 	authUC := application.NewAuthUseCase(userRepo, walletRepo, cfg.JWTSecret)
 	walletUC := application.NewWalletUseCase(walletRepo, userRepo)
@@ -76,7 +85,7 @@ func main() {
 	companyUC := application.NewCompanyUsecase(companyRepo, userRepo, walletRepo)
 	postUC := application.NewPostUsecase(postRepo, walletRepo)
 	uploadUC := application.NewUploadUsecase(postRepo, cfg.UploadPath)
-	notifUC := application.NewNotificationUseCase(notifRepo, pushSvc, hub)
+	notifUC := application.NewNotificationUseCase(notifRepo, pushSvc, emailSvc, hub)
 	freelanceUC := application.NewFreelanceUseCase(db, freelanceRepo, walletRepo, notifUC)
 	grantUC := application.NewGrantUseCase(db, grantRepo, walletRepo, notifUC)
 	investmentUC := application.NewInvestmentUseCase(db, investmentRepo, companyRepo, walletRepo)

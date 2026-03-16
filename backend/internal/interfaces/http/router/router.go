@@ -162,6 +162,8 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.POST("/notifications/push/subscribe", h.Notification.SubscribePush)
 	approved.DELETE("/notifications/push/subscribe", h.Notification.UnsubscribePush)
 	approved.GET("/notifications/push/vapid-key", h.Notification.GetVAPIDPublicKey)
+	approved.GET("/notifications/email/preference", h.Notification.GetEmailPreference)
+	approved.PUT("/notifications/email/preference", h.Notification.UpdateEmailPreference)
 
 	// ================================================================
 	// Admin routes (JWT + approved + admin)
