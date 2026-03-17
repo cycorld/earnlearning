@@ -72,8 +72,8 @@ func (uc *LoanUseCase) ApproveLoan(loanID, adminUserID int, input ApproveLoanInp
 	}
 
 	interestRate := input.InterestRate
-	if interestRate <= 0 {
-		interestRate = 5 // default 5% (stored as percentage)
+	if interestRate < 0 {
+		interestRate = 0
 	}
 	penaltyRate := interestRate * 2
 
