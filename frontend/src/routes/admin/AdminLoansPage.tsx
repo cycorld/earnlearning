@@ -99,7 +99,7 @@ export default function AdminLoansPage() {
 
   const openApproveDialog = (loan: AdminLoan) => {
     setSelectedLoan(loan)
-    setInterestRate('')
+    setInterestRate('5')
     setApproveDialogOpen(true)
   }
 
@@ -320,18 +320,21 @@ export default function AdminLoansPage() {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="interest-rate">이자율 (%)</Label>
+                <Label htmlFor="interest-rate">연 이자율 (%)</Label>
                 <Input
                   id="interest-rate"
                   type="number"
                   min="0"
                   max="100"
                   step="0.1"
-                  placeholder="주간 이자율"
+                  placeholder="연 이자율 (예: 5)"
                   value={interestRate}
                   onChange={(e) => setInterestRate(e.target.value)}
                   required
                 />
+                <p className="text-xs text-muted-foreground">
+                  0% 입력 시 무이자 대출. 연체 시 이자율의 2배가 벌금으로 적용됩니다.
+                </p>
               </div>
               <Button type="submit" className="w-full" disabled={processing}>
                 {processing ? '처리 중...' : '승인하기'}
