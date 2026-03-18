@@ -37,6 +37,7 @@ type Grant struct {
 	Admin            *UserRef             `json:"admin,omitempty"`
 	Applications     []*GrantApplication  `json:"applications,omitempty"`
 	ApplicationCount *int                 `json:"application_count,omitempty"`
+	ApprovedCount    *int                 `json:"approved_count,omitempty"`
 
 	// Internal
 	AdminName string `json:"-"`
