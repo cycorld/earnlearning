@@ -13,10 +13,7 @@ import {
   Building2,
   Clock,
 } from 'lucide-react'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 interface Dividend {
   id: number

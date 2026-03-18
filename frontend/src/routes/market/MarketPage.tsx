@@ -14,10 +14,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Clock, Users, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 const statusLabels: Record<string, string> = {
   open: '모집 중',

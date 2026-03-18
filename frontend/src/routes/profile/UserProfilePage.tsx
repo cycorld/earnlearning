@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ArrowLeft,
 } from 'lucide-react'
+import { formatMoney } from '@/lib/utils'
 
 interface UserProfile extends User {
   companies?: Company[]
@@ -111,10 +112,7 @@ export default function UserProfilePage() {
               <CardContent className="p-3 text-center">
                 <p className="text-xs text-muted-foreground">총 자산</p>
                 <p className="text-sm font-semibold">
-                  {new Intl.NumberFormat('ko-KR').format(
-                    profile.total_asset_value,
-                  )}
-                  원
+                  {formatMoney(profile.total_asset_value)}
                 </p>
               </CardContent>
             </Card>
@@ -124,8 +122,7 @@ export default function UserProfilePage() {
               <CardContent className="p-3 text-center">
                 <p className="text-xs text-muted-foreground">보유 현금</p>
                 <p className="text-sm font-semibold">
-                  {new Intl.NumberFormat('ko-KR').format(profile.wallet_balance)}
-                  원
+                  {formatMoney(profile.wallet_balance)}
                 </p>
               </CardContent>
             </Card>
@@ -174,7 +171,7 @@ export default function UserProfilePage() {
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">기업가치</p>
                   <p className="text-xs font-medium">
-                    {new Intl.NumberFormat('ko-KR').format(company.valuation)}원
+                    {formatMoney(company.valuation)}
                   </p>
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />

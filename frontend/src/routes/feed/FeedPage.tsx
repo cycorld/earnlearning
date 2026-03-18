@@ -30,6 +30,7 @@ import {
   LogIn,
   X,
   Hash,
+  Pencil,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
@@ -76,6 +77,13 @@ export default function FeedPage() {
   const [newPostTags, setNewPostTags] = useState('')
   const [postChannelId, setPostChannelId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
+
+  // Edit post
+  const [editPostId, setEditPostId] = useState<number | null>(null)
+  const [editPostContent, setEditPostContent] = useState('')
+  const [editPostTags, setEditPostTags] = useState('')
+  const [editPostOpen, setEditPostOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   // Comments
   const [expandedPost, setExpandedPost] = useState<number | null>(null)
@@ -231,6 +239,48 @@ export default function FeedPage() {
       toast.error(message)
     } finally {
       setCreating(false)
+    }
+  }
+
+  // Open edit dialog
+  const openEditPost = (post: Post) => {
+    setEditPostId(post.id)
+    setEditPostContent(post.content)
+    let tags: string[] = []
+    if (Array.isArray(post.tags)) {
+      tags = post.tags
+    } else if (typeof post.tags === 'string') {
+      try { tags = JSON.parse(post.tags) } catch { tags = [] }
+    }
+    setEditPostTags(tags.join(', '))
+    setEditPostOpen(true)
+  }
+
+  // Update post
+  const handleUpdatePost = async () => {
+    if (!editPostContent.trim() || !editPostId) return
+    setEditing(true)
+    try {
+      const tags = editPostTags
+        .split(',')
+        .map((t) => t.trim().replace(/^#/, ''))
+        .filter(Boolean)
+      const updated = await api.put<Post>(`/posts/${editPostId}`, {
+        content: editPostContent.trim(),
+        tags: JSON.stringify(tags),
+      })
+      setPosts((prev) =>
+        prev.map((p) => (p.id === editPostId ? { ...p, content: updated.content, tags: updated.tags } : p)),
+      )
+      toast.success('게시물이 수정되었습니다.')
+      setEditPostOpen(false)
+      setEditPostId(null)
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : '게시물 수정에 실패했습니다.'
+      toast.error(message)
+    } finally {
+      setEditing(false)
     }
   }
 
@@ -432,6 +482,65 @@ export default function FeedPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit post dialog */}
+      <Dialog open={editPostOpen} onOpenChange={setEditPostOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>게시물 수정</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>내용</Label>
+              <MarkdownEditor
+                value={editPostContent}
+                onChange={setEditPostContent}
+                placeholder="마크다운으로 작성하세요... (이미지 붙여넣기 가능)"
+                rows={6}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <Hash className="h-3.5 w-3.5" />
+                태그 (쉼표로 구분)
+              </Label>
+              <Input
+                placeholder="예: 공지, 중요, 프로젝트"
+                value={editPostTags}
+                onChange={(e) => setEditPostTags(e.target.value)}
+              />
+              {editPostTags.trim() && (
+                <div className="flex flex-wrap gap-1">
+                  {editPostTags
+                    .split(',')
+                    .map((t) => t.trim().replace(/^#/, ''))
+                    .filter(Boolean)
+                    .map((tag) => (
+                      <Badge key={tag} variant="outline" className="text-xs">
+                        #{tag}
+                      </Badge>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditPostOpen(false)}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={handleUpdatePost}
+              disabled={editing || !editPostContent.trim()}
+            >
+              {editing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              수정
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Active tag filter */}
       {activeTag && (
         <div className="flex items-center gap-2 rounded-lg border bg-primary/5 px-3 py-2">
@@ -482,8 +591,17 @@ export default function FeedPage() {
                         </Badge>
                       )}
                       {post.pinned && <Pin className="h-3 w-3 text-primary" />}
-                      <span className="ml-auto text-xs text-muted-foreground">
+                      <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
                         {timeAgo(post.created_at)}
+                        {(post.author?.id === user?.id || user?.role === 'admin') && (
+                          <button
+                            onClick={() => openEditPost(post)}
+                            className="ml-1 rounded p-0.5 hover:bg-muted"
+                            title="수정"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        )}
                       </span>
                     </div>
                     <MarkdownContent

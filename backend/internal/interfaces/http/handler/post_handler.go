@@ -126,6 +126,39 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	})
 }
 
+func (h *PostHandler) UpdatePost(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+
+	postID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 게시글 ID입니다"},
+		})
+	}
+
+	var input application.UpdatePostInput
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_INPUT", "message": "잘못된 입력입니다"},
+		})
+	}
+
+	result, err := h.uc.UpdatePost(postID, userID, role, input)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "UPDATE_FAILED", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": result, "error": nil,
+	})
+}
+
 func (h *PostHandler) LikePost(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	postID, err := strconv.Atoi(c.Param("id"))

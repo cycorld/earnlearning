@@ -28,10 +28,7 @@ import {
   LogIn,
 } from 'lucide-react'
 import { setToken } from '@/lib/auth'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 export default function AdminUsersPage() {
   const navigate = useNavigate()
