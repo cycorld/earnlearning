@@ -61,3 +61,8 @@ func (ap *AutoPoster) PostToChannelAsAdmin(slug string, content string, tags []s
 1. **공통 헬퍼 패턴**: 여러 도메인에서 같은 작업(피드 포스팅)을 할 때, 공통 헬퍼를 만들면 코드 중복을 줄이고 일관성을 유지할 수 있습니다.
 2. **Setter 주입 패턴**: 순환 의존성을 피하기 위해 `SetNotificationUseCase()` setter를 사용했습니다. 생성 시점에는 notifUC가 없지만, 모든 use case 생성 후 주입합니다.
 3. **알림 경로 통합의 중요성**: DB 직접 INSERT로 알림을 만들면 Push/Email이 안 갑니다. 반드시 NotificationUseCase를 경유해야 3채널 알림이 작동합니다.
+
+---
+
+## GitHub 참고 링크
+- [PR #15: 자동 피드 포스팅 + 누락 알림 보강](https://github.com/cycorld/earnlearning/pull/15)

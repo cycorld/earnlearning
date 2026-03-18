@@ -320,3 +320,10 @@ IP, 메서드, 경로, 상태코드, 응답시간을 기록하고,
 
 ### 7. 비용 의식을 갖자
 스타트업에서 인프라 비용은 중요합니다. t3.small($25/월)로 시작해서 사용자가 늘면 업그레이드하는 것이 현명합니다. 처음부터 큰 서버를 쓰면 돈 낭비입니다.
+
+---
+
+## GitHub 참고 링크
+- [커밋 3d22fbb: 배포 구성: EC2 + Docker Compose (stage/prod) + Nginx + Cloudflare DNS](https://github.com/cycorld/earnlearning/commit/3d22fbb)
+- [커밋 38fc923: prod DB 안전장치: external volume + 백업 스크립트](https://github.com/cycorld/earnlearning/commit/38fc923)
+- [커밋 9dfb9eb: 배포 최적화: deploy.sh 스크립트 + Stage→Prod 프로모트](https://github.com/cycorld/earnlearning/commit/9dfb9eb)

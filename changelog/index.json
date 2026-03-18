@@ -3,114 +3,133 @@
     "slug": "001-project-kickoff",
     "title": "프로젝트 기획과 설계: 아이디어를 문서로 만들기",
     "date": "2026-03-13",
-    "tags": ["기획", "설계", "PRD", "기술스펙", "PWA"]
+    "tags": ["기획", "설계", "PRD", "기술스펙", "PWA"],
+    "github": "https://github.com/cycorld/earnlearning/commit/3c9e496"
   },
   {
     "slug": "002-full-implementation",
     "title": "전체 기능 구현: 설계 문서를 동작하는 코드로",
     "date": "2026-03-13",
-    "tags": ["구현", "풀스택", "Go", "React", "API"]
+    "tags": ["구현", "풀스택", "Go", "React", "API"],
+    "github": "https://github.com/cycorld/earnlearning/commit/1e19397"
   },
   {
     "slug": "003-testing-and-bugfix",
     "title": "테스트와 버그 수정: 코드가 진짜로 동작하는지 확인하기",
     "date": "2026-03-13",
-    "tags": ["테스트", "E2E", "버그수정", "품질보증", "스모크테스트"]
+    "tags": ["테스트", "E2E", "버그수정", "품질보증", "스모크테스트"],
+    "github": "https://github.com/cycorld/earnlearning/commit/bde13f2"
   },
   {
     "slug": "004-ux-enhancements",
     "title": "UX 개선: 사용자 경험을 한 단계 끌어올리기",
     "date": "2026-03-14",
-    "tags": ["UX", "마크다운", "파일업로드", "태그", "에디터"]
+    "tags": ["UX", "마크다운", "파일업로드", "태그", "에디터"],
+    "github": "https://github.com/cycorld/earnlearning/commit/cec30e6"
   },
   {
     "slug": "005-deployment",
     "title": "배포: 내 컴퓨터에서 세상으로 나가기",
     "date": "2026-03-14",
-    "tags": ["배포", "AWS", "Docker", "Nginx", "Cloudflare", "백업"]
+    "tags": ["배포", "AWS", "Docker", "Nginx", "Cloudflare", "백업"],
+    "github": "https://github.com/cycorld/earnlearning/commit/3d22fbb"
   },
   {
     "slug": "006-tdd-and-quality",
     "title": "TDD와 코드 품질: 테스트가 개발을 이끄는 방식",
     "date": "2026-03-15",
-    "tags": ["TDD", "테스트", "회귀테스트", "빌드", "품질"]
+    "tags": ["TDD", "테스트", "회귀테스트", "빌드", "품질"],
+    "github": "https://github.com/cycorld/earnlearning/commit/191d481"
   },
   {
     "slug": "007-cicd-and-security",
     "title": "CI/CD와 보안: 자동화된 배포와 안전한 운영",
     "date": "2026-03-15",
-    "tags": ["CI/CD", "GitHub Actions", "보안", "자동화", "배포"]
+    "tags": ["CI/CD", "GitHub Actions", "보안", "자동화", "배포"],
+    "github": "https://github.com/cycorld/earnlearning/pull/1"
   },
   {
     "slug": "008-production-debugging",
     "title": "운영 환경 트러블슈팅: 배포 후 서비스가 안 될 때",
     "date": "2026-03-15",
-    "tags": ["트러블슈팅", "Docker", "Nginx", "WebSocket", "디버깅"]
+    "tags": ["트러블슈팅", "Docker", "Nginx", "WebSocket", "디버깅"],
+    "github": "https://github.com/cycorld/earnlearning/pull/3"
   },
   {
     "slug": "009-token-and-version",
     "title": "토큰 자동 갱신과 앱 버전 관리: 사용자가 모르게 부드럽게",
     "date": "2026-03-15",
-    "tags": ["JWT", "인증", "토큰갱신", "버전관리", "UX"]
+    "tags": ["JWT", "인증", "토큰갱신", "버전관리", "UX"],
+    "github": "https://github.com/cycorld/earnlearning/commit/945638d"
   },
   {
     "slug": "010-cache-busting",
     "title": "캐시 문제 해결: 새 버전이 안 보일 때",
     "date": "2026-03-15",
-    "tags": ["캐시", "Service Worker", "PWA", "Nginx", "배포"]
+    "tags": ["캐시", "Service Worker", "PWA", "Nginx", "배포"],
+    "github": "https://github.com/cycorld/earnlearning/pull/4"
   },
   {
     "slug": "011-brand-and-design",
     "title": "브랜드 디자인과 AI 이미지 생성: 서비스에 정체성 입히기",
     "date": "2026-03-15",
-    "tags": ["브랜드", "디자인", "AI", "Gemini", "PWA", "파비콘"]
+    "tags": ["브랜드", "디자인", "AI", "Gemini", "PWA", "파비콘"],
+    "github": "https://github.com/cycorld/earnlearning/pull/5"
   },
   {
     "slug": "012-brand-ui-redesign",
     "title": "브랜드 가이드 기반 UI 리디자인: 색상과 서체로 정체성 완성하기",
     "date": "2026-03-15",
-    "tags": ["브랜드", "UI", "디자인시스템", "타이포그래피", "CSS"]
+    "tags": ["브랜드", "UI", "디자인시스템", "타이포그래피", "CSS"],
+    "github": "https://github.com/cycorld/earnlearning/pull/9"
   },
   {
     "slug": "013-admin-announce",
     "title": "공지 알림 + iOS 웹 푸시: 삽질의 기록",
     "date": "2026-03-15",
-    "tags": ["알림", "푸시", "관리자", "WebPush", "iOS", "VAPID", "트러블슈팅"]
+    "tags": ["알림", "푸시", "관리자", "WebPush", "iOS", "VAPID", "트러블슈팅"],
+    "github": "https://github.com/cycorld/earnlearning/pull/12"
   },
   {
     "slug": "014-email-notifications",
     "title": "이메일 알림 시스템: AWS SES로 알림을 이메일로도 보내기",
     "date": "2026-03-16",
-    "tags": ["이메일", "AWS SES", "알림", "IAM", "DNS", "DKIM"]
+    "tags": ["이메일", "AWS SES", "알림", "IAM", "DNS", "DKIM"],
+    "github": "https://github.com/cycorld/earnlearning/pull/13"
   },
   {
     "slug": "015-announce-notify-toggle",
     "title": "공지 알림 전송 옵션: 푸시/이메일을 보낼지 선택하기",
     "date": "2026-03-16",
-    "tags": ["알림", "공지", "관리자", "UX"]
+    "tags": ["알림", "공지", "관리자", "UX"],
+    "github": "https://github.com/cycorld/earnlearning/pull/14"
   },
   {
     "slug": "016-auto-post-notifications",
     "title": "자동 피드 포스팅 & 알림 보강: 활동이 피드에 자동으로 올라가게",
     "date": "2026-03-16",
-    "tags": ["피드", "자동포스팅", "알림", "이메일", "거래소", "투자", "외주", "정부과제"]
+    "tags": ["피드", "자동포스팅", "알림", "이메일", "거래소", "투자", "외주", "정부과제"],
+    "github": "https://github.com/cycorld/earnlearning/pull/15"
   },
   {
     "slug": "017-loan-zero-interest",
     "title": "대출 0% 이자율 허용: 무이자 대출이 안 되던 버그 수정",
     "date": "2026-03-17",
-    "tags": ["버그수정", "대출", "은행"]
+    "tags": ["버그수정", "대출", "은행"],
+    "github": "https://github.com/cycorld/earnlearning/pull/16"
   },
   {
     "slug": "018-kanban-board",
     "title": "칸반보드 태스크 관리: 개발 작업을 시각적으로 관리하기",
     "date": "2026-03-18",
-    "tags": ["관리자", "칸반보드", "태스크", "프로젝트관리"]
+    "tags": ["관리자", "칸반보드", "태스크", "프로젝트관리"],
+    "github": "https://github.com/cycorld/earnlearning/pull/17"
   },
   {
     "slug": "019-edit-post-format-money",
     "title": "게시글 수정 기능 + 금액 포맷팅 통합: DRY 원칙 실천하기",
     "date": "2026-03-18",
-    "tags": ["피드", "게시글수정", "포맷팅", "리팩토링", "UX"]
+    "tags": ["피드", "게시글수정", "포맷팅", "리팩토링", "UX"],
+    "github": "https://github.com/cycorld/earnlearning/pull/18"
   }
 ]
