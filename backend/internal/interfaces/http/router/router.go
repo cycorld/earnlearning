@@ -180,6 +180,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.PUT("/loans/:id/reject", h.Loan.RejectLoan)
 	admin.POST("/loans/weekly-interest", h.Loan.ProcessWeeklyInterest)
 	admin.GET("/loans", h.Loan.AdminListLoans)
+	admin.GET("/classrooms/:id/dashboard", h.Classroom.GetClassroomDashboard)
 	admin.GET("/companies", h.Company.ListAllCompanies)
 	admin.POST("/users/:id/impersonate", h.Admin.ImpersonateUser)
 	admin.POST("/notifications/announce", h.Notification.AdminSendAnnouncement)
