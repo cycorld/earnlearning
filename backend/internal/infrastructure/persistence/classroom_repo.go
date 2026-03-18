@@ -141,6 +141,50 @@ func (r *ClassroomRepo) GetChannels(classroomID int) ([]*classroom.Channel, erro
 	return channels, rows.Err()
 }
 
+func (r *ClassroomRepo) GetMemberDashboard(classroomID int) ([]*classroom.MemberDashboard, error) {
+	rows, err := r.db.Query(`
+		SELECT
+			u.id, u.name, u.email, u.student_id, u.department, u.avatar_url, u.status,
+			cm.joined_at,
+			COALESCE(w.balance, 0) AS balance,
+			COALESCE(w.balance, 0)
+				+ COALESCE((SELECT SUM(sh.shares * COALESCE(
+					(SELECT MAX(t.price) FROM trades t WHERE t.company_id = sh.company_id), co.valuation / NULLIF(co.total_shares, 0)
+				)) FROM shareholders sh JOIN companies co ON co.id = sh.company_id WHERE sh.user_id = u.id), 0)
+				- COALESCE((SELECT SUM(l.remaining) FROM loans l WHERE l.borrower_id = u.id AND l.status = 'active'), 0)
+			AS total_asset,
+			COALESCE((SELECT COUNT(*) FROM companies WHERE owner_id = u.id AND status = 'active'), 0) AS company_count,
+			COALESCE((SELECT COUNT(*) FROM loans WHERE borrower_id = u.id AND status = 'active'), 0) AS loan_count,
+			COALESCE((SELECT SUM(remaining) FROM loans WHERE borrower_id = u.id AND status = 'active'), 0) AS total_debt,
+			COALESCE((SELECT COUNT(*) FROM posts p JOIN channels ch ON ch.id = p.channel_id WHERE ch.classroom_id = ? AND p.author_id = u.id), 0) AS post_count,
+			COALESCE((SELECT GROUP_CONCAT(name, ', ') FROM companies WHERE owner_id = u.id AND status = 'active'), '') AS company_names
+		FROM classroom_members cm
+		JOIN users u ON u.id = cm.user_id
+		LEFT JOIN wallets w ON w.user_id = u.id
+		WHERE cm.classroom_id = ? AND u.role = 'student'
+		ORDER BY total_asset DESC`,
+		classroomID, classroomID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var members []*classroom.MemberDashboard
+	for rows.Next() {
+		m := &classroom.MemberDashboard{}
+		if err := rows.Scan(
+			&m.UserID, &m.Name, &m.Email, &m.StudentID, &m.Department, &m.AvatarURL, &m.Status,
+			&m.JoinedAt, &m.Balance, &m.TotalAsset,
+			&m.CompanyCount, &m.LoanCount, &m.TotalDebt, &m.PostCount, &m.CompanyNames,
+		); err != nil {
+			return nil, err
+		}
+		members = append(members, m)
+	}
+	return members, rows.Err()
+}
+
 func (r *ClassroomRepo) ListByUser(userID int) ([]*classroom.Classroom, error) {
 	rows, err := r.db.Query(
 		`SELECT c.id, c.name, c.code, c.created_by, c.initial_capital, c.settings, c.created_at

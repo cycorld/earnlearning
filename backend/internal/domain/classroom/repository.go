@@ -10,4 +10,5 @@ type Repository interface {
 	CreateChannel(ch *Channel) (int, error)
 	GetChannels(classroomID int) ([]*Channel, error)
 	ListByUser(userID int) ([]*Classroom, error)
+	GetMemberDashboard(classroomID int) ([]*MemberDashboard, error)
 }

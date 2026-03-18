@@ -145,5 +145,12 @@
     "date": "2026-03-18",
     "tags": ["마크다운", "버그수정", "UX"],
     "github": "https://github.com/cycorld/earnlearning/pull/21"
+  },
+  {
+    "slug": "022-classroom-dashboard",
+    "title": "강의실 학생 대시보드: 학생 현황을 한눈에",
+    "date": "2026-03-19",
+    "tags": ["관리자", "대시보드", "강의실", "UX"],
+    "github": "https://github.com/cycorld/earnlearning/pull/22"
   }
 ]
