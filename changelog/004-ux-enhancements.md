@@ -306,3 +306,10 @@ tx.Commit()
 
 ### 6. 자동화는 행동을 유도한다
 "외주 완료 후 결과물을 포스팅하세요"보다 자동으로 포스팅되도록 하면 참여율이 훨씬 높아집니다. 사용자에게 행동을 요구하는 대신 시스템이 자동으로 처리하는 것이 더 효과적입니다.
+
+---
+
+## GitHub 참고 링크
+- [커밋 cec30e6: 마크다운 에디터 + 파일 업로드 + 더보기 토글 추가](https://github.com/cycorld/earnlearning/commit/cec30e6)
+- [커밋 6f048d8: 모든 상세내용 입력 필드를 마크다운 위지윅 에디터로 전환](https://github.com/cycorld/earnlearning/commit/6f048d8)
+- [커밋 d7a2726: 태그 입력 UI + 클릭 필터링 + 리그레션 테스트](https://github.com/cycorld/earnlearning/commit/d7a2726)
