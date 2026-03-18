@@ -9,10 +9,7 @@ import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Loader2, Upload } from 'lucide-react'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 const MIN_CAPITAL = 1_000_000
 

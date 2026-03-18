@@ -14,6 +14,7 @@ import {
   Users,
   Wallet,
 } from 'lucide-react'
+import { formatMoney } from '@/lib/utils'
 
 interface Classroom {
   id: number
@@ -22,10 +23,6 @@ interface Classroom {
   initial_capital: number
   member_count?: number
   created_at: string
-}
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
 }
 
 export default function AdminClassroomPage() {

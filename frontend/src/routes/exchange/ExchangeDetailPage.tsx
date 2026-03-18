@@ -23,6 +23,7 @@ import {
   X,
   RefreshCw,
 } from 'lucide-react'
+import { formatMoney } from '@/lib/utils'
 
 interface OrderbookEntry {
   price: number
@@ -43,10 +44,6 @@ interface ExchangeOrder {
   price: number
   status: string
   created_at: string
-}
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
 }
 
 export default function ExchangeDetailPage() {

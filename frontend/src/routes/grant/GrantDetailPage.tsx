@@ -11,10 +11,7 @@ import { toast } from 'sonner'
 import { ArrowLeft, Loader2, CheckCircle, Send } from 'lucide-react'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { MarkdownContent } from '@/components/MarkdownContent'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 const statusLabels: Record<string, string> = {
   open: '모집 중',

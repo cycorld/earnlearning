@@ -20,10 +20,7 @@ import {
 import { usePush } from '@/hooks/use-push'
 import { useEmailPreference } from '@/hooks/use-email-preference'
 import { Mail, MailX } from 'lucide-react'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 export default function ProfilePage() {
   const { user, isLoading, logout } = useAuth()

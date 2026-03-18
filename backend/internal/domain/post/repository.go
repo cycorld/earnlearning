@@ -9,6 +9,7 @@ type PostRepository interface {
 	// Post operations
 	CreatePost(p *Post) (int, error)
 	FindPostByID(postID int) (*Post, error)
+	UpdatePost(postID int, content string, tags string) error
 	GetPosts(classroomID, channelID int, page, limit int, tag string, currentUserID int) ([]*Post, int, error)
 
 	// Like operations

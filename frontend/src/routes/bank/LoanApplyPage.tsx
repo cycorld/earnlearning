@@ -8,10 +8,7 @@ import { Label } from '@/components/ui/label'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { toast } from 'sonner'
 import { ArrowLeft, Landmark, Info } from 'lucide-react'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 export default function LoanApplyPage() {
   const navigate = useNavigate()

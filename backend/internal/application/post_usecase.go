@@ -150,6 +150,57 @@ func (uc *PostUsecase) CreatePost(userID int, role string, input CreatePostInput
 	return p, nil
 }
 
+type UpdatePostInput struct {
+	Content string `json:"content"`
+	Tags    string `json:"tags"`
+}
+
+func (uc *PostUsecase) UpdatePost(postID, userID int, role string, input UpdatePostInput) (*post.Post, error) {
+	// Check if post exists and user is author (or admin)
+	p, err := uc.postRepo.FindPostByID(postID)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.AuthorID != userID && role != "admin" {
+		return nil, fmt.Errorf("본인이 작성한 게시글만 수정할 수 있습니다")
+	}
+
+	// Merge user-provided tags with auto-extracted tags from content
+	autoTags := extractTags(input.Content)
+	seen := make(map[string]bool)
+	var tags []string
+	if input.Tags != "" {
+		var userTags []string
+		if json.Unmarshal([]byte(input.Tags), &userTags) == nil {
+			for _, t := range userTags {
+				t = strings.TrimSpace(t)
+				if t != "" && !seen[t] {
+					seen[t] = true
+					tags = append(tags, t)
+				}
+			}
+		}
+	}
+	for _, t := range autoTags {
+		if !seen[t] {
+			seen[t] = true
+			tags = append(tags, t)
+		}
+	}
+	if tags == nil {
+		tags = []string{}
+	}
+	tagsJSON, _ := json.Marshal(tags)
+
+	if err := uc.postRepo.UpdatePost(postID, input.Content, string(tagsJSON)); err != nil {
+		return nil, fmt.Errorf("게시글 수정 실패: %w", err)
+	}
+
+	// Re-fetch to return updated post
+	return uc.postRepo.FindPostByID(postID)
+}
+
 func (uc *PostUsecase) LikePost(postID, userID int) (bool, error) {
 	// Check if post exists
 	_, err := uc.postRepo.FindPostByID(postID)
