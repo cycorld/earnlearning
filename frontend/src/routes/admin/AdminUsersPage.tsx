@@ -28,7 +28,7 @@ import {
   LogIn,
 } from 'lucide-react'
 import { setToken } from '@/lib/auth'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, displayName } from '@/lib/utils'
 
 export default function AdminUsersPage() {
   const navigate = useNavigate()
@@ -170,7 +170,7 @@ export default function AdminUsersPage() {
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-medium">{user.name}</p>
+          <p className="truncate text-sm font-medium">{displayName(user)}</p>
           <Badge variant={statusVariant(user.status)} className="text-xs">
             {statusLabel(user.status)}
           </Badge>

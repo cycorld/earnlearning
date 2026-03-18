@@ -78,7 +78,7 @@ export interface Channel {
 export interface Post {
   id: number
   channel?: Channel
-  author?: { id: number; name: string; avatar_url: string; student_id: string }
+  author?: { id: number; name: string; avatar_url: string; student_id: string; department: string }
   content: string
   post_type: string
   media: MediaItem[]
@@ -99,7 +99,7 @@ export interface MediaItem {
 export interface Comment {
   id: number
   post_id: number
-  author?: { id: number; name: string; avatar_url: string }
+  author?: { id: number; name: string; avatar_url: string; student_id: string; department: string }
   content: string
   media: MediaItem[]
   created_at: string
@@ -127,7 +127,7 @@ export interface Submission {
 
 export interface FreelanceJob {
   id: number
-  client?: { id: number; name: string; rating: number }
+  client?: { id: number; name: string; rating: number; student_id?: string; department?: string }
   title: string
   description: string
   budget: number
@@ -148,7 +148,7 @@ export interface FreelanceJob {
 export interface JobApplication {
   id: number
   job_id: number
-  user?: { id: number; name: string; rating: number }
+  user?: { id: number; name: string; rating: number; student_id?: string; department?: string }
   proposal: string
   price: number
   status: string
@@ -176,7 +176,7 @@ export interface GrantApplication {
   id: number
   grant_id: number
   user_id: number
-  user?: { id: number; name: string; student_id: string }
+  user?: { id: number; name: string; student_id: string; department: string }
   proposal: string
   status: 'pending' | 'approved' | 'rejected'
   created_at: string

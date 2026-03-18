@@ -30,17 +30,19 @@ type Post struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 
 	// Joined fields (not stored in posts table, not serialized directly)
-	AuthorName      string `json:"-"`
-	AuthorAvatar    string `json:"-"`
-	AuthorStudentID string `json:"-"`
-	IsLiked         bool   `json:"is_liked"`
+	AuthorName       string `json:"-"`
+	AuthorAvatar     string `json:"-"`
+	AuthorStudentID  string `json:"-"`
+	AuthorDepartment string `json:"-"`
+	IsLiked          bool   `json:"is_liked"`
 }
 
 type PostAuthor struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	AvatarURL string `json:"avatar_url"`
-	StudentID string `json:"student_id"`
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	AvatarURL  string `json:"avatar_url"`
+	StudentID  string `json:"student_id"`
+	Department string `json:"department"`
 }
 
 func (p Post) MarshalJSON() ([]byte, error) {
@@ -51,10 +53,11 @@ func (p Post) MarshalJSON() ([]byte, error) {
 	}{
 		Alias: (Alias)(p),
 		Author: PostAuthor{
-			ID:        p.AuthorID,
-			Name:      p.AuthorName,
-			AvatarURL: p.AuthorAvatar,
-			StudentID: p.AuthorStudentID,
+			ID:         p.AuthorID,
+			Name:       p.AuthorName,
+			AvatarURL:  p.AuthorAvatar,
+			StudentID:  p.AuthorStudentID,
+			Department: p.AuthorDepartment,
 		},
 	})
 }
@@ -68,14 +71,18 @@ type Comment struct {
 	CreatedAt time.Time `json:"created_at"`
 
 	// Joined fields (not serialized directly)
-	AuthorName   string `json:"-"`
-	AuthorAvatar string `json:"-"`
+	AuthorName       string `json:"-"`
+	AuthorAvatar     string `json:"-"`
+	AuthorStudentID  string `json:"-"`
+	AuthorDepartment string `json:"-"`
 }
 
 type CommentAuthor struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	AvatarURL string `json:"avatar_url"`
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	AvatarURL  string `json:"avatar_url"`
+	StudentID  string `json:"student_id"`
+	Department string `json:"department"`
 }
 
 func (c Comment) MarshalJSON() ([]byte, error) {
@@ -86,9 +93,11 @@ func (c Comment) MarshalJSON() ([]byte, error) {
 	}{
 		Alias: (Alias)(c),
 		Author: CommentAuthor{
-			ID:        c.AuthorID,
-			Name:      c.AuthorName,
-			AvatarURL: c.AuthorAvatar,
+			ID:         c.AuthorID,
+			Name:       c.AuthorName,
+			AvatarURL:  c.AuthorAvatar,
+			StudentID:  c.AuthorStudentID,
+			Department: c.AuthorDepartment,
 		},
 	})
 }

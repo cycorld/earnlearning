@@ -63,6 +63,37 @@ func (h *WalletHandler) GetTransactions(c echo.Context) error {
 	return successResponse(c, http.StatusOK, result)
 }
 
+func (h *WalletHandler) SearchRecipients(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	q := c.QueryParam("q")
+
+	recipients, err := h.walletUC.SearchRecipients(userID, q)
+	if err != nil {
+		return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "검색에 실패했습니다")
+	}
+
+	return successResponse(c, http.StatusOK, recipients)
+}
+
+func (h *WalletHandler) Transfer(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+
+	var input application.TransferInput
+	if err := c.Bind(&input); err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "잘못된 입력입니다")
+	}
+
+	if input.TargetUserID == userID {
+		return errorResponse(c, http.StatusBadRequest, "SELF_TRANSFER", "자기 자신에게 송금할 수 없습니다")
+	}
+
+	if err := h.walletUC.Transfer(userID, input); err != nil {
+		return errorResponse(c, http.StatusBadRequest, "TRANSFER_FAILED", err.Error())
+	}
+
+	return successResponse(c, http.StatusOK, map[string]string{"message": "송금이 완료되었습니다"})
+}
+
 func (h *WalletHandler) AdminTransfer(c echo.Context) error {
 	var input application.AdminTransferInput
 	if err := c.Bind(&input); err != nil {
