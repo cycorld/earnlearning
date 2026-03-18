@@ -212,3 +212,10 @@ git diff HEAD~1       # 마지막 변경 내용 확인
 2순위: 빌드 컨텍스트 변경이 원인 ✅
 3순위: PR 리뷰에서 Dockerfile 변경 시 주의 ✅
 ```
+
+---
+
+## GitHub 참고 링크
+- [PR #3: fix: WebSocket 연결 오류 수정](https://github.com/cycorld/earnlearning/pull/3)
+- [커밋 7f01cba: 프론트엔드 Dockerfile nginx.conf 경로 수정 (bad gateway 해결)](https://github.com/cycorld/earnlearning/commit/7f01cba)
+- [커밋 ee68ad7: WebSocket 401 수정 + 빌드넘버 기본값 개선](https://github.com/cycorld/earnlearning/commit/ee68ad7)

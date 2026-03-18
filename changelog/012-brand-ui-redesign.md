@@ -118,3 +118,9 @@ text-primary, bg-primary 등 유틸리티 클래스
 ```
 
 AI가 브랜드 가이드(`docs/brand-guide.md`)를 읽고, 현재 CSS와의 차이를 분석한 뒤, 색상/서체/파비콘을 일괄 업데이트했습니다.
+
+---
+
+## GitHub 참고 링크
+- [PR #9: 브랜드 가이드 기반 UI 리디자인](https://github.com/cycorld/earnlearning/pull/9)
+- [PR #8: 마크다운 GitHub 스타일 적용](https://github.com/cycorld/earnlearning/pull/8)

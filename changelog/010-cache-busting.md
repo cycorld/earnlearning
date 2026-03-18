@@ -159,3 +159,8 @@ forceRefresh()의 장점:
 
 ### 3. 핑거프린팅은 업계 표준
 Vite, Webpack, Next.js 모두 콘텐츠 해시 기반 캐시 전략을 사용합니다. 원리를 이해하면 어떤 프레임워크에서든 적용할 수 있습니다.
+
+---
+
+## GitHub 참고 링크
+- [PR #4: 캐시 문제 해결](https://github.com/cycorld/earnlearning/pull/4)

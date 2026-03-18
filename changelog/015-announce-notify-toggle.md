@@ -41,3 +41,8 @@ API에는 `send_notify` 필드를 추가했고, 생략하면 기본값 `true`로
 
 1. **기본값으로 하위호환**: `send_notify` 필드를 포인터(`*bool`)로 받아서, 기존 API 호출(필드 없음)은 자동으로 `true`로 처리됩니다.
 2. **코드 재사용**: 기존 `CreateNotification()`을 복제하지 않고, Push/Email 발송 부분만 빠진 `CreateNotificationQuiet()`를 별도로 만들었습니다.
+
+---
+
+## GitHub 참고 링크
+- [PR #14: 공지 알림 푸시/이메일 발송 선택 옵션](https://github.com/cycorld/earnlearning/pull/14)

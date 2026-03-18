@@ -258,3 +258,9 @@ AI가 작성한 코드라고 해서 버그가 없는 것은 절대 아닙니다.
 
 ### 6. 디버깅은 탐정 작업이다
 "댓글이 안 보여요" 같은 증상만으로는 원인을 알 수 없습니다. 데이터가 저장은 되는지? API가 응답을 하는지? SQL이 올바른지? 하나씩 확인하며 범위를 좁혀가는 것이 체계적인 디버깅입니다.
+
+---
+
+## GitHub 참고 링크
+- [커밋 bde13f2: E2E 테스트 전체 버그 수정 및 50+ 시나리오 커버리지 확보](https://github.com/cycorld/earnlearning/commit/bde13f2)
+- [커밋 8b7595a: 댓글 버그 수정 + 스모크/회귀 테스트 추가](https://github.com/cycorld/earnlearning/commit/8b7595a)

@@ -33,3 +33,8 @@ if interestRate < 0 { interestRate = 0 }
 ## 배운 점
 
 경계값 처리에서 `<= 0`과 `< 0`의 차이는 크다. 0이 유효한 입력인 경우 `<= 0`으로 검사하면 의도치 않게 기본값으로 대체된다.
+
+---
+
+## GitHub 참고 링크
+- [PR #16: 대출 0% 이자율 허용](https://github.com/cycorld/earnlearning/pull/16)

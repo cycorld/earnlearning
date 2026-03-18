@@ -129,3 +129,8 @@ aws profile=k 에다가 ses 세팅해줘. 우리 도메인 earnlearning.com 을 
 3. **Go의 goroutine으로 비동기 처리**: `go uc.sendEmailNotification(...)` 한 줄로 이메일 발송을 백그라운드에서 처리합니다. 사용자는 알림 생성이 완료될 때까지 이메일이 다 보내질 때까지 기다릴 필요가 없습니다.
 
 4. **기본값 설계의 중요성**: 이메일 알림은 기본 "켜짐"으로 설정했습니다. DB에 레코드가 없으면 켜짐으로 간주하는 방식으로, 기존 사용자들도 별도 마이그레이션 없이 바로 이메일을 받습니다.
+
+---
+
+## GitHub 참고 링크
+- [PR #13: AWS SES 이메일 알림 시스템 추가](https://github.com/cycorld/earnlearning/pull/13)
