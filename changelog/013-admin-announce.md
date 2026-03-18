@@ -112,3 +112,11 @@ if !strings.HasPrefix(subscriber, "https:") {
 - **에러 응답 body를 꼭 확인하세요**: HTTP 403이라는 상태 코드만으로는 원인을 알 수 없습니다. Apple이 보내주는 `BadJwtToken`, `VapidPkHashMismatch` 같은 메시지가 해결의 열쇠입니다.
 - **라이브러리 소스를 읽으세요**: webpush-go가 `mailto:`를 자동으로 붙이는 동작은 문서에 나와있지 않았습니다. 소스 코드를 직접 읽어서 원인을 찾았습니다.
 - **기존 코드 재활용**: 공지 알림 기능 자체는 기존 `CreateNotification` 파이프라인을 그대로 활용해서 빠르게 만들 수 있었습니다.
+
+---
+
+## GitHub 참고 링크
+- [PR #12: admin 공지 알림 기능 추가](https://github.com/cycorld/earnlearning/pull/12)
+- [커밋 20422e8: fix: VAPID subscriber에서 mailto: 중복 제거 (Apple Push BadJwtToken 해결)](https://github.com/cycorld/earnlearning/commit/20422e8)
+- [커밋 f4447f7: feat: iOS Safari PWA 설치 안내 배너 추가](https://github.com/cycorld/earnlearning/commit/f4447f7)
+- [커밋 1064c74: fix: PWA 푸시 알림 켜기 배너에 로딩/에러/타임아웃 추가](https://github.com/cycorld/earnlearning/commit/1064c74)

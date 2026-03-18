@@ -141,3 +141,9 @@ gemini-3-pro-image-preview → 고퀄리티, 복잡한 디자인
 
 ### 3. 하나의 원본에서 모든 크기를
 512px 고해상도 원본 하나를 만들고, `sips`(macOS)나 `sharp`(Node.js)로 나머지를 자동 생성합니다. 각 크기를 따로 만들면 미세한 차이가 생깁니다.
+
+---
+
+## GitHub 참고 링크
+- [PR #5: 브랜드 아이콘/파비콘/PWA 에셋 교체](https://github.com/cycorld/earnlearning/pull/5)
+- [PR #6: 아이콘 배경 투명 처리](https://github.com/cycorld/earnlearning/pull/6)

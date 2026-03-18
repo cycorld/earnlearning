@@ -284,3 +284,9 @@ async function tryRefreshToken() {
 go build -ldflags "-X main.BuildNumber=45 -X main.CommitSHA=abc1234" -o server .
 ```
 소스 코드를 수정하지 않고 빌드 시점에 변수 값을 주입하는 Go의 강력한 기능입니다. Docker, CI/CD와 함께 사용하면 빌드 메타데이터를 깔끔하게 관리할 수 있습니다.
+
+---
+
+## GitHub 참고 링크
+- [커밋 945638d: 토큰 자동 갱신(silent refresh) 구현](https://github.com/cycorld/earnlearning/commit/945638d)
+- [커밋 c9c7c87: 앱 버전 체크: 배포 후 자동 새로고침](https://github.com/cycorld/earnlearning/commit/c9c7c87)

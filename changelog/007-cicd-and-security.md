@@ -376,3 +376,9 @@ CI/CD가 있으면 main 브랜치는 항상 배포 가능한 상태여야 합니
 
 ### 7. 빌드 정보는 디버깅의 시작점이다
 "이 버그가 어느 버전에서 발생했지?"를 빌드 정보로 바로 확인할 수 있습니다. 단순한 기능이지만 운영 시 매우 유용합니다.
+
+---
+
+## GitHub 참고 링크
+- [PR #1: CI/CD 파이프라인 구축](https://github.com/cycorld/earnlearning/pull/1)
+- [커밋 372f6d9: 보안: 민감 정보 제거 및 .env 참조로 전환](https://github.com/cycorld/earnlearning/commit/372f6d9)
