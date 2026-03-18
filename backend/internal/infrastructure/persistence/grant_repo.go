@@ -76,7 +76,8 @@ func (r *GrantRepo) List(filter grant.GrantFilter, page, limit int) ([]*grant.Gr
 	rows, err := r.db.Query(`
 		SELECT g.id, g.admin_id, g.title, g.description, g.reward, g.max_applicants,
 			   g.status, g.created_at, u.name AS admin_name,
-			   (SELECT COUNT(*) FROM grant_applications WHERE grant_id = g.id) AS application_count
+			   (SELECT COUNT(*) FROM grant_applications WHERE grant_id = g.id) AS application_count,
+			   (SELECT COUNT(*) FROM grant_applications WHERE grant_id = g.id AND status = 'approved') AS approved_count
 		FROM grants g
 		JOIN users u ON u.id = g.admin_id
 		WHERE `+whereClause+`
@@ -91,17 +92,18 @@ func (r *GrantRepo) List(filter grant.GrantFilter, page, limit int) ([]*grant.Gr
 	for rows.Next() {
 		g := &grant.Grant{}
 		var adminName string
-		var appCount int
+		var appCount, approvedCount int
 
 		if err := rows.Scan(
 			&g.ID, &g.AdminID, &g.Title, &g.Description, &g.Reward, &g.MaxApplicants,
-			&g.Status, &g.CreatedAt, &adminName, &appCount,
+			&g.Status, &g.CreatedAt, &adminName, &appCount, &approvedCount,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan grant: %w", err)
 		}
 		g.Admin = &grant.UserRef{ID: g.AdminID, Name: adminName}
 		g.AdminName = adminName
 		g.ApplicationCount = &appCount
+		g.ApprovedCount = &approvedCount
 		grants = append(grants, g)
 	}
 	return grants, total, nil

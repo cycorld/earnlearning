@@ -228,7 +228,7 @@ export default function GrantDetailPage() {
                   </Badge>
                 </div>
                 {app.proposal && (
-                  <p className="mt-2 text-sm text-muted-foreground">{app.proposal}</p>
+                  <MarkdownContent content={app.proposal} className="mt-2 text-sm" />
                 )}
                 {isAdmin && app.status === 'pending' && grant.status === 'open' && (
                   <div className="mt-2 flex justify-end">
