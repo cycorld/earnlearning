@@ -100,6 +100,14 @@ func (r *PostRepo) FindPostByID(postID int) (*post.Post, error) {
 	return p, nil
 }
 
+func (r *PostRepo) UpdatePost(postID int, content string, tags string) error {
+	_, err := r.db.Exec("UPDATE posts SET content = ?, tags = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", content, tags, postID)
+	if err != nil {
+		return fmt.Errorf("update post: %w", err)
+	}
+	return nil
+}
+
 func (r *PostRepo) GetPosts(classroomID, channelID int, page, limit int, tag string, currentUserID int) ([]*post.Post, int, error) {
 	offset := (page - 1) * limit
 

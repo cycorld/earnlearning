@@ -5,10 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(Math.abs(amount)) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ko-KR', {
@@ -91,7 +88,7 @@ export default function TransactionsPage() {
                     }`}
                   >
                     {tx.amount >= 0 ? '+' : '-'}
-                    {formatMoney(tx.amount)}
+                    {formatMoney(Math.abs(tx.amount))}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     잔액 {formatMoney(tx.balance_after)}

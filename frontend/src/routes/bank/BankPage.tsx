@@ -12,10 +12,7 @@ import {
   Percent,
   RefreshCw,
 } from 'lucide-react'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 function loanStatusLabel(status: string): string {
   switch (status) {
