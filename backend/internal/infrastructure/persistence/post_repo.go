@@ -82,13 +82,13 @@ func (r *PostRepo) FindPostByID(postID int) (*post.Post, error) {
 	err := r.db.QueryRow(`
 		SELECT p.id, p.channel_id, p.author_id, p.content, p.post_type, p.media, p.tags,
 		       p.like_count, p.comment_count, p.pinned, p.created_at, p.updated_at,
-		       u.name, u.avatar_url, u.student_id
+		       u.name, u.avatar_url, u.student_id, u.department
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
 		WHERE p.id = ?`, postID).Scan(
 		&p.ID, &p.ChannelID, &p.AuthorID, &p.Content, &p.PostType, &p.Media, &p.Tags,
 		&p.LikeCount, &p.CommentCount, &pinned, &p.CreatedAt, &p.UpdatedAt,
-		&p.AuthorName, &p.AuthorAvatar, &p.AuthorStudentID,
+		&p.AuthorName, &p.AuthorAvatar, &p.AuthorStudentID, &p.AuthorDepartment,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("게시글을 찾을 수 없습니다")
@@ -154,7 +154,7 @@ func (r *PostRepo) GetPosts(classroomID, channelID int, page, limit int, tag str
 	query := `
 		SELECT p.id, p.channel_id, p.author_id, p.content, p.post_type, p.media, p.tags,
 		       p.like_count, p.comment_count, p.pinned, p.created_at, p.updated_at,
-		       u.name, u.avatar_url, u.student_id,
+		       u.name, u.avatar_url, u.student_id, u.department,
 		       CASE WHEN pl.id IS NOT NULL THEN 1 ELSE 0 END as is_liked
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
@@ -183,7 +183,7 @@ func (r *PostRepo) GetPosts(classroomID, channelID int, page, limit int, tag str
 		if err := rows.Scan(
 			&p.ID, &p.ChannelID, &p.AuthorID, &p.Content, &p.PostType, &p.Media, &p.Tags,
 			&p.LikeCount, &p.CommentCount, &pinned, &p.CreatedAt, &p.UpdatedAt,
-			&p.AuthorName, &p.AuthorAvatar, &p.AuthorStudentID, &isLiked,
+			&p.AuthorName, &p.AuthorAvatar, &p.AuthorStudentID, &p.AuthorDepartment, &isLiked,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan post: %w", err)
 		}
@@ -252,7 +252,7 @@ func (r *PostRepo) CreateComment(c *post.Comment) (int, error) {
 func (r *PostRepo) GetComments(postID int) ([]*post.Comment, error) {
 	rows, err := r.db.Query(`
 		SELECT c.id, c.post_id, c.author_id, c.content, c.media, c.created_at,
-		       u.name, u.avatar_url
+		       u.name, u.avatar_url, u.student_id, u.department
 		FROM comments c
 		JOIN users u ON u.id = c.author_id
 		WHERE c.post_id = ? ORDER BY c.created_at`, postID)
@@ -264,7 +264,7 @@ func (r *PostRepo) GetComments(postID int) ([]*post.Comment, error) {
 	var comments []*post.Comment
 	for rows.Next() {
 		c := &post.Comment{}
-		if err := rows.Scan(&c.ID, &c.PostID, &c.AuthorID, &c.Content, &c.Media, &c.CreatedAt, &c.AuthorName, &c.AuthorAvatar); err != nil {
+		if err := rows.Scan(&c.ID, &c.PostID, &c.AuthorID, &c.Content, &c.Media, &c.CreatedAt, &c.AuthorName, &c.AuthorAvatar, &c.AuthorStudentID, &c.AuthorDepartment); err != nil {
 			return nil, fmt.Errorf("scan comment: %w", err)
 		}
 		comments = append(comments, c)

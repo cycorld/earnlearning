@@ -19,8 +19,10 @@ const (
 
 // UserRef is a nested user reference for JSON output.
 type UserRef struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	StudentID  string `json:"student_id"`
+	Department string `json:"department"`
 }
 
 type Grant struct {
@@ -52,6 +54,8 @@ type GrantApplication struct {
 	CreatedAt time.Time         `json:"created_at"`
 
 	// Nested reference
-	User     *UserRef `json:"user,omitempty"`
-	UserName string   `json:"-"`
+	User           *UserRef `json:"user,omitempty"`
+	UserName       string   `json:"-"`
+	UserStudentID  string   `json:"-"`
+	UserDepartment string   `json:"-"`
 }

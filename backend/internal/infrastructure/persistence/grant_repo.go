@@ -131,15 +131,15 @@ func (r *GrantRepo) CreateApplication(app *grant.GrantApplication) (int, error) 
 
 func (r *GrantRepo) FindApplicationByID(id int) (*grant.GrantApplication, error) {
 	app := &grant.GrantApplication{}
-	var userName string
+	var userName, userStudentID, userDepartment string
 	err := r.db.QueryRow(`
 		SELECT a.id, a.grant_id, a.user_id, a.proposal, a.status, a.created_at,
-			   u.name AS user_name
+			   u.name, u.student_id, u.department
 		FROM grant_applications a
 		JOIN users u ON u.id = a.user_id
 		WHERE a.id = ?`, id).Scan(
 		&app.ID, &app.GrantID, &app.UserID, &app.Proposal, &app.Status, &app.CreatedAt,
-		&userName,
+		&userName, &userStudentID, &userDepartment,
 	)
 	if err == sql.ErrNoRows {
 		return nil, grant.ErrApplicationNotFound
@@ -148,21 +148,23 @@ func (r *GrantRepo) FindApplicationByID(id int) (*grant.GrantApplication, error)
 		return nil, fmt.Errorf("find grant application: %w", err)
 	}
 	app.UserName = userName
-	app.User = &grant.UserRef{ID: app.UserID, Name: userName}
+	app.UserStudentID = userStudentID
+	app.UserDepartment = userDepartment
+	app.User = &grant.UserRef{ID: app.UserID, Name: userName, StudentID: userStudentID, Department: userDepartment}
 	return app, nil
 }
 
 func (r *GrantRepo) FindApplicationByGrantAndUser(grantID, userID int) (*grant.GrantApplication, error) {
 	app := &grant.GrantApplication{}
-	var userName string
+	var userName, userStudentID, userDepartment string
 	err := r.db.QueryRow(`
 		SELECT a.id, a.grant_id, a.user_id, a.proposal, a.status, a.created_at,
-			   u.name AS user_name
+			   u.name, u.student_id, u.department
 		FROM grant_applications a
 		JOIN users u ON u.id = a.user_id
 		WHERE a.grant_id = ? AND a.user_id = ?`, grantID, userID).Scan(
 		&app.ID, &app.GrantID, &app.UserID, &app.Proposal, &app.Status, &app.CreatedAt,
-		&userName,
+		&userName, &userStudentID, &userDepartment,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -171,14 +173,16 @@ func (r *GrantRepo) FindApplicationByGrantAndUser(grantID, userID int) (*grant.G
 		return nil, fmt.Errorf("find grant application by grant and user: %w", err)
 	}
 	app.UserName = userName
-	app.User = &grant.UserRef{ID: app.UserID, Name: userName}
+	app.UserStudentID = userStudentID
+	app.UserDepartment = userDepartment
+	app.User = &grant.UserRef{ID: app.UserID, Name: userName, StudentID: userStudentID, Department: userDepartment}
 	return app, nil
 }
 
 func (r *GrantRepo) ListApplicationsByGrant(grantID int) ([]*grant.GrantApplication, error) {
 	rows, err := r.db.Query(`
 		SELECT a.id, a.grant_id, a.user_id, a.proposal, a.status, a.created_at,
-			   u.name AS user_name
+			   u.name, u.student_id, u.department
 		FROM grant_applications a
 		JOIN users u ON u.id = a.user_id
 		WHERE a.grant_id = ?
@@ -191,15 +195,17 @@ func (r *GrantRepo) ListApplicationsByGrant(grantID int) ([]*grant.GrantApplicat
 	var apps []*grant.GrantApplication
 	for rows.Next() {
 		app := &grant.GrantApplication{}
-		var userName string
+		var userName, userStudentID, userDepartment string
 		if err := rows.Scan(
 			&app.ID, &app.GrantID, &app.UserID, &app.Proposal, &app.Status, &app.CreatedAt,
-			&userName,
+			&userName, &userStudentID, &userDepartment,
 		); err != nil {
 			return nil, fmt.Errorf("scan grant application: %w", err)
 		}
 		app.UserName = userName
-		app.User = &grant.UserRef{ID: app.UserID, Name: userName}
+		app.UserStudentID = userStudentID
+		app.UserDepartment = userDepartment
+		app.User = &grant.UserRef{ID: app.UserID, Name: userName, StudentID: userStudentID, Department: userDepartment}
 		apps = append(apps, app)
 	}
 	return apps, nil

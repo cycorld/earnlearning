@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 import { ArrowLeft, Loader2, CheckCircle, Send } from 'lucide-react'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { MarkdownContent } from '@/components/MarkdownContent'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, displayName } from '@/lib/utils'
 
 const statusLabels: Record<string, string> = {
   open: '모집 중',
@@ -219,7 +219,7 @@ export default function GrantDetailPage() {
             {applications.map((app) => (
               <div key={app.id} className="rounded-lg border p-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{app.user?.name}</span>
+                  <span className="text-sm font-medium">{displayName(app.user)}</span>
                   <Badge
                     variant={app.status === 'approved' ? 'default' : 'secondary'}
                     className="text-xs"
