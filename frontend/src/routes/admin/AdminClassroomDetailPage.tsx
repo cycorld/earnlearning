@@ -247,9 +247,14 @@ export default function AdminClassroomDetailPage() {
                         {formatMoney(m.balance)}
                       </span>
                       {m.company_count > 0 && (
-                        <span className="flex items-center gap-0.5">
+                        <span className="flex items-center gap-0.5" title={m.company_names}>
                           <Building2 className="h-3 w-3" />
-                          {m.company_names || `${m.company_count}개`}
+                          {m.company_count}개
+                          {m.company_names && (
+                            <span className="max-w-[120px] truncate text-muted-foreground">
+                              ({m.company_names})
+                            </span>
+                          )}
                         </span>
                       )}
                       {m.total_debt > 0 && (
