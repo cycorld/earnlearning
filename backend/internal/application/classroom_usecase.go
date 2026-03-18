@@ -144,6 +144,10 @@ func (uc *ClassroomUseCase) GetClassroomMembers(classroomID int) ([]*classroom.C
 	return uc.classroomRepo.GetMembers(classroomID)
 }
 
+func (uc *ClassroomUseCase) GetMemberDashboard(classroomID int) ([]*classroom.MemberDashboard, error) {
+	return uc.classroomRepo.GetMemberDashboard(classroomID)
+}
+
 func (uc *ClassroomUseCase) ListMyClassrooms(userID int) ([]*classroom.Classroom, error) {
 	return uc.classroomRepo.ListByUser(userID)
 }

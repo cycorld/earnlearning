@@ -68,6 +68,32 @@ func (h *ClassroomHandler) GetClassroom(c echo.Context) error {
 	})
 }
 
+func (h *ClassroomHandler) GetClassroomDashboard(c echo.Context) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_ID", "유효하지 않은 ID입니다")
+	}
+
+	cr, err := h.classroomUC.GetClassroom(id)
+	if err != nil {
+		return errorResponse(c, http.StatusNotFound, "NOT_FOUND", err.Error())
+	}
+
+	members, err := h.classroomUC.GetMemberDashboard(id)
+	if err != nil {
+		return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "멤버 데이터 조회에 실패했습니다")
+	}
+
+	if members == nil {
+		members = []*classroom.MemberDashboard{}
+	}
+
+	return successResponse(c, http.StatusOK, map[string]interface{}{
+		"classroom": cr,
+		"members":   members,
+	})
+}
+
 func (h *ClassroomHandler) ListMyClassrooms(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	classrooms, err := h.classroomUC.ListMyClassrooms(userID)
