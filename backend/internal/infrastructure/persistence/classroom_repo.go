@@ -148,9 +148,8 @@ func (r *ClassroomRepo) GetMemberDashboard(classroomID int) ([]*classroom.Member
 			cm.joined_at,
 			COALESCE(w.balance, 0) AS balance,
 			COALESCE(w.balance, 0)
-				+ COALESCE((SELECT SUM(sh.shares * COALESCE(
-					(SELECT MAX(t.price) FROM trades t WHERE t.company_id = sh.company_id), co.valuation / NULLIF(co.total_shares, 0)
-				)) FROM shareholders sh JOIN companies co ON co.id = sh.company_id WHERE sh.user_id = u.id), 0)
+				+ COALESCE((SELECT SUM(sh.shares * (co.valuation / NULLIF(co.total_shares, 0)))
+					FROM shareholders sh JOIN companies co ON co.id = sh.company_id WHERE sh.user_id = u.id), 0)
 				- COALESCE((SELECT SUM(l.remaining) FROM loans l WHERE l.borrower_id = u.id AND l.status = 'active'), 0)
 			AS total_asset,
 			COALESCE((SELECT COUNT(*) FROM companies WHERE owner_id = u.id AND status = 'active'), 0) AS company_count,

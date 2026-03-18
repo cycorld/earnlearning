@@ -151,6 +151,7 @@
     "title": "강의실 학생 대시보드: 학생 현황을 한눈에",
     "date": "2026-03-19",
     "tags": ["관리자", "대시보드", "강의실", "UX"],
-    "github": "https://github.com/cycorld/earnlearning/pull/22"
+    "github": "https://github.com/cycorld/earnlearning/pull/22",
+    "hotfix": "https://github.com/cycorld/earnlearning/pull/23"
   }
 ]
