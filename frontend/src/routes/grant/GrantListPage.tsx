@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus } from 'lucide-react'
+import { Plus, Users, CheckCircle } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
 
 const statusLabels: Record<string, string> = {
@@ -116,6 +116,16 @@ export default function GrantListPage() {
                       </span>
                       {grant.max_applicants > 0 && (
                         <span>정원 {grant.max_applicants}명</span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        지원 {grant.application_count ?? 0}명
+                      </span>
+                      {(grant.approved_count ?? 0) > 0 && (
+                        <span className="flex items-center gap-1 text-green-600">
+                          <CheckCircle className="h-3 w-3" />
+                          승인 {grant.approved_count}명
+                        </span>
                       )}
                     </div>
                   </CardContent>

@@ -166,6 +166,8 @@ export interface Grant {
   reward: number
   max_applicants: number
   status: 'open' | 'closed'
+  application_count?: number
+  approved_count?: number
   applications?: GrantApplication[]
   created_at: string
 }
