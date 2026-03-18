@@ -1,6 +1,7 @@
 package application
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/earnlearning/backend/internal/domain/notification"
@@ -18,6 +19,7 @@ type NotificationUseCase struct {
 	pushService  *push.WebPushService
 	emailService *email.SESService
 	wsBroadcast  WSBroadcaster
+	autoPoster   *AutoPoster
 }
 
 func NewNotificationUseCase(repo notification.Repository, pushSvc *push.WebPushService, emailSvc *email.SESService, ws WSBroadcaster) *NotificationUseCase {
@@ -27,6 +29,10 @@ func NewNotificationUseCase(repo notification.Repository, pushSvc *push.WebPushS
 		emailService: emailSvc,
 		wsBroadcast:  ws,
 	}
+}
+
+func (uc *NotificationUseCase) SetAutoPoster(ap *AutoPoster) {
+	uc.autoPoster = ap
 }
 
 type NotificationListResult struct {
@@ -238,6 +244,7 @@ func (uc *NotificationUseCase) UpdateEmailPreference(userID int, emailEnabled bo
 
 // SendAnnouncement sends a notification to all approved users (or specific users).
 // If sendNotify is true, push and email notifications are also sent.
+// Auto-posts to 공지 channel and links notifications to the post.
 func (uc *NotificationUseCase) SendAnnouncement(title, body string, targetUserIDs []int, sendNotify bool) (int, error) {
 	userIDs := targetUserIDs
 	if len(userIDs) == 0 {
@@ -248,13 +255,28 @@ func (uc *NotificationUseCase) SendAnnouncement(title, body string, targetUserID
 		}
 	}
 
+	// Auto-post to 공지 channel
+	var postID int
+	if uc.autoPoster != nil {
+		content := fmt.Sprintf("## 📢 %s\n\n%s", title, body)
+		postID = uc.autoPoster.PostToChannelAsAdmin("notice", content, []string{"공지"})
+	}
+
+	// Set reference to the post so notification click navigates to it
+	refType := ""
+	refID := 0
+	if postID > 0 {
+		refType = "posts"
+		refID = postID
+	}
+
 	sent := 0
 	for _, uid := range userIDs {
 		var err error
 		if sendNotify {
-			err = uc.CreateNotification(uid, "admin_transfer", title, body, "", 0)
+			err = uc.CreateNotification(uid, "admin_transfer", title, body, refType, refID)
 		} else {
-			err = uc.CreateNotificationQuiet(uid, "admin_transfer", title, body, "", 0)
+			err = uc.CreateNotificationQuiet(uid, "admin_transfer", title, body, refType, refID)
 		}
 		if err != nil {
 			continue

@@ -24,6 +24,7 @@ type Handlers struct {
 	Exchange     *handler.ExchangeHandler
 	Loan         *handler.LoanHandler
 	Notification *handler.NotificationHandler
+	Task         *handler.TaskHandler
 }
 
 // Setup registers all routes on the given Echo instance.
@@ -181,6 +182,9 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.GET("/companies", h.Company.ListAllCompanies)
 	admin.POST("/users/:id/impersonate", h.Admin.ImpersonateUser)
 	admin.POST("/notifications/announce", h.Notification.AdminSendAnnouncement)
+
+	// Kanban tasks (read-only, source of truth is tasks/ markdown files)
+	admin.GET("/tasks", h.Task.ListTasks)
 
 	// Grant admin routes
 	admin.POST("/grants", h.Grant.CreateGrant)

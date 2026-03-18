@@ -86,6 +86,7 @@ func main() {
 	postUC := application.NewPostUsecase(postRepo, walletRepo)
 	uploadUC := application.NewUploadUsecase(postRepo, cfg.UploadPath)
 	notifUC := application.NewNotificationUseCase(notifRepo, pushSvc, emailSvc, hub)
+	notifUC.SetAutoPoster(application.NewAutoPoster(db))
 	freelanceUC := application.NewFreelanceUseCase(db, freelanceRepo, walletRepo, notifUC)
 	grantUC := application.NewGrantUseCase(db, grantRepo, walletRepo, notifUC)
 	investmentUC := application.NewInvestmentUseCase(db, investmentRepo, companyRepo, walletRepo)
@@ -96,6 +97,13 @@ func main() {
 	exchangeUC.SetNotificationUseCase(notifUC)
 	postUC.SetNotificationUseCase(notifUC)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
+
+	// Task repo (reads tasks/ markdown files)
+	tasksPath := os.Getenv("TASKS_PATH")
+	if tasksPath == "" {
+		tasksPath = "./tasks"
+	}
+	taskRepo := persistence.NewTaskRepo(tasksPath)
 
 	// Handlers
 	handlers := &router.Handlers{
@@ -112,6 +120,7 @@ func main() {
 		Exchange:     handler.NewExchangeHandler(exchangeUC),
 		Loan:         handler.NewLoanHandler(loanUC),
 		Notification: handler.NewNotificationHandler(notifUC),
+		Task:         handler.NewTaskHandler(taskRepo),
 	}
 
 	// Echo server

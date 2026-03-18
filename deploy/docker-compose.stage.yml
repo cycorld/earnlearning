@@ -10,9 +10,11 @@ services:
     volumes:
       - stage_db:/data/db
       - stage_uploads:/data/uploads
+      - ../tasks:/data/tasks:ro
     environment:
       - DB_PATH=/data/db/earnlearning.db
       - UPLOAD_PATH=/data/uploads
+      - TASKS_PATH=/data/tasks
       - JWT_SECRET=${JWT_SECRET}
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}

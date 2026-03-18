@@ -51,6 +51,7 @@ import AdminClassroomPage from '@/routes/admin/AdminClassroomPage'
 import AdminLoansPage from '@/routes/admin/AdminLoansPage'
 import AdminKpiPage from '@/routes/admin/AdminKpiPage'
 import AdminAnnouncePage from '@/routes/admin/AdminAnnouncePage'
+import AdminTasksPage from '@/routes/admin/AdminTasksPage'
 
 export default function App() {
   return (
@@ -99,6 +100,7 @@ export default function App() {
                 <Route path="/admin/loans" element={<AdminLoansPage />} />
                 <Route path="/admin/kpi" element={<AdminKpiPage />} />
                 <Route path="/admin/announce" element={<AdminAnnouncePage />} />
+                <Route path="/admin/tasks" element={<AdminTasksPage />} />
               </Route>
             </Route>
           </Route>
