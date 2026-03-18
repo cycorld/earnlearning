@@ -13,6 +13,7 @@
 
 ## 배포
 배포 관련 상세 가이드는 [docs/DEPLOY.md](docs/DEPLOY.md) 참조.
+핫픽스 절차는 [docs/HOTFIX.md](docs/HOTFIX.md) 참조.
 - **Production**: https://earnlearning.com
 - **Staging**: https://stage.earnlearning.com
 - **CI/CD**: main 머지 → Stage 자동 배포 (~33초) → 확인 → `./deploy.sh prod` (~2분)
