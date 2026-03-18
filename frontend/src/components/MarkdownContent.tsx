@@ -33,7 +33,7 @@ export function MarkdownContent({
         }
       >
         <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
+          remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
           components={{
             img: ({ src, alt }) => (
               <img

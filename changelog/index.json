@@ -138,5 +138,12 @@
     "date": "2026-03-18",
     "tags": ["정부과제", "마크다운", "UX"],
     "github": "https://github.com/cycorld/earnlearning/pull/20"
+  },
+  {
+    "slug": "021-strikethrough-fix",
+    "title": "마크다운 취소선 오작동 수정: ~를 범위 표현에 안전하게",
+    "date": "2026-03-18",
+    "tags": ["마크다운", "버그수정", "UX"],
+    "github": "https://github.com/cycorld/earnlearning/pull/21"
   }
 ]
