@@ -131,5 +131,12 @@
     "date": "2026-03-18",
     "tags": ["피드", "게시글수정", "포맷팅", "리팩토링", "UX"],
     "github": "https://github.com/cycorld/earnlearning/pull/18"
+  },
+  {
+    "slug": "020-grant-markdown-counts",
+    "title": "정부과제 지원서 마크다운 + 지원/승인 현황 표시",
+    "date": "2026-03-18",
+    "tags": ["정부과제", "마크다운", "UX"],
+    "github": "https://github.com/cycorld/earnlearning/pull/20"
   }
 ]
