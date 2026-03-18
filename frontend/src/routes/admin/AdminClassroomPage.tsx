@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -157,29 +157,31 @@ export default function AdminClassroomPage() {
             </p>
           ) : (
             classrooms.map((classroom) => (
-              <Card key={classroom.id}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div>
-                    <p className="font-medium">{classroom.name}</p>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {classroom.member_count ?? 0}명
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Wallet className="h-3 w-3" />
-                        초기자본 {formatMoney(classroom.initial_capital)}
-                      </span>
+              <Link key={classroom.id} to={`/admin/classroom/${classroom.id}`}>
+                <Card className="transition-colors hover:bg-accent/30">
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div>
+                      <p className="font-medium">{classroom.name}</p>
+                      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {classroom.member_count ?? 0}명
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Wallet className="h-3 w-3" />
+                          초기자본 {formatMoney(classroom.initial_capital)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">초대코드</p>
-                    <Badge variant="secondary" className="font-mono text-sm tracking-wider">
-                      {classroom.code}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">초대코드</p>
+                      <Badge variant="secondary" className="font-mono text-sm tracking-wider">
+                        {classroom.code}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))
           )}
         </CardContent>
