@@ -160,6 +160,7 @@
     "title": "P2P 송금 기능 + 사용자 이름 표시 개선",
     "date": "2026-03-19",
     "tags": ["송금", "지갑", "UX", "유틸리티"],
-    "github": "https://github.com/cycorld/earnlearning/pull/25"
+    "github": "https://github.com/cycorld/earnlearning/pull/25",
+    "fix": "https://github.com/cycorld/earnlearning/pull/26"
   }
 ]
