@@ -15,10 +15,11 @@ export function useEmailPreference() {
     api
       .get<EmailPreference>('/notifications/email/preference')
       .then((res) => {
-        if (res.success && res.data) {
-          setPreference(res.data)
+        if (res) {
+          setPreference(res)
         }
       })
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
@@ -26,14 +27,12 @@ export function useEmailPreference() {
     async (emailEnabled: boolean) => {
       setUpdating(true)
       try {
-        const res = await api.put('/notifications/email/preference', {
+        await api.put('/notifications/email/preference', {
           email_enabled: emailEnabled,
         })
-        if (res.success) {
-          setPreference((prev) =>
-            prev ? { ...prev, email_enabled: emailEnabled } : null
-          )
-        }
+        setPreference((prev) =>
+          prev ? { ...prev, email_enabled: emailEnabled } : null
+        )
       } finally {
         setUpdating(false)
       }
