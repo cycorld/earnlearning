@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { MarkdownContent } from '@/components/MarkdownContent'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, displayName } from '@/lib/utils'
 
 const statusLabels: Record<string, string> = {
   open: '모집 중',
@@ -191,7 +191,7 @@ export default function MarketDetailPage() {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <User className="h-4 w-4" />
-              {job.client?.name}
+              {displayName(job.client)}
             </span>
             {job.client?.rating != null && (
               <span className="flex items-center gap-1">
@@ -391,7 +391,7 @@ export default function MarketDetailPage() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{app.user?.name}</span>
+                    <span className="font-medium text-sm">{displayName(app.user)}</span>
                     {app.user?.rating != null && (
                       <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />

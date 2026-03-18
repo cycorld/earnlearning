@@ -17,7 +17,7 @@ import {
   Loader2,
   TrendingUp,
 } from 'lucide-react'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, displayName } from '@/lib/utils'
 
 const statusLabels: Record<string, string> = {
   active: '모집 중',
@@ -153,7 +153,7 @@ export default function InvestDetailPage() {
               </div>
               {round.owner && (
                 <p className="text-sm text-muted-foreground">
-                  대표: {round.owner.name}
+                  대표: {displayName(round.owner)}
                 </p>
               )}
             </div>

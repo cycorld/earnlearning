@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { CreditCard, Pencil, Loader2, Plus } from 'lucide-react'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, displayName } from '@/lib/utils'
 
 export default function CompanyDetailPage() {
   const { id } = useParams()
@@ -128,7 +128,7 @@ export default function CompanyDetailPage() {
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              대표: {company.owner?.name || '-'}
+              대표: {displayName(company.owner) || '-'}
             </p>
           </div>
           {isOwner && (

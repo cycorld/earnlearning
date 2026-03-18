@@ -35,6 +35,7 @@ import {
 import { toast } from 'sonner'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { MarkdownContent } from '@/components/MarkdownContent'
+import { displayName } from '@/lib/utils'
 
 interface Classroom {
   id: number
@@ -583,7 +584,7 @@ export default function FeedPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">
-                        {post.author?.name}
+                        {displayName(post.author)}
                       </span>
                       {post.channel && (
                         <Badge variant="secondary" className="text-xs">
@@ -675,7 +676,7 @@ export default function FeedPage() {
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1">
                                     <span className="text-xs font-medium">
-                                      {c.author?.name}
+                                      {displayName(c.author)}
                                     </span>
                                     <span className="text-xs text-muted-foreground">
                                       {timeAgo(c.created_at)}
