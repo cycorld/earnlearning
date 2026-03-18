@@ -53,10 +53,12 @@ func NewSESService(cfg Config) *SESService {
 
 	client := sesv2.NewFromConfig(sdkCfg)
 
-	log.Printf("email: SES enabled (from=%s, region=%s)", cfg.FromEmail, cfg.Region)
+	fromDisplay := fmt.Sprintf("언러닝 <%s>", cfg.FromEmail)
+
+	log.Printf("email: SES enabled (from=%s, region=%s)", fromDisplay, cfg.Region)
 	return &SESService{
 		client:    client,
-		fromEmail: cfg.FromEmail,
+		fromEmail: fromDisplay,
 		enabled:   true,
 	}
 }
