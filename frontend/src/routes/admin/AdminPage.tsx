@@ -12,6 +12,7 @@ import {
   Clock,
   ShieldCheck,
   Megaphone,
+  KanbanSquare,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
@@ -89,6 +90,14 @@ export default function AdminPage() {
       icon: Megaphone,
       href: '/admin/announce',
       color: 'bg-red-100 text-red-600',
+      badge: null,
+    },
+    {
+      title: '태스크 보드',
+      description: '개발 작업 칸반보드 관리',
+      icon: KanbanSquare,
+      href: '/admin/tasks',
+      color: 'bg-indigo-100 text-indigo-600',
       badge: null,
     },
   ]

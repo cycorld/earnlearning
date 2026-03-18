@@ -46,9 +46,10 @@ func (ap *AutoPoster) PostToChannel(slug string, authorID int, content string, t
 
 // PostToChannelAsAdmin creates a post in the given channel slug using the admin user.
 // Used when the action creator may not be a classroom member (e.g., system posts).
-func (ap *AutoPoster) PostToChannelAsAdmin(slug string, content string, tags []string) {
+// Returns the post ID (0 if failed).
+func (ap *AutoPoster) PostToChannelAsAdmin(slug string, content string, tags []string) int {
 	if ap == nil || ap.db == nil {
-		return
+		return 0
 	}
 
 	var channelID, adminID int
@@ -59,18 +60,21 @@ func (ap *AutoPoster) PostToChannelAsAdmin(slug string, content string, tags []s
 		WHERE c.slug = ?
 		LIMIT 1`, slug).Scan(&channelID, &adminID)
 	if err != nil || channelID == 0 {
-		return
+		return 0
 	}
 
 	tagsJSON, _ := json.Marshal(tags)
 
-	_, err = ap.db.Exec(`
+	result, err := ap.db.Exec(`
 		INSERT INTO posts (channel_id, author_id, content, post_type, media, tags)
 		VALUES (?, ?, ?, 'normal', '[]', ?)`,
 		channelID, adminID, content, string(tagsJSON))
 	if err != nil {
 		log.Printf("auto-post: failed to post to %s channel as admin: %v", slug, err)
+		return 0
 	}
+	id, _ := result.LastInsertId()
+	return int(id)
 }
 
 func formatMoney(amount int) string {
