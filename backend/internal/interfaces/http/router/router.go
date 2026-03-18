@@ -82,6 +82,8 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.GET("/wallet", h.Wallet.GetWallet)
 	approved.GET("/wallet/transactions", h.Wallet.GetTransactions)
 	approved.GET("/wallet/ranking", h.Wallet.GetRanking)
+	approved.GET("/wallet/recipients", h.Wallet.SearchRecipients)
+	approved.POST("/wallet/transfer", h.Wallet.Transfer)
 
 	// Classrooms
 	approved.POST("/classrooms", h.Classroom.CreateClassroom)

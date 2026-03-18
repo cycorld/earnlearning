@@ -2,6 +2,7 @@ package application
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/earnlearning/backend/internal/domain/user"
@@ -163,6 +164,123 @@ func (uc *WalletUseCase) AdminTransfer(input AdminTransferInput) (int, error) {
 	}
 
 	return successCount, nil
+}
+
+type Recipient struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	StudentID  string `json:"student_id"`
+	Department string `json:"department"`
+	AvatarURL  string `json:"avatar_url"`
+	Type       string `json:"type"` // "user" or "company"
+}
+
+func (uc *WalletUseCase) SearchRecipients(senderID int, query string) ([]*Recipient, error) {
+	users, _, err := uc.userRepo.ListAll(1, 1000)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []*Recipient
+	q := query
+	for _, u := range users {
+		if u.ID == senderID {
+			continue
+		}
+		if u.Status != "approved" {
+			continue
+		}
+		if q != "" {
+			match := contains(u.Name, q) || contains(u.StudentID, q) || contains(u.Department, q)
+			if !match {
+				continue
+			}
+		}
+		results = append(results, &Recipient{
+			ID:         u.ID,
+			Name:       u.Name,
+			StudentID:  u.StudentID,
+			Department: u.Department,
+			AvatarURL:  u.AvatarURL,
+			Type:       "user",
+		})
+	}
+	return results, nil
+}
+
+func contains(s, substr string) bool {
+	return len(substr) > 0 && len(s) > 0 && strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+type TransferInput struct {
+	TargetUserID int    `json:"target_user_id"`
+	TargetType   string `json:"target_type"` // "user" or "company"
+	Amount       int    `json:"amount"`
+	Description  string `json:"description"`
+}
+
+func (uc *WalletUseCase) Transfer(senderID int, input TransferInput) error {
+	if input.Amount <= 0 {
+		return wallet.ErrInvalidAmount
+	}
+
+	// Find sender wallet
+	senderWallet, err := uc.walletRepo.FindByUserID(senderID)
+	if err != nil {
+		return fmt.Errorf("보내는 사람의 지갑을 찾을 수 없습니다")
+	}
+
+	if senderWallet.Balance < input.Amount {
+		return wallet.ErrInsufficientFunds
+	}
+
+	// Determine receiver
+	receiverUserID := input.TargetUserID
+	if input.TargetType == "company" {
+		// For company transfer, we need to find the company owner
+		// TargetUserID here is actually companyID
+		return fmt.Errorf("회사 송금은 회사 ID가 아닌 대표의 user_id로 전달해야 합니다")
+	}
+
+	// Find or create receiver wallet
+	receiverWallet, err := uc.walletRepo.FindByUserID(receiverUserID)
+	if err != nil {
+		return fmt.Errorf("받는 사람의 지갑을 찾을 수 없습니다")
+	}
+
+	// Get sender & receiver names for description
+	sender, _ := uc.userRepo.FindByID(senderID)
+	receiver, _ := uc.userRepo.FindByID(receiverUserID)
+
+	senderName := "알 수 없음"
+	receiverName := "알 수 없음"
+	if sender != nil {
+		senderName = sender.Name
+	}
+	if receiver != nil {
+		receiverName = receiver.Name
+	}
+
+	desc := input.Description
+	if desc == "" {
+		desc = "개인 송금"
+	}
+
+	// Debit sender
+	err = uc.walletRepo.Debit(senderWallet.ID, input.Amount, wallet.TxTransfer,
+		fmt.Sprintf("%s에게 송금: %s", receiverName, desc), "user", receiverUserID)
+	if err != nil {
+		return err
+	}
+
+	// Credit receiver
+	err = uc.walletRepo.Credit(receiverWallet.ID, input.Amount, wallet.TxTransfer,
+		fmt.Sprintf("%s로부터 송금: %s", senderName, desc), "user", senderID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (uc *WalletUseCase) GetRanking(limit int) ([]*wallet.RankEntry, error) {

@@ -61,9 +61,11 @@ const (
 
 // UserRef is a nested user reference for JSON output.
 type UserRef struct {
-	ID   int     `json:"id"`
-	Name string  `json:"name"`
-	Rating *float64 `json:"rating,omitempty"`
+	ID         int      `json:"id"`
+	Name       string   `json:"name"`
+	StudentID  string   `json:"student_id"`
+	Department string   `json:"department"`
+	Rating     *float64 `json:"rating,omitempty"`
 }
 
 type FreelanceJob struct {
@@ -111,8 +113,10 @@ type JobApplication struct {
 	// Nested reference for JSON output
 	User *UserRef `json:"user,omitempty"`
 
-	// Internal joined field (not serialized directly)
-	UserName string `json:"-"`
+	// Internal joined fields (not serialized directly)
+	UserName       string `json:"-"`
+	UserStudentID  string `json:"-"`
+	UserDepartment string `json:"-"`
 }
 
 type FreelanceReview struct {
