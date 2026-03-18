@@ -43,3 +43,4 @@
 
 ## GitHub 참고 링크
 - [PR #25: P2P 송금 + displayName 유틸리티](https://github.com/cycorld/earnlearning/pull/25)
+- [PR #26: 학번 앞 2자리로 수정](https://github.com/cycorld/earnlearning/pull/26)

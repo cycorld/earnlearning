@@ -21,7 +21,7 @@ export function displayName(
 ): string {
   if (!user?.name) return '?'
   const dept = user.department ? shortenDept(user.department) : ''
-  const sid = user.student_id ? user.student_id.slice(-2) : ''
+  const sid = user.student_id ? user.student_id.slice(0, 2) : ''
   if (!dept && !sid) return user.name
   const suffix = [dept, sid].filter(Boolean).join('/')
   return `${user.name}(${suffix})`
