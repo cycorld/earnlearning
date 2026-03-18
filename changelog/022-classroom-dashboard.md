@@ -41,3 +41,4 @@
 ## GitHub 참고 링크
 - [PR #22: 강의실 학생 대시보드](https://github.com/cycorld/earnlearning/pull/22)
 - [PR #23: SQL 핫픽스 — trades 테이블 참조 오류 수정](https://github.com/cycorld/earnlearning/pull/23)
+- [PR #24: 회사 표시 개선 — 개수 + 이름 분리](https://github.com/cycorld/earnlearning/pull/24)
