@@ -20,10 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { CreditCard, Pencil, Loader2, Plus } from 'lucide-react'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 export default function CompanyDetailPage() {
   const { id } = useParams()

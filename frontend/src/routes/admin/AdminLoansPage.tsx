@@ -25,14 +25,11 @@ import {
   CheckCircle,
   Calculator,
 } from 'lucide-react'
+import { formatMoney } from '@/lib/utils'
 
 interface AdminLoan extends Loan {
   borrower_id: number
   borrower_name?: string
-}
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
 }
 
 function loanStatusLabel(status: string): string {

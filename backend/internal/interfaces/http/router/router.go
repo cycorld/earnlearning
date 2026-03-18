@@ -102,6 +102,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.GET("/posts", h.Post.GetPosts)
 	approved.GET("/channels/:channelId/posts", h.Post.GetPosts)
 	approved.POST("/channels/:channelId/posts", h.Post.CreatePost)
+	approved.PUT("/posts/:id", h.Post.UpdatePost)
 	approved.POST("/posts/:id/like", h.Post.LikePost)
 	approved.GET("/posts/:id/comments", h.Post.GetComments)
 	approved.POST("/posts/:id/comments", h.Post.CreateComment)

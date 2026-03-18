@@ -17,10 +17,7 @@ import {
   Loader2,
   TrendingUp,
 } from 'lucide-react'
-
-function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
-}
+import { formatMoney } from '@/lib/utils'
 
 const statusLabels: Record<string, string> = {
   active: '모집 중',
