@@ -162,5 +162,12 @@
     "tags": ["송금", "지갑", "UX", "유틸리티"],
     "github": "https://github.com/cycorld/earnlearning/pull/25",
     "fix": "https://github.com/cycorld/earnlearning/pull/26"
+  },
+  {
+    "slug": "024-notification-links",
+    "title": "알림 클릭 시 관련 페이지 이동",
+    "date": "2026-03-19",
+    "tags": ["알림", "UX", "네비게이션"],
+    "github": "https://github.com/cycorld/earnlearning/pull/27"
   }
 ]

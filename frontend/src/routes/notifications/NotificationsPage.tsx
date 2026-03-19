@@ -32,10 +32,13 @@ function getNotifIcon(type: string) {
   switch (type) {
     case 'comment':
     case 'post':
+    case 'assignment_graded':
       return <MessageCircle className="h-5 w-5 text-blue-500" />
     case 'wallet':
     case 'transaction':
     case 'reward':
+    case 'admin_transfer':
+    case 'transfer':
       return <Wallet className="h-5 w-5 text-green-500" />
     case 'company':
       return <Building2 className="h-5 w-5 text-purple-500" />
@@ -45,6 +48,17 @@ function getNotifIcon(type: string) {
     case 'approval':
     case 'admin':
       return <ShieldCheck className="h-5 w-5 text-red-500" />
+    case 'grant_applied':
+    case 'grant_approved':
+    case 'grant_closed':
+      return <ShieldCheck className="h-5 w-5 text-emerald-500" />
+    case 'job_applied':
+    case 'job_accepted':
+    case 'job_work_done':
+    case 'job_completed':
+    case 'job_cancelled':
+    case 'job_disputed':
+      return <Building2 className="h-5 w-5 text-indigo-500" />
     default:
       return <Bell className="h-5 w-5 text-muted-foreground" />
   }
@@ -53,20 +67,27 @@ function getNotifIcon(type: string) {
 function getReferencePath(refType: string, refId: number): string | null {
   switch (refType) {
     case 'post':
-      return `/feed`
     case 'posts':
-      return `/feed`
+    case 'assignment':
+    case 'submission':
+      return '/feed'
     case 'company':
       return `/company/${refId}`
     case 'investment':
       return `/invest/${refId}`
+    case 'dividend':
+      return '/invest'
     case 'transaction':
     case 'wallet':
-      return `/wallet`
+    case 'admin_transfer':
+      return '/wallet'
     case 'loan':
-      return `/bank`
+      return '/bank'
     case 'job':
+    case 'freelance_job':
       return `/market/${refId}`
+    case 'grant':
+      return `/grant/${refId}`
     case 'user':
       return `/profile/${refId}`
     default:
