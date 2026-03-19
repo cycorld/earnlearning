@@ -58,6 +58,21 @@
 - **DROP/DELETE 절대 금지**: 테이블 삭제, 컬럼 삭제, 데이터 삭제 절대 금지. 프로덕션에 실제 학생/교수 데이터가 있다.
 - **에러 무시 패턴**: `db.Exec(stmt)` — SQLite에서 "duplicate column" 에러를 무시하여 재실행에도 안전하게 동작한다.
 
+## 알림 연동 체크리스트
+새 기능에서 알림(`CreateNotification`)을 추가할 때 반드시 아래 두 곳을 함께 업데이트한다:
+1. **프론트엔드 `getReferencePath()`** (`frontend/src/routes/notifications/NotificationsPage.tsx`) — `reference_type` → URL 매핑 추가
+2. **프론트엔드 `getNotifIcon()`** (같은 파일) — `notif_type` → 아이콘 매핑 추가
+
+현재 등록된 reference_type 매핑:
+- `post`, `posts`, `assignment`, `submission` → `/feed`
+- `company` → `/company/:id`
+- `investment` → `/invest/:id`, `dividend` → `/invest`
+- `transaction`, `wallet`, `admin_transfer` → `/wallet`
+- `loan` → `/bank`
+- `job`, `freelance_job` → `/market/:id`
+- `grant` → `/grant/:id`
+- `user` → `/profile/:id`
+
 ## 커밋 규칙
 - 매 프롬프트 작업 완료 시 반드시 커밋한다.
 - 커밋 전 반드시 스모크 테스트 통과 확인.
