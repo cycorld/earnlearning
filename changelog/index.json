@@ -169,5 +169,12 @@
     "date": "2026-03-19",
     "tags": ["알림", "UX", "네비게이션"],
     "github": "https://github.com/cycorld/earnlearning/pull/27"
+  },
+  {
+    "slug": "025-api-docs-oauth",
+    "title": "API 문서화 + OAuth2 시스템",
+    "date": "2026-03-22",
+    "tags": ["API", "OAuth", "보안", "문서화"],
+    "github": "https://github.com/cycorld/earnlearning/pull/28"
   }
 ]
