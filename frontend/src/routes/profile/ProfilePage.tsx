@@ -16,6 +16,7 @@ import {
   Bell,
   BellOff,
   Loader2,
+  Code2,
 } from 'lucide-react'
 import { usePush } from '@/hooks/use-push'
 import { useEmailPreference } from '@/hooks/use-email-preference'
@@ -206,6 +207,15 @@ export default function ProfilePage() {
               </span>
             )}
           </button>
+          <Separator />
+          <Link
+            to="/developer"
+            className="flex items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-accent"
+          >
+            <Code2 className="h-5 w-5 text-muted-foreground" />
+            <span className="flex-1 text-sm">개발자 (OAuth 앱)</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
           {user.role === 'admin' && (
             <>
               <Separator />

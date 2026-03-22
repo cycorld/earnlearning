@@ -4,6 +4,7 @@ import (
 	"github.com/labstack/echo/v4"
 	echomw "github.com/labstack/echo/v4/middleware"
 
+	"github.com/earnlearning/backend/internal/application"
 	"github.com/earnlearning/backend/internal/interfaces/http/handler"
 	"github.com/earnlearning/backend/internal/interfaces/http/middleware"
 	"github.com/earnlearning/backend/internal/interfaces/ws"
@@ -25,6 +26,9 @@ type Handlers struct {
 	Loan         *handler.LoanHandler
 	Notification *handler.NotificationHandler
 	Task         *handler.TaskHandler
+	Docs         *handler.DocsHandler
+	OAuth        *handler.OAuthHandler
+	OAuthUC      *application.OAuthUseCase // needed for middleware
 }
 
 // Setup registers all routes on the given Echo instance.
@@ -41,6 +45,12 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 
 	// CORS
 	e.Use(middleware.CORS())
+
+	// API Documentation (public, outside /api group)
+	if h.Docs != nil {
+		e.GET("/docs", h.Docs.ServeUI)
+		e.GET("/docs/openapi.json", h.Docs.ServeSpec)
+	}
 
 	api := e.Group("/api")
 
@@ -194,6 +204,28 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.POST("/grants", h.Grant.CreateGrant)
 	admin.POST("/grants/:id/approve/:appId", h.Grant.ApproveApplication)
 	admin.POST("/grants/:id/close", h.Grant.CloseGrant)
+
+	// ================================================================
+	// OAuth routes
+	// ================================================================
+	if h.OAuth != nil {
+		// Public OAuth endpoint (token exchange)
+		api.POST("/oauth/token", h.OAuth.Token)
+
+		// OAuth endpoints requiring JWT login (for app management & authorization)
+		approved.POST("/oauth/clients", h.OAuth.RegisterClient)
+		approved.GET("/oauth/clients", h.OAuth.ListClients)
+		approved.DELETE("/oauth/clients/:id", h.OAuth.DeleteClient)
+		approved.GET("/oauth/authorize", h.OAuth.AuthorizePage)
+		approved.POST("/oauth/authorize", h.OAuth.Authorize)
+		approved.POST("/oauth/revoke", h.OAuth.Revoke)
+
+		// OAuth Bearer protected endpoint
+		if h.OAuthUC != nil {
+			oauthGroup := api.Group("", middleware.OAuthBearerAuth(h.OAuthUC))
+			oauthGroup.GET("/oauth/userinfo", h.OAuth.UserInfo)
+		}
+	}
 
 	// ================================================================
 	// WebSocket

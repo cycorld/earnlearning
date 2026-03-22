@@ -92,5 +92,49 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// Create OAuth tables (idempotent)
+	oauthTables := []string{
+		`CREATE TABLE IF NOT EXISTS oauth_clients (
+			id TEXT PRIMARY KEY,
+			secret_hash TEXT NOT NULL,
+			user_id INTEGER REFERENCES users(id),
+			name TEXT NOT NULL,
+			description TEXT DEFAULT '',
+			redirect_uris TEXT DEFAULT '[]',
+			scopes TEXT DEFAULT '[]',
+			status TEXT DEFAULT 'active',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS oauth_authorization_codes (
+			code TEXT PRIMARY KEY,
+			client_id TEXT NOT NULL,
+			user_id INTEGER NOT NULL,
+			redirect_uri TEXT NOT NULL,
+			scopes TEXT DEFAULT '[]',
+			code_challenge TEXT DEFAULT '',
+			code_challenge_method TEXT DEFAULT '',
+			expires_at DATETIME NOT NULL,
+			used INTEGER DEFAULT 0,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS oauth_tokens (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			client_id TEXT NOT NULL,
+			user_id INTEGER NOT NULL,
+			access_token TEXT UNIQUE,
+			refresh_token TEXT UNIQUE,
+			scopes TEXT DEFAULT '[]',
+			expires_at DATETIME NOT NULL,
+			revoked INTEGER DEFAULT 0,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+	}
+	for _, stmt := range oauthTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create oauth tables: %w", err)
+		}
+	}
+
 	return nil
 }
