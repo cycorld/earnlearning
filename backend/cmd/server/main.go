@@ -16,6 +16,15 @@ import (
 	"github.com/earnlearning/backend/internal/interfaces/ws"
 )
 
+// @title			EarnLearning LMS API
+// @version		1.0
+// @description	이화여대 창업 교육 LMS API
+// @host			earnlearning.com
+// @BasePath		/api
+// @securityDefinitions.apikey	BearerAuth
+// @in							header
+// @name						Authorization
+
 // Set via -ldflags at build time
 var (
 	BuildNumber = "dev"
@@ -105,6 +114,16 @@ func main() {
 	}
 	taskRepo := persistence.NewTaskRepo(tasksPath)
 
+	// OAuth
+	oauthRepo := persistence.NewOAuthRepo(db)
+	oauthUC := application.NewOAuthUseCase(oauthRepo, userRepo)
+
+	// Docs directory (swagger.json location)
+	docsDir := os.Getenv("DOCS_DIR")
+	if docsDir == "" {
+		docsDir = "./docs"
+	}
+
 	// Handlers
 	handlers := &router.Handlers{
 		Auth:         handler.NewAuthHandler(authUC),
@@ -121,6 +140,9 @@ func main() {
 		Loan:         handler.NewLoanHandler(loanUC),
 		Notification: handler.NewNotificationHandler(notifUC),
 		Task:         handler.NewTaskHandler(taskRepo),
+		Docs:         handler.NewDocsHandler(docsDir),
+		OAuth:        handler.NewOAuthHandler(oauthUC),
+		OAuthUC:      oauthUC,
 	}
 
 	// Echo server

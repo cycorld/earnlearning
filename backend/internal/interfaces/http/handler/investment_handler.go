@@ -17,6 +17,17 @@ func NewInvestmentHandler(uc *application.InvestmentUseCase) *InvestmentHandler 
 	return &InvestmentHandler{uc: uc}
 }
 
+// CreateRound godoc
+//
+//	@Summary		투자 라운드 생성
+//	@Description	회사의 새 투자 라운드 생성
+//	@Tags			Investment
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		CreateRoundRequest	true	"라운드 정보"
+//	@Success		201		{object}	APIResponse
+//	@Router			/investment/rounds [post]
 func (h *InvestmentHandler) CreateRound(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	var input application.CreateRoundInput
@@ -30,6 +41,16 @@ func (h *InvestmentHandler) CreateRound(c echo.Context) error {
 	return c.JSON(http.StatusCreated, successResp(round))
 }
 
+// Invest godoc
+//
+//	@Summary		투자하기
+//	@Description	투자 라운드에 투자
+//	@Tags			Investment
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"라운드 ID"
+//	@Success		201	{object}	APIResponse
+//	@Router			/investment/rounds/{id}/invest [post]
 func (h *InvestmentHandler) Invest(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	roundID, err := strconv.Atoi(c.Param("id"))
@@ -43,6 +64,19 @@ func (h *InvestmentHandler) Invest(c echo.Context) error {
 	return c.JSON(http.StatusCreated, successResp(inv))
 }
 
+// ListRounds godoc
+//
+//	@Summary		투자 라운드 목록
+//	@Description	투자 라운드 목록 조회
+//	@Tags			Investment
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			company_id	query		int		false	"회사 ID 필터"
+//	@Param			status		query		string	false	"상태 필터"
+//	@Param			page		query		int		false	"페이지"
+//	@Param			limit		query		int		false	"크기"
+//	@Success		200			{object}	APIResponse
+//	@Router			/investment/rounds [get]
 func (h *InvestmentHandler) ListRounds(c echo.Context) error {
 	companyID, _ := strconv.Atoi(c.QueryParam("company_id"))
 	status := c.QueryParam("status")
@@ -59,6 +93,15 @@ func (h *InvestmentHandler) ListRounds(c echo.Context) error {
 	}))
 }
 
+// GetPortfolio godoc
+//
+//	@Summary		내 투자 포트폴리오
+//	@Description	내 투자 내역 조회
+//	@Tags			Investment
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Router			/investment/portfolio [get]
 func (h *InvestmentHandler) GetPortfolio(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	portfolio, err := h.uc.GetPortfolio(userID)
@@ -68,6 +111,17 @@ func (h *InvestmentHandler) GetPortfolio(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(portfolio))
 }
 
+// ExecuteDividend godoc
+//
+//	@Summary		배당 실행
+//	@Description	회사 배당금 실행
+//	@Tags			Investment
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		ExecuteDividendRequest	true	"배당 정보"
+//	@Success		201		{object}	APIResponse
+//	@Router			/investment/dividends [post]
 func (h *InvestmentHandler) ExecuteDividend(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	var input application.ExecuteDividendInput
@@ -81,6 +135,15 @@ func (h *InvestmentHandler) ExecuteDividend(c echo.Context) error {
 	return c.JSON(http.StatusCreated, successResp(dividend))
 }
 
+// GetMyDividends godoc
+//
+//	@Summary		내 배당 내역
+//	@Description	내가 받은 배당 내역 조회
+//	@Tags			Investment
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Router			/investment/dividends [get]
 func (h *InvestmentHandler) GetMyDividends(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	dividends, err := h.uc.GetMyDividends(userID)
@@ -90,6 +153,17 @@ func (h *InvestmentHandler) GetMyDividends(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(dividends))
 }
 
+// CreateKpiRule godoc
+//
+//	@Summary		KPI 규칙 생성
+//	@Description	회사 KPI 규칙 생성
+//	@Tags			Investment
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		CreateKpiRuleRequest	true	"KPI 규칙"
+//	@Success		201		{object}	APIResponse
+//	@Router			/investment/kpi-rules [post]
 func (h *InvestmentHandler) CreateKpiRule(c echo.Context) error {
 	var input application.CreateKpiRuleInput
 	if err := c.Bind(&input); err != nil {
@@ -102,6 +176,17 @@ func (h *InvestmentHandler) CreateKpiRule(c echo.Context) error {
 	return c.JSON(http.StatusCreated, successResp(rule))
 }
 
+// AddKpiRevenue godoc
+//
+//	@Summary		KPI 매출 등록
+//	@Description	KPI 규칙에 매출 기록 추가
+//	@Tags			Investment
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		AddKpiRevenueRequest	true	"매출 정보"
+//	@Success		201		{object}	APIResponse
+//	@Router			/investment/kpi-revenue [post]
 func (h *InvestmentHandler) AddKpiRevenue(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	var input application.AddKpiRevenueInput

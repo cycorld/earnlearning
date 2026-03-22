@@ -17,6 +17,18 @@ func NewAuthHandler(uc *application.AuthUseCase) *AuthHandler {
 	return &AuthHandler{authUC: uc}
 }
 
+// Register godoc
+//
+//	@Summary		회원가입
+//	@Description	이메일, 비밀번호, 이름, 학번으로 회원가입
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		RegisterRequest	true	"회원가입 정보"
+//	@Success		201		{object}	APIResponse
+//	@Failure		400		{object}	APIResponse
+//	@Failure		409		{object}	APIResponse
+//	@Router			/auth/register [post]
 func (h *AuthHandler) Register(c echo.Context) error {
 	var input application.RegisterInput
 	if err := c.Bind(&input); err != nil {
@@ -40,6 +52,17 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	return successResponse(c, http.StatusCreated, resp)
 }
 
+// Login godoc
+//
+//	@Summary		로그인
+//	@Description	이메일/비밀번호로 로그인하여 JWT 토큰 발급
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		LoginRequest	true	"로그인 정보"
+//	@Success		200		{object}	APIResponse
+//	@Failure		401		{object}	APIResponse
+//	@Router			/auth/login [post]
 func (h *AuthHandler) Login(c echo.Context) error {
 	var input application.LoginInput
 	if err := c.Bind(&input); err != nil {
@@ -61,6 +84,16 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	return successResponse(c, http.StatusOK, resp)
 }
 
+// Refresh godoc
+//
+//	@Summary		토큰 갱신
+//	@Description	만료 임박 JWT 토큰을 새 토큰으로 갱신
+//	@Tags			Auth
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Failure		401	{object}	APIResponse
+//	@Router			/auth/refresh [post]
 func (h *AuthHandler) Refresh(c echo.Context) error {
 	// Extract token from Authorization header
 	auth := c.Request().Header.Get("Authorization")
@@ -77,6 +110,16 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 	return successResponse(c, http.StatusOK, resp)
 }
 
+// GetMe godoc
+//
+//	@Summary		내 정보 조회
+//	@Description	현재 로그인한 사용자 정보 조회
+//	@Tags			Auth
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Failure		404	{object}	APIResponse
+//	@Router			/auth/me [get]
 func (h *AuthHandler) GetMe(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	u, err := h.authUC.GetMe(userID)
@@ -88,6 +131,17 @@ func (h *AuthHandler) GetMe(c echo.Context) error {
 	return successResponse(c, http.StatusOK, userToResponse(u, viewerRole))
 }
 
+// GetProfile godoc
+//
+//	@Summary		사용자 프로필 조회
+//	@Description	특정 사용자의 공개 프로필 조회
+//	@Tags			Auth
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"사용자 ID"
+//	@Success		200	{object}	APIResponse
+//	@Failure		404	{object}	APIResponse
+//	@Router			/users/{id}/profile [get]
 func (h *AuthHandler) GetProfile(c echo.Context) error {
 	id, err := intParam(c, "id")
 	if err != nil {

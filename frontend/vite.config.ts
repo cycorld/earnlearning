@@ -63,6 +63,7 @@ export default defineConfig({
       '/api': 'http://localhost:8080',
       '/ws': { target: 'ws://localhost:8080', ws: true },
       '/uploads': 'http://localhost:8080',
+      '/docs': 'http://localhost:8080',
     }
   }
 })

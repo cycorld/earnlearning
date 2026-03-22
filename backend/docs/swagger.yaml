@@ -1,0 +1,2766 @@
+basePath: /api
+definitions:
+  github_com_earnlearning_backend_internal_application.AuthorizeInput:
+    properties:
+      client_id:
+        type: string
+      code_challenge:
+        type: string
+      code_challenge_method:
+        type: string
+      redirect_uri:
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+      state:
+        type: string
+    type: object
+  github_com_earnlearning_backend_internal_application.RegisterClientInput:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      redirect_uris:
+        items:
+          type: string
+        type: array
+      scopes:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_interfaces_http_handler.APIError:
+    properties:
+      code:
+        example: INVALID_INPUT
+        type: string
+      message:
+        example: 잘못된 입력입니다
+        type: string
+    type: object
+  internal_interfaces_http_handler.APIResponse:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/internal_interfaces_http_handler.APIError'
+      success:
+        example: true
+        type: boolean
+    type: object
+  internal_interfaces_http_handler.AcceptApplicationRequest:
+    properties:
+      application_id:
+        example: 1
+        type: integer
+    type: object
+  internal_interfaces_http_handler.AddKpiRevenueRequest:
+    properties:
+      amount:
+        example: 50000
+        type: integer
+      rule_id:
+        example: 1
+        type: integer
+    type: object
+  internal_interfaces_http_handler.AdminTransferRequest:
+    properties:
+      amount:
+        example: 5000
+        type: integer
+      description:
+        example: 보상금 지급
+        type: string
+      user_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  internal_interfaces_http_handler.AnnouncementRequest:
+    properties:
+      body:
+        example: 공지사항 내용
+        type: string
+      send_notify:
+        example: true
+        type: boolean
+      title:
+        example: 공지사항 제목
+        type: string
+      user_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  internal_interfaces_http_handler.ApplyGrantRequest:
+    properties:
+      proposal:
+        example: 지원 제안서
+        type: string
+    type: object
+  internal_interfaces_http_handler.ApplyJobRequest:
+    properties:
+      price:
+        example: 45000
+        type: integer
+      proposal:
+        example: 지원 내용
+        type: string
+    type: object
+  internal_interfaces_http_handler.ApplyLoanRequest:
+    properties:
+      amount:
+        example: 50000
+        type: integer
+      purpose:
+        example: 사업 자금
+        type: string
+    type: object
+  internal_interfaces_http_handler.ApproveLoanRequest:
+    properties:
+      interest_rate:
+        example: 5
+        type: number
+      weeks:
+        example: 4
+        type: integer
+    type: object
+  internal_interfaces_http_handler.BusinessCardRequest:
+    properties:
+      email:
+        example: ceo@company.com
+        type: string
+      name:
+        example: 홍길동
+        type: string
+      phone:
+        example: 010-1234-5678
+        type: string
+      template:
+        example: modern
+        type: string
+      title:
+        example: CEO
+        type: string
+    type: object
+  internal_interfaces_http_handler.CompleteWorkRequest:
+    properties:
+      media:
+        items:
+          type: string
+        type: array
+      report:
+        example: 완료 보고서
+        type: string
+    type: object
+  internal_interfaces_http_handler.CreateAssignmentRequest:
+    properties:
+      channel_id:
+        example: 1
+        type: integer
+      description:
+        example: 과제 설명
+        type: string
+      due_date:
+        example: "2026-04-01"
+        type: string
+      max_score:
+        example: 100
+        type: integer
+      title:
+        example: 과제 제목
+        type: string
+    type: object
+  internal_interfaces_http_handler.CreateClassroomRequest:
+    properties:
+      name:
+        example: 코딩입문 1반
+        type: string
+    type: object
+  internal_interfaces_http_handler.CreateCommentRequest:
+    properties:
+      content:
+        example: 댓글 내용
+        type: string
+      post_id:
+        example: 1
+        type: integer
+    type: object
+  internal_interfaces_http_handler.CreateCompanyRequest:
+    properties:
+      capital:
+        example: 100000
+        type: integer
+      description:
+        example: AI 기반 서비스
+        type: string
+      name:
+        example: 테크스타트업
+        type: string
+    type: object
+  internal_interfaces_http_handler.CreateGrantRequest:
+    properties:
+      description:
+        example: 지원 설명
+        type: string
+      max_applicants:
+        example: 5
+        type: integer
+      reward:
+        example: 100000
+        type: integer
+      title:
+        example: 창업지원금
+        type: string
+    type: object
+  internal_interfaces_http_handler.CreateJobRequest:
+    properties:
+      budget:
+        example: 50000
+        type: integer
+      description:
+        example: React 기반 랜딩페이지
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+      title:
+        example: 웹사이트 제작
+        type: string
+    type: object
+  internal_interfaces_http_handler.CreateKpiRuleRequest:
+    properties:
+      company_id:
+        example: 1
+        type: integer
+      name:
+        example: 매출 목표
+        type: string
+      target:
+        example: 1000000
+        type: integer
+    type: object
+  internal_interfaces_http_handler.CreatePostRequest:
+    properties:
+      channel_id:
+        example: 1
+        type: integer
+      content:
+        example: 게시글 내용
+        type: string
+      media:
+        items:
+          type: string
+        type: array
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_interfaces_http_handler.CreateRoundRequest:
+    properties:
+      company_id:
+        example: 1
+        type: integer
+      price_per_share:
+        example: 1000
+        type: integer
+      total_shares:
+        example: 100
+        type: integer
+    type: object
+  internal_interfaces_http_handler.ExecuteDividendRequest:
+    properties:
+      amount_per_share:
+        example: 100
+        type: integer
+      company_id:
+        example: 1
+        type: integer
+    type: object
+  internal_interfaces_http_handler.GradeAssignmentRequest:
+    properties:
+      feedback:
+        example: 잘했습니다
+        type: string
+      score:
+        example: 95
+        type: integer
+      submission_id:
+        example: 1
+        type: integer
+    type: object
+  internal_interfaces_http_handler.JoinClassroomRequest:
+    properties:
+      code:
+        example: ABC123
+        type: string
+    type: object
+  internal_interfaces_http_handler.LoginRequest:
+    properties:
+      email:
+        example: student@ewha.ac.kr
+        type: string
+      password:
+        example: password123
+        type: string
+    type: object
+  internal_interfaces_http_handler.PlaceOrderRequest:
+    properties:
+      company_id:
+        example: 1
+        type: integer
+      price:
+        example: 1000
+        type: integer
+      quantity:
+        example: 10
+        type: integer
+      side:
+        example: buy
+        type: string
+    type: object
+  internal_interfaces_http_handler.RegisterRequest:
+    properties:
+      email:
+        example: student@ewha.ac.kr
+        type: string
+      name:
+        example: 홍길동
+        type: string
+      password:
+        example: password123
+        type: string
+      student_id:
+        example: "2024001"
+        type: string
+    type: object
+  internal_interfaces_http_handler.RepayLoanRequest:
+    properties:
+      amount:
+        example: 10000
+        type: integer
+    type: object
+  internal_interfaces_http_handler.ReviewJobRequest:
+    properties:
+      comment:
+        example: 좋은 작업이었습니다
+        type: string
+      rating:
+        example: 5
+        type: integer
+    type: object
+  internal_interfaces_http_handler.RevokeTokenInput:
+    properties:
+      token:
+        example: access_token_or_refresh_token
+        type: string
+    type: object
+  internal_interfaces_http_handler.SubmitAssignmentRequest:
+    properties:
+      assignment_id:
+        example: 1
+        type: integer
+      content:
+        example: 제출 내용
+        type: string
+      file_url:
+        example: /uploads/file.pdf
+        type: string
+    type: object
+  internal_interfaces_http_handler.SubscribePushRequest:
+    properties:
+      auth:
+        example: tBHI...
+        type: string
+      endpoint:
+        example: https://fcm.googleapis.com/...
+        type: string
+      p256dh:
+        example: BNcRd...
+        type: string
+    type: object
+  internal_interfaces_http_handler.TransferRequest:
+    properties:
+      amount:
+        example: 1000
+        type: integer
+      description:
+        example: 송금 메모
+        type: string
+      target_user_id:
+        example: 2
+        type: integer
+    type: object
+  internal_interfaces_http_handler.UnsubscribePushRequest:
+    properties:
+      endpoint:
+        example: https://fcm.googleapis.com/...
+        type: string
+    type: object
+  internal_interfaces_http_handler.UpdateCompanyRequest:
+    properties:
+      description:
+        example: 수정된 설명
+        type: string
+      logo_url:
+        example: /uploads/logo.png
+        type: string
+    type: object
+  internal_interfaces_http_handler.UpdateEmailPrefRequest:
+    properties:
+      email_enabled:
+        example: true
+        type: boolean
+    type: object
+  internal_interfaces_http_handler.UpdatePostRequest:
+    properties:
+      content:
+        example: 수정된 내용
+        type: string
+      media:
+        items:
+          type: string
+        type: array
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+host: earnlearning.com
+info:
+  contact: {}
+  description: 이화여대 창업 교육 LMS API
+  title: EarnLearning LMS API
+  version: "1.0"
+paths:
+  /admin/classrooms/{id}/dashboard:
+    get:
+      description: '관리자용: 클래스룸 멤버 활동 대시보드'
+      parameters:
+      - description: 클래스룸 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 클래스룸 대시보드
+      tags:
+      - Admin
+  /admin/companies:
+    get:
+      description: '관리자용: 모든 회사 목록 조회'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 전체 회사 목록
+      tags:
+      - Admin
+  /admin/grants:
+    post:
+      consumes:
+      - application/json
+      description: '관리자용: 새 정부과제 생성'
+      parameters:
+      - description: 과제 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.CreateGrantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 정부과제 생성
+      tags:
+      - Admin
+  /admin/grants/{id}/approve/{appId}:
+    post:
+      description: '관리자용: 정부과제 지원 승인'
+      parameters:
+      - description: 과제 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 지원 ID
+        in: path
+        name: appId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 정부과제 지원 승인
+      tags:
+      - Admin
+  /admin/grants/{id}/close:
+    post:
+      description: '관리자용: 정부과제 종료'
+      parameters:
+      - description: 과제 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 정부과제 종료
+      tags:
+      - Admin
+  /admin/loans:
+    get:
+      description: '관리자용: 전체 대출 목록 조회'
+      parameters:
+      - description: 상태 필터
+        in: query
+        name: status
+        type: string
+      - description: 페이지
+        in: query
+        name: page
+        type: integer
+      - description: 크기
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 전체 대출 목록
+      tags:
+      - Admin
+  /admin/loans/{id}/approve:
+    put:
+      consumes:
+      - application/json
+      description: '관리자용: 대출 신청 승인'
+      parameters:
+      - description: 대출 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 승인 조건
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.ApproveLoanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 대출 승인
+      tags:
+      - Admin
+  /admin/loans/{id}/reject:
+    put:
+      description: '관리자용: 대출 신청 거절'
+      parameters:
+      - description: 대출 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 대출 거절
+      tags:
+      - Admin
+  /admin/loans/weekly-interest:
+    post:
+      description: '관리자용: 전체 대출 주간 이자 처리'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 주간 이자 처리
+      tags:
+      - Admin
+  /admin/notifications/announce:
+    post:
+      consumes:
+      - application/json
+      description: '관리자용: 공지 알림 전송 (전체 또는 특정 사용자)'
+      parameters:
+      - description: 공지 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.AnnouncementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 공지 알림 전송
+      tags:
+      - Admin
+  /admin/tasks:
+    get:
+      description: '관리자용: 칸반 태스크 목록 조회'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 태스크 목록
+      tags:
+      - Admin
+  /admin/users:
+    get:
+      description: '관리자용: 전체 사용자 목록 (페이지네이션)'
+      parameters:
+      - default: 1
+        description: 페이지 번호
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 페이지 크기
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 전체 사용자 목록
+      tags:
+      - Admin
+  /admin/users/{id}/approve:
+    put:
+      description: '관리자용: 사용자 가입 승인'
+      parameters:
+      - description: 사용자 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 사용자 승인
+      tags:
+      - Admin
+  /admin/users/{id}/impersonate:
+    post:
+      description: '관리자용: 특정 사용자로 대리 로그인 (디버깅용)'
+      parameters:
+      - description: 사용자 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 사용자 대리 로그인
+      tags:
+      - Admin
+  /admin/users/{id}/reject:
+    put:
+      description: '관리자용: 사용자 가입 거절'
+      parameters:
+      - description: 사용자 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 사용자 거절
+      tags:
+      - Admin
+  /admin/users/pending:
+    get:
+      description: '관리자용: 승인 대기 중인 사용자 목록 조회'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 승인 대기 사용자 목록
+      tags:
+      - Admin
+  /admin/wallet/transfer:
+    post:
+      consumes:
+      - application/json
+      description: '관리자용: 여러 사용자에게 일괄 송금'
+      parameters:
+      - description: 일괄 송금 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.AdminTransferRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 관리자 일괄 송금
+      tags:
+      - Admin
+  /assignments/{id}/submissions:
+    get:
+      description: 과제의 제출물 목록 조회
+      parameters:
+      - description: 과제 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 제출 목록 조회
+      tags:
+      - Assignment
+  /assignments/{id}/submit:
+    post:
+      consumes:
+      - application/json
+      description: 과제에 대한 제출물 작성
+      parameters:
+      - description: 과제 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 제출 내용
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.SubmitAssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 과제 제출
+      tags:
+      - Assignment
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 이메일/비밀번호로 로그인하여 JWT 토큰 발급
+      parameters:
+      - description: 로그인 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      summary: 로그인
+      tags:
+      - Auth
+  /auth/me:
+    get:
+      description: 현재 로그인한 사용자 정보 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 정보 조회
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      description: 만료 임박 JWT 토큰을 새 토큰으로 갱신
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 토큰 갱신
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 이메일, 비밀번호, 이름, 학번으로 회원가입
+      parameters:
+      - description: 회원가입 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      summary: 회원가입
+      tags:
+      - Auth
+  /channels/{channelId}/assignments:
+    post:
+      consumes:
+      - application/json
+      description: 채널에 새 과제 생성 (관리자)
+      parameters:
+      - description: 과제 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.CreateAssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 과제 생성
+      tags:
+      - Assignment
+  /channels/{channelId}/posts:
+    post:
+      consumes:
+      - application/json
+      description: 채널에 새 게시물 작성
+      parameters:
+      - description: 채널 ID
+        in: path
+        name: channelId
+        required: true
+        type: integer
+      - description: 게시물 내용
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.CreatePostRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 게시물 작성
+      tags:
+      - Feed
+  /classrooms:
+    get:
+      description: 내가 속한 클래스룸 목록 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 클래스룸 목록
+      tags:
+      - Classroom
+    post:
+      consumes:
+      - application/json
+      description: 새 클래스룸 생성 (관리자)
+      parameters:
+      - description: 클래스룸 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.CreateClassroomRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 클래스룸 생성
+      tags:
+      - Classroom
+  /classrooms/{classroomId}/channels:
+    get:
+      description: 클래스룸 내 채널 목록 조회
+      parameters:
+      - description: 클래스룸 ID
+        in: path
+        name: classroomId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 채널 목록 조회
+      tags:
+      - Feed
+  /classrooms/{id}:
+    get:
+      description: 클래스룸 정보, 채널, 멤버 조회
+      parameters:
+      - description: 클래스룸 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 클래스룸 상세 조회
+      tags:
+      - Classroom
+  /classrooms/join:
+    post:
+      consumes:
+      - application/json
+      description: 초대 코드로 클래스룸 참여
+      parameters:
+      - description: 참여 코드
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.JoinClassroomRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 클래스룸 참여
+      tags:
+      - Classroom
+  /companies:
+    post:
+      consumes:
+      - application/json
+      description: 새 회사를 설립 (자본금 필요)
+      parameters:
+      - description: 회사 설립 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.CreateCompanyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 회사 설립
+      tags:
+      - Company
+  /companies/{id}:
+    get:
+      description: 특정 회사의 상세 정보 조회
+      parameters:
+      - description: 회사 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 회사 상세 조회
+      tags:
+      - Company
+    put:
+      consumes:
+      - application/json
+      description: 회사 설명, 로고 등 수정 (소유자만)
+      parameters:
+      - description: 회사 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 수정 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.UpdateCompanyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 회사 정보 수정
+      tags:
+      - Company
+  /companies/{id}/business-card:
+    get:
+      description: 회사 명함 조회
+      parameters:
+      - description: 회사 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 명함 조회
+      tags:
+      - Company
+    post:
+      consumes:
+      - application/json
+      description: 회사 명함 생성 또는 수정
+      parameters:
+      - description: 회사 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 명함 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.BusinessCardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 명함 생성/수정
+      tags:
+      - Company
+  /companies/mine:
+    get:
+      description: 내가 소유한 회사 목록 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 회사 목록
+      tags:
+      - Company
+  /docs:
+    get:
+      description: Scalar 기반 API 문서 페이지
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+      summary: API 문서 UI
+      tags:
+      - Docs
+  /docs/openapi.json:
+    get:
+      description: swaggo로 생성된 OpenAPI 3.0 JSON 스펙
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      summary: OpenAPI 스펙 (JSON)
+      tags:
+      - Docs
+  /exchange/companies:
+    get:
+      description: 거래소에 상장된 회사 목록
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 거래소 회사 목록
+      tags:
+      - Exchange
+  /exchange/orderbook/{companyId}:
+    get:
+      description: 회사의 매수/매도 호가창 조회
+      parameters:
+      - description: 회사 ID
+        in: path
+        name: companyId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 호가창 조회
+      tags:
+      - Exchange
+  /exchange/orders:
+    post:
+      consumes:
+      - application/json
+      description: 주식 매수/매도 주문 제출
+      parameters:
+      - description: 주문 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.PlaceOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 주문 제출
+      tags:
+      - Exchange
+  /exchange/orders/{id}:
+    delete:
+      description: 미체결 주문 취소
+      parameters:
+      - description: 주문 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 주문 취소
+      tags:
+      - Exchange
+  /exchange/orders/mine:
+    get:
+      description: 내 주식 주문 목록 조회
+      parameters:
+      - description: 상태 필터
+        in: query
+        name: status
+        type: string
+      - description: 회사 ID
+        in: query
+        name: company_id
+        type: integer
+      - default: 1
+        description: 페이지
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 크기
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 주문 목록
+      tags:
+      - Exchange
+  /freelance/jobs:
+    get:
+      description: 프리랜서 잡 목록 조회 (필터, 페이지네이션)
+      parameters:
+      - description: 상태 필터 (open, in_progress, completed)
+        in: query
+        name: status
+        type: string
+      - description: 스킬 필터
+        in: query
+        name: skills
+        type: string
+      - description: 최소 예산
+        in: query
+        name: min_budget
+        type: integer
+      - default: 1
+        description: 페이지
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 크기
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 프리랜서 잡 목록
+      tags:
+      - Freelance
+    post:
+      consumes:
+      - application/json
+      description: 새 프리랜서 잡 등록
+      parameters:
+      - description: 잡 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.CreateJobRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 프리랜서 잡 등록
+      tags:
+      - Freelance
+  /freelance/jobs/{id}:
+    get:
+      description: 프리랜서 잡 상세 조회
+      parameters:
+      - description: 잡 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 프리랜서 잡 상세
+      tags:
+      - Freelance
+  /freelance/jobs/{id}/accept:
+    post:
+      consumes:
+      - application/json
+      description: 프리랜서 잡 지원을 수락
+      parameters:
+      - description: 잡 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 수락 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.AcceptApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 지원 수락
+      tags:
+      - Freelance
+  /freelance/jobs/{id}/applications:
+    get:
+      description: 프리랜서 잡의 지원자 목록 조회
+      parameters:
+      - description: 잡 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 지원자 목록
+      tags:
+      - Freelance
+  /freelance/jobs/{id}/apply:
+    post:
+      consumes:
+      - application/json
+      description: 프리랜서 잡에 지원
+      parameters:
+      - description: 잡 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 지원 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.ApplyJobRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 잡 지원
+      tags:
+      - Freelance
+  /freelance/jobs/{id}/approve:
+    post:
+      description: 프리랜서 작업 결과 승인 → 대금 지급
+      parameters:
+      - description: 잡 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 작업 승인
+      tags:
+      - Freelance
+  /freelance/jobs/{id}/cancel:
+    post:
+      description: 프리랜서 잡 취소
+      parameters:
+      - description: 잡 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 잡 취소
+      tags:
+      - Freelance
+  /freelance/jobs/{id}/complete:
+    post:
+      consumes:
+      - application/json
+      description: 프리랜서 작업 완료 보고
+      parameters:
+      - description: 잡 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 완료 보고
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.CompleteWorkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 작업 완료 보고
+      tags:
+      - Freelance
+  /freelance/jobs/{id}/dispute:
+    post:
+      description: 프리랜서 작업에 분쟁 제기
+      parameters:
+      - description: 잡 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 분쟁 제기
+      tags:
+      - Freelance
+  /freelance/jobs/{id}/review:
+    post:
+      consumes:
+      - application/json
+      description: 완료된 프리랜서 잡에 리뷰 작성
+      parameters:
+      - description: 잡 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 리뷰 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.ReviewJobRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 리뷰 작성
+      tags:
+      - Freelance
+  /grants:
+    get:
+      description: 정부과제 목록 조회 (페이지네이션)
+      parameters:
+      - description: 상태 필터
+        in: query
+        name: status
+        type: string
+      - default: 1
+        description: 페이지
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 크기
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 정부과제 목록
+      tags:
+      - Grant
+  /grants/{id}:
+    get:
+      description: 정부과제 상세 정보 조회
+      parameters:
+      - description: 과제 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 정부과제 상세
+      tags:
+      - Grant
+  /grants/{id}/apply:
+    post:
+      consumes:
+      - application/json
+      description: 정부과제에 지원
+      parameters:
+      - description: 과제 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 지원 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.ApplyGrantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 정부과제 지원
+      tags:
+      - Grant
+  /investment/dividends:
+    get:
+      description: 내가 받은 배당 내역 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 배당 내역
+      tags:
+      - Investment
+    post:
+      consumes:
+      - application/json
+      description: 회사 배당금 실행
+      parameters:
+      - description: 배당 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.ExecuteDividendRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 배당 실행
+      tags:
+      - Investment
+  /investment/kpi-revenue:
+    post:
+      consumes:
+      - application/json
+      description: KPI 규칙에 매출 기록 추가
+      parameters:
+      - description: 매출 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.AddKpiRevenueRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: KPI 매출 등록
+      tags:
+      - Investment
+  /investment/kpi-rules:
+    post:
+      consumes:
+      - application/json
+      description: 회사 KPI 규칙 생성
+      parameters:
+      - description: KPI 규칙
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.CreateKpiRuleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: KPI 규칙 생성
+      tags:
+      - Investment
+  /investment/portfolio:
+    get:
+      description: 내 투자 내역 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 투자 포트폴리오
+      tags:
+      - Investment
+  /investment/rounds:
+    get:
+      description: 투자 라운드 목록 조회
+      parameters:
+      - description: 회사 ID 필터
+        in: query
+        name: company_id
+        type: integer
+      - description: 상태 필터
+        in: query
+        name: status
+        type: string
+      - description: 페이지
+        in: query
+        name: page
+        type: integer
+      - description: 크기
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 투자 라운드 목록
+      tags:
+      - Investment
+    post:
+      consumes:
+      - application/json
+      description: 회사의 새 투자 라운드 생성
+      parameters:
+      - description: 라운드 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.CreateRoundRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 투자 라운드 생성
+      tags:
+      - Investment
+  /investment/rounds/{id}/invest:
+    post:
+      description: 투자 라운드에 투자
+      parameters:
+      - description: 라운드 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 투자하기
+      tags:
+      - Investment
+  /loans:
+    post:
+      consumes:
+      - application/json
+      description: 대출 신청
+      parameters:
+      - description: 대출 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.ApplyLoanRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 대출 신청
+      tags:
+      - Loan
+  /loans/{id}/payments:
+    get:
+      description: 대출 상환 내역 조회
+      parameters:
+      - description: 대출 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 상환 내역 조회
+      tags:
+      - Loan
+  /loans/{id}/repay:
+    post:
+      consumes:
+      - application/json
+      description: 대출금 일부 또는 전액 상환
+      parameters:
+      - description: 대출 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 상환 금액
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.RepayLoanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 대출 상환
+      tags:
+      - Loan
+  /loans/mine:
+    get:
+      description: 내 대출 목록 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 대출 목록
+      tags:
+      - Loan
+  /notifications:
+    get:
+      description: 내 알림 목록 조회 (읽음/안읽음 필터)
+      parameters:
+      - default: 1
+        description: 페이지
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 크기
+        in: query
+        name: limit
+        type: integer
+      - description: 읽음 여부 (true/false)
+        in: query
+        name: is_read
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 알림 목록 조회
+      tags:
+      - Notification
+  /notifications/{id}/read:
+    put:
+      description: 특정 알림 읽음 처리
+      parameters:
+      - description: 알림 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 알림 읽음 처리
+      tags:
+      - Notification
+  /notifications/email/preference:
+    get:
+      description: 이메일 알림 수신 설정 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 이메일 알림 설정 조회
+      tags:
+      - Notification
+    put:
+      consumes:
+      - application/json
+      description: 이메일 알림 수신 여부 변경
+      parameters:
+      - description: 설정
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.UpdateEmailPrefRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 이메일 알림 설정 변경
+      tags:
+      - Notification
+  /notifications/push/subscribe:
+    delete:
+      consumes:
+      - application/json
+      description: 웹 푸시 알림 구독 해제
+      parameters:
+      - description: 해제 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.UnsubscribePushRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 푸시 구독 해제
+      tags:
+      - Notification
+    post:
+      consumes:
+      - application/json
+      description: 웹 푸시 알림 구독 등록
+      parameters:
+      - description: 구독 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.SubscribePushRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 푸시 구독
+      tags:
+      - Notification
+  /notifications/read-all:
+    put:
+      description: 모든 알림 일괄 읽음 처리
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 전체 알림 읽음 처리
+      tags:
+      - Notification
+  /oauth/authorize:
+    get:
+      description: 인가 동의 화면에 표시할 앱 정보 조회
+      parameters:
+      - description: Client ID
+        in: query
+        name: client_id
+        required: true
+        type: string
+      - description: Redirect URI
+        in: query
+        name: redirect_uri
+        required: true
+        type: string
+      - description: 요청 스코프 (공백 구분)
+        in: query
+        name: scope
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 인가 정보 조회
+      tags:
+      - OAuth
+    post:
+      consumes:
+      - application/json
+      description: 사용자가 외부 앱에 접근 권한 승인 → 인가 코드 발급
+      parameters:
+      - description: 인가 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_earnlearning_backend_internal_application.AuthorizeInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 인가 승인
+      tags:
+      - OAuth
+  /oauth/clients:
+    get:
+      description: 내가 등록한 OAuth 앱 목록 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 앱 목록
+      tags:
+      - OAuth
+    post:
+      consumes:
+      - application/json
+      description: 외부 앱 등록 (client_id, client_secret 발급)
+      parameters:
+      - description: 앱 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_earnlearning_backend_internal_application.RegisterClientInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: OAuth 앱 등록
+      tags:
+      - OAuth
+  /oauth/clients/{id}:
+    delete:
+      description: 등록한 OAuth 앱 삭제 + 토큰 폐기
+      parameters:
+      - description: Client ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 앱 삭제
+      tags:
+      - OAuth
+  /oauth/revoke:
+    post:
+      consumes:
+      - application/json
+      description: 액세스 토큰 또는 리프레시 토큰 폐기
+      parameters:
+      - description: 폐기할 토큰
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.RevokeTokenInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 토큰 폐기
+      tags:
+      - OAuth
+  /oauth/token:
+    post:
+      consumes:
+      - application/json
+      description: 인가 코드 → 액세스 토큰 교환, 또는 리프레시 토큰으로 갱신
+      parameters:
+      - description: grant_type, code, client_id, client_secret, redirect_uri, code_verifier,
+          refresh_token
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      summary: 토큰 교환
+      tags:
+      - OAuth
+  /oauth/userinfo:
+    get:
+      description: OAuth 액세스 토큰으로 사용자 정보 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 사용자 정보 (OAuth)
+      tags:
+      - OAuth
+  /posts:
+    get:
+      description: 채널 또는 클래스룸의 게시물 목록 (페이지네이션, 태그 필터)
+      parameters:
+      - description: 클래스룸 ID
+        in: query
+        name: classroom_id
+        type: integer
+      - description: 채널 ID
+        in: query
+        name: channel_id
+        type: integer
+      - default: 1
+        description: 페이지 번호
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 페이지 크기
+        in: query
+        name: limit
+        type: integer
+      - description: 태그 필터
+        in: query
+        name: tag
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 게시물 목록 조회
+      tags:
+      - Feed
+  /posts/{id}:
+    put:
+      consumes:
+      - application/json
+      description: 게시물 내용 수정
+      parameters:
+      - description: 게시물 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 수정 내용
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.UpdatePostRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 게시물 수정
+      tags:
+      - Feed
+  /posts/{id}/comments:
+    get:
+      description: 게시물의 댓글 목록 조회
+      parameters:
+      - description: 게시물 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 댓글 목록 조회
+      tags:
+      - Feed
+    post:
+      consumes:
+      - application/json
+      description: 게시물에 댓글 작성
+      parameters:
+      - description: 게시물 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 댓글 내용
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.CreateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 댓글 작성
+      tags:
+      - Feed
+  /posts/{id}/like:
+    post:
+      description: 게시물에 좋아요 토글
+      parameters:
+      - description: 게시물 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 게시물 좋아요
+      tags:
+      - Feed
+  /push/vapid-public-key:
+    get:
+      description: 웹 푸시용 VAPID 공개키 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      summary: VAPID 공개키 조회
+      tags:
+      - Notification
+  /submissions/{id}/grade:
+    put:
+      consumes:
+      - application/json
+      description: 제출된 과제 채점 (관리자)
+      parameters:
+      - description: 제출 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 채점 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.GradeAssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 과제 채점
+      tags:
+      - Assignment
+  /upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 이미지/문서 파일 업로드
+      parameters:
+      - description: 업로드할 파일
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 파일 업로드
+      tags:
+      - Upload
+  /users/{id}/profile:
+    get:
+      description: 특정 사용자의 공개 프로필 조회
+      parameters:
+      - description: 사용자 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 사용자 프로필 조회
+      tags:
+      - Auth
+  /wallet:
+    get:
+      description: 내 지갑 잔액 및 정보 조회
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 지갑 조회
+      tags:
+      - Wallet
+  /wallet/ranking:
+    get:
+      description: 전체 사용자 자산 랭킹 조회
+      parameters:
+      - default: 20
+        description: 조회 수
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 자산 랭킹
+      tags:
+      - Wallet
+  /wallet/recipients:
+    get:
+      description: 이름/이메일로 송금 대상 사용자 검색
+      parameters:
+      - description: 검색어
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 송금 대상 검색
+      tags:
+      - Wallet
+  /wallet/transactions:
+    get:
+      description: 내 지갑 거래 내역 조회 (필터, 페이지네이션)
+      parameters:
+      - default: 1
+        description: 페이지 번호
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 페이지 크기
+        in: query
+        name: limit
+        type: integer
+      - description: 거래 유형 필터
+        in: query
+        name: tx_type
+        type: string
+      - description: 시작일 (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: 종료일 (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 거래 내역 조회
+      tags:
+      - Wallet
+  /wallet/transfer:
+    post:
+      consumes:
+      - application/json
+      description: 다른 사용자에게 송금
+      parameters:
+      - description: 송금 정보
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.TransferRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 송금
+      tags:
+      - Wallet
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

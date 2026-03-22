@@ -19,6 +19,16 @@ func NewPostHandler(uc *application.PostUsecase) *PostHandler {
 	return &PostHandler{uc: uc}
 }
 
+// GetChannels godoc
+//
+//	@Summary		채널 목록 조회
+//	@Description	클래스룸 내 채널 목록 조회
+//	@Tags			Feed
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			classroomId	path		int	true	"클래스룸 ID"
+//	@Success		200			{object}	APIResponse
+//	@Router			/classrooms/{classroomId}/channels [get]
 func (h *PostHandler) GetChannels(c echo.Context) error {
 	classroomID, err := strconv.Atoi(c.Param("classroomId"))
 	if err != nil {
@@ -41,6 +51,20 @@ func (h *PostHandler) GetChannels(c echo.Context) error {
 	})
 }
 
+// GetPosts godoc
+//
+//	@Summary		게시물 목록 조회
+//	@Description	채널 또는 클래스룸의 게시물 목록 (페이지네이션, 태그 필터)
+//	@Tags			Feed
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			classroom_id	query		int		false	"클래스룸 ID"
+//	@Param			channel_id		query		int		false	"채널 ID"
+//	@Param			page			query		int		false	"페이지 번호"	default(1)
+//	@Param			limit			query		int		false	"페이지 크기"	default(20)
+//	@Param			tag				query		string	false	"태그 필터"
+//	@Success		200				{object}	APIResponse
+//	@Router			/posts [get]
 func (h *PostHandler) GetPosts(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 
@@ -96,6 +120,18 @@ func (h *PostHandler) GetPosts(c echo.Context) error {
 	})
 }
 
+// CreatePost godoc
+//
+//	@Summary		게시물 작성
+//	@Description	채널에 새 게시물 작성
+//	@Tags			Feed
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			channelId	path		int				true	"채널 ID"
+//	@Param			body		body		CreatePostRequest	true	"게시물 내용"
+//	@Success		201			{object}	APIResponse
+//	@Router			/channels/{channelId}/posts [post]
 func (h *PostHandler) CreatePost(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	role := middleware.GetUserRole(c)
@@ -126,6 +162,18 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	})
 }
 
+// UpdatePost godoc
+//
+//	@Summary		게시물 수정
+//	@Description	게시물 내용 수정
+//	@Tags			Feed
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int				true	"게시물 ID"
+//	@Param			body	body		UpdatePostRequest	true	"수정 내용"
+//	@Success		200		{object}	APIResponse
+//	@Router			/posts/{id} [put]
 func (h *PostHandler) UpdatePost(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	role := middleware.GetUserRole(c)
@@ -159,6 +207,16 @@ func (h *PostHandler) UpdatePost(c echo.Context) error {
 	})
 }
 
+// LikePost godoc
+//
+//	@Summary		게시물 좋아요
+//	@Description	게시물에 좋아요 토글
+//	@Tags			Feed
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"게시물 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/posts/{id}/like [post]
 func (h *PostHandler) LikePost(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	postID, err := strconv.Atoi(c.Param("id"))
@@ -182,6 +240,16 @@ func (h *PostHandler) LikePost(c echo.Context) error {
 	})
 }
 
+// GetComments godoc
+//
+//	@Summary		댓글 목록 조회
+//	@Description	게시물의 댓글 목록 조회
+//	@Tags			Feed
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"게시물 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/posts/{id}/comments [get]
 func (h *PostHandler) GetComments(c echo.Context) error {
 	postID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -218,6 +286,18 @@ func (h *PostHandler) GetComments(c echo.Context) error {
 	})
 }
 
+// CreateComment godoc
+//
+//	@Summary		댓글 작성
+//	@Description	게시물에 댓글 작성
+//	@Tags			Feed
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int					true	"게시물 ID"
+//	@Param			body	body		CreateCommentRequest	true	"댓글 내용"
+//	@Success		201		{object}	APIResponse
+//	@Router			/posts/{id}/comments [post]
 func (h *PostHandler) CreateComment(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 
@@ -247,6 +327,17 @@ func (h *PostHandler) CreateComment(c echo.Context) error {
 	})
 }
 
+// CreateAssignment godoc
+//
+//	@Summary		과제 생성
+//	@Description	채널에 새 과제 생성 (관리자)
+//	@Tags			Assignment
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		CreateAssignmentRequest	true	"과제 정보"
+//	@Success		201		{object}	APIResponse
+//	@Router			/channels/{channelId}/assignments [post]
 func (h *PostHandler) CreateAssignment(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 
@@ -271,6 +362,18 @@ func (h *PostHandler) CreateAssignment(c echo.Context) error {
 	})
 }
 
+// SubmitAssignment godoc
+//
+//	@Summary		과제 제출
+//	@Description	과제에 대한 제출물 작성
+//	@Tags			Assignment
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int						true	"과제 ID"
+//	@Param			body	body		SubmitAssignmentRequest	true	"제출 내용"
+//	@Success		201		{object}	APIResponse
+//	@Router			/assignments/{id}/submit [post]
 func (h *PostHandler) SubmitAssignment(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 
@@ -295,6 +398,18 @@ func (h *PostHandler) SubmitAssignment(c echo.Context) error {
 	})
 }
 
+// GradeAssignment godoc
+//
+//	@Summary		과제 채점
+//	@Description	제출된 과제 채점 (관리자)
+//	@Tags			Assignment
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int						true	"제출 ID"
+//	@Param			body	body		GradeAssignmentRequest	true	"채점 정보"
+//	@Success		200		{object}	APIResponse
+//	@Router			/submissions/{id}/grade [put]
 func (h *PostHandler) GradeAssignment(c echo.Context) error {
 	var input application.GradeAssignmentInput
 	if err := c.Bind(&input); err != nil {
@@ -316,6 +431,16 @@ func (h *PostHandler) GradeAssignment(c echo.Context) error {
 	})
 }
 
+// GetSubmissions godoc
+//
+//	@Summary		제출 목록 조회
+//	@Description	과제의 제출물 목록 조회
+//	@Tags			Assignment
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"과제 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/assignments/{id}/submissions [get]
 func (h *PostHandler) GetSubmissions(c echo.Context) error {
 	assignmentID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
