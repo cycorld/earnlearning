@@ -19,6 +19,18 @@ func NewUploadHandler(uc *application.UploadUsecase) *UploadHandler {
 	return &UploadHandler{uc: uc}
 }
 
+// Upload godoc
+//
+//	@Summary		파일 업로드
+//	@Description	이미지/문서 파일 업로드
+//	@Tags			Upload
+//	@Accept			multipart/form-data
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			file	formData	file	true	"업로드할 파일"
+//	@Success		201		{object}	APIResponse
+//	@Failure		400		{object}	APIResponse
+//	@Router			/upload [post]
 func (h *UploadHandler) Upload(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 

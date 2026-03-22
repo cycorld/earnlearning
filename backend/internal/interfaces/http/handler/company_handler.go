@@ -19,6 +19,18 @@ func NewCompanyHandler(uc *application.CompanyUsecase) *CompanyHandler {
 	return &CompanyHandler{uc: uc}
 }
 
+// CreateCompany godoc
+//
+//	@Summary		회사 설립
+//	@Description	새 회사를 설립 (자본금 필요)
+//	@Tags			Company
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		CreateCompanyRequest	true	"회사 설립 정보"
+//	@Success		201		{object}	APIResponse
+//	@Failure		400		{object}	APIResponse
+//	@Router			/companies [post]
 func (h *CompanyHandler) CreateCompany(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 
@@ -53,6 +65,17 @@ func (h *CompanyHandler) CreateCompany(c echo.Context) error {
 	})
 }
 
+// GetCompany godoc
+//
+//	@Summary		회사 상세 조회
+//	@Description	특정 회사의 상세 정보 조회
+//	@Tags			Company
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"회사 ID"
+//	@Success		200	{object}	APIResponse
+//	@Failure		404	{object}	APIResponse
+//	@Router			/companies/{id} [get]
 func (h *CompanyHandler) GetCompany(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -81,6 +104,19 @@ func (h *CompanyHandler) GetCompany(c echo.Context) error {
 	})
 }
 
+// UpdateCompany godoc
+//
+//	@Summary		회사 정보 수정
+//	@Description	회사 설명, 로고 등 수정 (소유자만)
+//	@Tags			Company
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int					true	"회사 ID"
+//	@Param			body	body		UpdateCompanyRequest	true	"수정 정보"
+//	@Success		200		{object}	APIResponse
+//	@Failure		403		{object}	APIResponse
+//	@Router			/companies/{id} [put]
 func (h *CompanyHandler) UpdateCompany(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	id, err := strconv.Atoi(c.Param("id"))
@@ -126,6 +162,15 @@ func (h *CompanyHandler) UpdateCompany(c echo.Context) error {
 	})
 }
 
+// GetMyCompanies godoc
+//
+//	@Summary		내 회사 목록
+//	@Description	내가 소유한 회사 목록 조회
+//	@Tags			Company
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Router			/companies/mine [get]
 func (h *CompanyHandler) GetMyCompanies(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 
@@ -142,6 +187,15 @@ func (h *CompanyHandler) GetMyCompanies(c echo.Context) error {
 	})
 }
 
+// ListAllCompanies godoc
+//
+//	@Summary		전체 회사 목록
+//	@Description	관리자용: 모든 회사 목록 조회
+//	@Tags			Admin
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Router			/admin/companies [get]
 func (h *CompanyHandler) ListAllCompanies(c echo.Context) error {
 	result, err := h.uc.GetAllCompanies()
 	if err != nil {
@@ -160,6 +214,19 @@ func (h *CompanyHandler) ListAllCompanies(c echo.Context) error {
 	})
 }
 
+// CreateBusinessCard godoc
+//
+//	@Summary		명함 생성/수정
+//	@Description	회사 명함 생성 또는 수정
+//	@Tags			Company
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int					true	"회사 ID"
+//	@Param			body	body		BusinessCardRequest	true	"명함 정보"
+//	@Success		200		{object}	APIResponse
+//	@Failure		403		{object}	APIResponse
+//	@Router			/companies/{id}/business-card [post]
 func (h *CompanyHandler) CreateBusinessCard(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	id, err := strconv.Atoi(c.Param("id"))
@@ -196,6 +263,17 @@ func (h *CompanyHandler) CreateBusinessCard(c echo.Context) error {
 	})
 }
 
+// GetBusinessCard godoc
+//
+//	@Summary		명함 조회
+//	@Description	회사 명함 조회
+//	@Tags			Company
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"회사 ID"
+//	@Success		200	{object}	APIResponse
+//	@Failure		404	{object}	APIResponse
+//	@Router			/companies/{id}/business-card [get]
 func (h *CompanyHandler) GetBusinessCard(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

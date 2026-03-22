@@ -18,6 +18,20 @@ func NewFreelanceHandler(uc *application.FreelanceUseCase) *FreelanceHandler {
 	return &FreelanceHandler{uc: uc}
 }
 
+// ListJobs godoc
+//
+//	@Summary		프리랜서 잡 목록
+//	@Description	프리랜서 잡 목록 조회 (필터, 페이지네이션)
+//	@Tags			Freelance
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			status		query		string	false	"상태 필터 (open, in_progress, completed)"
+//	@Param			skills		query		string	false	"스킬 필터"
+//	@Param			min_budget	query		int		false	"최소 예산"
+//	@Param			page		query		int		false	"페이지"	default(1)
+//	@Param			limit		query		int		false	"크기"	default(20)
+//	@Success		200			{object}	APIResponse
+//	@Router			/freelance/jobs [get]
 func (h *FreelanceHandler) ListJobs(c echo.Context) error {
 	status := c.QueryParam("status")
 	skills := c.QueryParam("skills")
@@ -53,6 +67,17 @@ func (h *FreelanceHandler) ListJobs(c echo.Context) error {
 	}))
 }
 
+// CreateJob godoc
+//
+//	@Summary		프리랜서 잡 등록
+//	@Description	새 프리랜서 잡 등록
+//	@Tags			Freelance
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		CreateJobRequest	true	"잡 정보"
+//	@Success		201		{object}	APIResponse
+//	@Router			/freelance/jobs [post]
 func (h *FreelanceHandler) CreateJob(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	var input application.CreateJobInput
@@ -66,6 +91,17 @@ func (h *FreelanceHandler) CreateJob(c echo.Context) error {
 	return c.JSON(http.StatusCreated, successResp(job))
 }
 
+// GetJob godoc
+//
+//	@Summary		프리랜서 잡 상세
+//	@Description	프리랜서 잡 상세 조회
+//	@Tags			Freelance
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"잡 ID"
+//	@Success		200	{object}	APIResponse
+//	@Failure		404	{object}	APIResponse
+//	@Router			/freelance/jobs/{id} [get]
 func (h *FreelanceHandler) GetJob(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	jobID, err := strconv.Atoi(c.Param("id"))
@@ -79,6 +115,16 @@ func (h *FreelanceHandler) GetJob(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(job))
 }
 
+// ListApplications godoc
+//
+//	@Summary		지원자 목록
+//	@Description	프리랜서 잡의 지원자 목록 조회
+//	@Tags			Freelance
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"잡 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/freelance/jobs/{id}/applications [get]
 func (h *FreelanceHandler) ListApplications(c echo.Context) error {
 	jobID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -94,6 +140,18 @@ func (h *FreelanceHandler) ListApplications(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(apps))
 }
 
+// ApplyToJob godoc
+//
+//	@Summary		잡 지원
+//	@Description	프리랜서 잡에 지원
+//	@Tags			Freelance
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int				true	"잡 ID"
+//	@Param			body	body		ApplyJobRequest	true	"지원 정보"
+//	@Success		200		{object}	APIResponse
+//	@Router			/freelance/jobs/{id}/apply [post]
 func (h *FreelanceHandler) ApplyToJob(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	jobID, err := strconv.Atoi(c.Param("id"))
@@ -111,6 +169,18 @@ func (h *FreelanceHandler) ApplyToJob(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(app))
 }
 
+// AcceptApplication godoc
+//
+//	@Summary		지원 수락
+//	@Description	프리랜서 잡 지원을 수락
+//	@Tags			Freelance
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int							true	"잡 ID"
+//	@Param			body	body		AcceptApplicationRequest	true	"수락 정보"
+//	@Success		200		{object}	APIResponse
+//	@Router			/freelance/jobs/{id}/accept [post]
 func (h *FreelanceHandler) AcceptApplication(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	jobID, err := strconv.Atoi(c.Param("id"))
@@ -129,6 +199,18 @@ func (h *FreelanceHandler) AcceptApplication(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "지원이 수락되었습니다"}))
 }
 
+// CompleteWork godoc
+//
+//	@Summary		작업 완료 보고
+//	@Description	프리랜서 작업 완료 보고
+//	@Tags			Freelance
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int					true	"잡 ID"
+//	@Param			body	body		CompleteWorkRequest	true	"완료 보고"
+//	@Success		200		{object}	APIResponse
+//	@Router			/freelance/jobs/{id}/complete [post]
 func (h *FreelanceHandler) CompleteWork(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	jobID, err := strconv.Atoi(c.Param("id"))
@@ -143,6 +225,16 @@ func (h *FreelanceHandler) CompleteWork(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "작업 완료가 제출되었습니다"}))
 }
 
+// ApproveJob godoc
+//
+//	@Summary		작업 승인
+//	@Description	프리랜서 작업 결과 승인 → 대금 지급
+//	@Tags			Freelance
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"잡 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/freelance/jobs/{id}/approve [post]
 func (h *FreelanceHandler) ApproveJob(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	jobID, err := strconv.Atoi(c.Param("id"))
@@ -155,6 +247,16 @@ func (h *FreelanceHandler) ApproveJob(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "작업이 승인되었습니다"}))
 }
 
+// CancelJob godoc
+//
+//	@Summary		잡 취소
+//	@Description	프리랜서 잡 취소
+//	@Tags			Freelance
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"잡 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/freelance/jobs/{id}/cancel [post]
 func (h *FreelanceHandler) CancelJob(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	jobID, err := strconv.Atoi(c.Param("id"))
@@ -168,6 +270,16 @@ func (h *FreelanceHandler) CancelJob(c echo.Context) error {
 }
 
 
+// DisputeJob godoc
+//
+//	@Summary		분쟁 제기
+//	@Description	프리랜서 작업에 분쟁 제기
+//	@Tags			Freelance
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"잡 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/freelance/jobs/{id}/dispute [post]
 func (h *FreelanceHandler) DisputeJob(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	jobID, err := strconv.Atoi(c.Param("id"))
@@ -180,6 +292,18 @@ func (h *FreelanceHandler) DisputeJob(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "분쟁이 제기되었습니다"}))
 }
 
+// ReviewJob godoc
+//
+//	@Summary		리뷰 작성
+//	@Description	완료된 프리랜서 잡에 리뷰 작성
+//	@Tags			Freelance
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int				true	"잡 ID"
+//	@Param			body	body		ReviewJobRequest	true	"리뷰 정보"
+//	@Success		201		{object}	APIResponse
+//	@Router			/freelance/jobs/{id}/review [post]
 func (h *FreelanceHandler) ReviewJob(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	jobID, err := strconv.Atoi(c.Param("id"))

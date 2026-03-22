@@ -17,6 +17,18 @@ func NewGrantHandler(uc *application.GrantUseCase) *GrantHandler {
 	return &GrantHandler{uc: uc}
 }
 
+// ListGrants godoc
+//
+//	@Summary		정부과제 목록
+//	@Description	정부과제 목록 조회 (페이지네이션)
+//	@Tags			Grant
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			status	query		string	false	"상태 필터"
+//	@Param			page	query		int		false	"페이지"	default(1)
+//	@Param			limit	query		int		false	"크기"	default(20)
+//	@Success		200		{object}	APIResponse
+//	@Router			/grants [get]
 func (h *GrantHandler) ListGrants(c echo.Context) error {
 	status := c.QueryParam("status")
 	page, _ := strconv.Atoi(c.QueryParam("page"))
@@ -50,6 +62,17 @@ func (h *GrantHandler) ListGrants(c echo.Context) error {
 	}))
 }
 
+// CreateGrant godoc
+//
+//	@Summary		정부과제 생성
+//	@Description	관리자용: 새 정부과제 생성
+//	@Tags			Admin
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		CreateGrantRequest	true	"과제 정보"
+//	@Success		201		{object}	APIResponse
+//	@Router			/admin/grants [post]
 func (h *GrantHandler) CreateGrant(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	var input application.CreateGrantInput
@@ -63,6 +86,17 @@ func (h *GrantHandler) CreateGrant(c echo.Context) error {
 	return c.JSON(http.StatusCreated, successResp(g))
 }
 
+// GetGrant godoc
+//
+//	@Summary		정부과제 상세
+//	@Description	정부과제 상세 정보 조회
+//	@Tags			Grant
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"과제 ID"
+//	@Success		200	{object}	APIResponse
+//	@Failure		404	{object}	APIResponse
+//	@Router			/grants/{id} [get]
 func (h *GrantHandler) GetGrant(c echo.Context) error {
 	grantID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -75,6 +109,18 @@ func (h *GrantHandler) GetGrant(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(g))
 }
 
+// ApplyToGrant godoc
+//
+//	@Summary		정부과제 지원
+//	@Description	정부과제에 지원
+//	@Tags			Grant
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int				true	"과제 ID"
+//	@Param			body	body		ApplyGrantRequest	true	"지원 정보"
+//	@Success		200		{object}	APIResponse
+//	@Router			/grants/{id}/apply [post]
 func (h *GrantHandler) ApplyToGrant(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	grantID, err := strconv.Atoi(c.Param("id"))
@@ -90,6 +136,17 @@ func (h *GrantHandler) ApplyToGrant(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(app))
 }
 
+// ApproveApplication godoc
+//
+//	@Summary		정부과제 지원 승인
+//	@Description	관리자용: 정부과제 지원 승인
+//	@Tags			Admin
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int	true	"과제 ID"
+//	@Param			appId	path		int	true	"지원 ID"
+//	@Success		200		{object}	APIResponse
+//	@Router			/admin/grants/{id}/approve/{appId} [post]
 func (h *GrantHandler) ApproveApplication(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	grantID, err := strconv.Atoi(c.Param("id"))
@@ -106,6 +163,16 @@ func (h *GrantHandler) ApproveApplication(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "지원이 승인되었습니다"}))
 }
 
+// CloseGrant godoc
+//
+//	@Summary		정부과제 종료
+//	@Description	관리자용: 정부과제 종료
+//	@Tags			Admin
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"과제 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/admin/grants/{id}/close [post]
 func (h *GrantHandler) CloseGrant(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	grantID, err := strconv.Atoi(c.Param("id"))

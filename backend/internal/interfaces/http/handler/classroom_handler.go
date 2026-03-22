@@ -17,6 +17,17 @@ func NewClassroomHandler(uc *application.ClassroomUseCase) *ClassroomHandler {
 	return &ClassroomHandler{classroomUC: uc}
 }
 
+// CreateClassroom godoc
+//
+//	@Summary		클래스룸 생성
+//	@Description	새 클래스룸 생성 (관리자)
+//	@Tags			Classroom
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		CreateClassroomRequest	true	"클래스룸 정보"
+//	@Success		201		{object}	APIResponse
+//	@Router			/classrooms [post]
 func (h *ClassroomHandler) CreateClassroom(c echo.Context) error {
 	var input application.CreateClassroomInput
 	if err := c.Bind(&input); err != nil {
@@ -32,6 +43,18 @@ func (h *ClassroomHandler) CreateClassroom(c echo.Context) error {
 	return successResponse(c, http.StatusCreated, classroom)
 }
 
+// JoinClassroom godoc
+//
+//	@Summary		클래스룸 참여
+//	@Description	초대 코드로 클래스룸 참여
+//	@Tags			Classroom
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		JoinClassroomRequest	true	"참여 코드"
+//	@Success		200		{object}	APIResponse
+//	@Failure		400		{object}	APIResponse
+//	@Router			/classrooms/join [post]
 func (h *ClassroomHandler) JoinClassroom(c echo.Context) error {
 	var input application.JoinClassroomInput
 	if err := c.Bind(&input); err != nil {
@@ -47,6 +70,17 @@ func (h *ClassroomHandler) JoinClassroom(c echo.Context) error {
 	return successResponse(c, http.StatusOK, classroom)
 }
 
+// GetClassroom godoc
+//
+//	@Summary		클래스룸 상세 조회
+//	@Description	클래스룸 정보, 채널, 멤버 조회
+//	@Tags			Classroom
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"클래스룸 ID"
+//	@Success		200	{object}	APIResponse
+//	@Failure		404	{object}	APIResponse
+//	@Router			/classrooms/{id} [get]
 func (h *ClassroomHandler) GetClassroom(c echo.Context) error {
 	id, err := intParam(c, "id")
 	if err != nil {
@@ -68,6 +102,16 @@ func (h *ClassroomHandler) GetClassroom(c echo.Context) error {
 	})
 }
 
+// GetClassroomDashboard godoc
+//
+//	@Summary		클래스룸 대시보드
+//	@Description	관리자용: 클래스룸 멤버 활동 대시보드
+//	@Tags			Admin
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"클래스룸 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/admin/classrooms/{id}/dashboard [get]
 func (h *ClassroomHandler) GetClassroomDashboard(c echo.Context) error {
 	id, err := intParam(c, "id")
 	if err != nil {
@@ -94,6 +138,15 @@ func (h *ClassroomHandler) GetClassroomDashboard(c echo.Context) error {
 	})
 }
 
+// ListMyClassrooms godoc
+//
+//	@Summary		내 클래스룸 목록
+//	@Description	내가 속한 클래스룸 목록 조회
+//	@Tags			Classroom
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Router			/classrooms [get]
 func (h *ClassroomHandler) ListMyClassrooms(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	classrooms, err := h.classroomUC.ListMyClassrooms(userID)

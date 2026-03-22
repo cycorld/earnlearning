@@ -93,6 +93,13 @@ func setupTestServer(t *testing.T) *testServer {
 	exchangeUC.SetShareholderUpdater(shareholderUpdater)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
 
+	// OAuth
+	oauthRepo := persistence.NewOAuthRepo(db)
+	oauthUC := application.NewOAuthUseCase(oauthRepo, userRepo)
+
+	// Docs directory — resolve relative to backend root
+	docsDir := "../../docs"
+
 	handlers := &router.Handlers{
 		Auth:         handler.NewAuthHandler(authUC),
 		Admin:        handler.NewAdminHandler(authUC),
@@ -107,6 +114,9 @@ func setupTestServer(t *testing.T) *testServer {
 		Exchange:     handler.NewExchangeHandler(exchangeUC),
 		Loan:         handler.NewLoanHandler(loanUC),
 		Notification: handler.NewNotificationHandler(notifUC),
+		Docs:         handler.NewDocsHandler(docsDir),
+		OAuth:        handler.NewOAuthHandler(oauthUC),
+		OAuthUC:      oauthUC,
 	}
 
 	e := echo.New()
@@ -185,6 +195,20 @@ func (ts *testServer) put(path string, body interface{}, token string) *apiRespo
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		ts.t.Fatalf("PUT %s: %v", path, err)
+	}
+	defer resp.Body.Close()
+	return ts.parseResponse(resp)
+}
+
+func (ts *testServer) delete(path, token string) *apiResponse {
+	ts.t.Helper()
+	req, _ := http.NewRequest("DELETE", ts.url(path), nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		ts.t.Fatalf("DELETE %s: %v", path, err)
 	}
 	defer resp.Body.Close()
 	return ts.parseResponse(resp)

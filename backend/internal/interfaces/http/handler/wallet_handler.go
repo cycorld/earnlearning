@@ -18,6 +18,16 @@ func NewWalletHandler(uc *application.WalletUseCase) *WalletHandler {
 	return &WalletHandler{walletUC: uc}
 }
 
+// GetWallet godoc
+//
+//	@Summary		지갑 조회
+//	@Description	내 지갑 잔액 및 정보 조회
+//	@Tags			Wallet
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Failure		404	{object}	APIResponse
+//	@Router			/wallet [get]
 func (h *WalletHandler) GetWallet(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	resp, err := h.walletUC.GetWallet(userID)
@@ -31,6 +41,20 @@ func (h *WalletHandler) GetWallet(c echo.Context) error {
 	return successResponse(c, http.StatusOK, resp)
 }
 
+// GetTransactions godoc
+//
+//	@Summary		거래 내역 조회
+//	@Description	내 지갑 거래 내역 조회 (필터, 페이지네이션)
+//	@Tags			Wallet
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			page		query		int		false	"페이지 번호"	default(1)
+//	@Param			limit		query		int		false	"페이지 크기"	default(20)
+//	@Param			tx_type		query		string	false	"거래 유형 필터"
+//	@Param			start_date	query		string	false	"시작일 (YYYY-MM-DD)"
+//	@Param			end_date	query		string	false	"종료일 (YYYY-MM-DD)"
+//	@Success		200			{object}	APIResponse
+//	@Router			/wallet/transactions [get]
 func (h *WalletHandler) GetTransactions(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	page := intQuery(c, "page", 1)
@@ -63,6 +87,16 @@ func (h *WalletHandler) GetTransactions(c echo.Context) error {
 	return successResponse(c, http.StatusOK, result)
 }
 
+// SearchRecipients godoc
+//
+//	@Summary		송금 대상 검색
+//	@Description	이름/이메일로 송금 대상 사용자 검색
+//	@Tags			Wallet
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			q	query		string	false	"검색어"
+//	@Success		200	{object}	APIResponse
+//	@Router			/wallet/recipients [get]
 func (h *WalletHandler) SearchRecipients(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	q := c.QueryParam("q")
@@ -75,6 +109,18 @@ func (h *WalletHandler) SearchRecipients(c echo.Context) error {
 	return successResponse(c, http.StatusOK, recipients)
 }
 
+// Transfer godoc
+//
+//	@Summary		송금
+//	@Description	다른 사용자에게 송금
+//	@Tags			Wallet
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		TransferRequest	true	"송금 정보"
+//	@Success		200		{object}	APIResponse
+//	@Failure		400		{object}	APIResponse
+//	@Router			/wallet/transfer [post]
 func (h *WalletHandler) Transfer(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 
@@ -94,6 +140,17 @@ func (h *WalletHandler) Transfer(c echo.Context) error {
 	return successResponse(c, http.StatusOK, map[string]string{"message": "송금이 완료되었습니다"})
 }
 
+// AdminTransfer godoc
+//
+//	@Summary		관리자 일괄 송금
+//	@Description	관리자용: 여러 사용자에게 일괄 송금
+//	@Tags			Admin
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		AdminTransferRequest	true	"일괄 송금 정보"
+//	@Success		200		{object}	APIResponse
+//	@Router			/admin/wallet/transfer [post]
 func (h *WalletHandler) AdminTransfer(c echo.Context) error {
 	var input application.AdminTransferInput
 	if err := c.Bind(&input); err != nil {
@@ -111,6 +168,16 @@ func (h *WalletHandler) AdminTransfer(c echo.Context) error {
 	})
 }
 
+// GetRanking godoc
+//
+//	@Summary		자산 랭킹
+//	@Description	전체 사용자 자산 랭킹 조회
+//	@Tags			Wallet
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			limit	query		int	false	"조회 수"	default(20)
+//	@Success		200		{object}	APIResponse
+//	@Router			/wallet/ranking [get]
 func (h *WalletHandler) GetRanking(c echo.Context) error {
 	limit := intQuery(c, "limit", 20)
 

@@ -44,6 +44,10 @@ import GrantNewPage from '@/routes/grant/GrantNewPage'
 // Changelog
 import ChangelogPage from '@/routes/changelog/ChangelogPage'
 
+// Developer / OAuth
+import DeveloperPage from '@/routes/developer/DeveloperPage'
+import OAuthAuthorizePage from '@/routes/oauth/AuthorizePage'
+
 // Admin pages
 import AdminPage from '@/routes/admin/AdminPage'
 import AdminUsersPage from '@/routes/admin/AdminUsersPage'
@@ -93,6 +97,8 @@ export default function App() {
               <Route path="/profile/:id" element={<UserProfilePage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/changelog" element={<ChangelogPage />} />
+              <Route path="/developer" element={<DeveloperPage />} />
+              <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
 
               <Route element={<AdminGuard />}>
                 <Route path="/admin" element={<AdminPage />} />
