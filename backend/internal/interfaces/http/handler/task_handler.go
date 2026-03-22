@@ -15,6 +15,15 @@ func NewTaskHandler(repo *persistence.TaskRepo) *TaskHandler {
 	return &TaskHandler{repo: repo}
 }
 
+// ListTasks godoc
+//
+//	@Summary		태스크 목록
+//	@Description	관리자용: 칸반 태스크 목록 조회
+//	@Tags			Admin
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Router			/admin/tasks [get]
 func (h *TaskHandler) ListTasks(c echo.Context) error {
 	tasks, err := h.repo.List()
 	if err != nil {

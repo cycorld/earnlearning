@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EarnLearning OAuth 연동 예제</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1 { color: #1a1a1a; margin-bottom: 8px; font-size: 1.5rem; }
+    .subtitle { color: #666; margin-bottom: 24px; }
+    .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .card h2 { font-size: 1.1rem; margin-bottom: 16px; color: #333; }
+    .step-badge { display: inline-block; background: #4f46e5; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 0.8rem; margin-right: 8px; }
+    label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 4px; font-weight: 500; }
+    input, select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; margin-bottom: 12px; }
+    input:focus, select:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+    button { background: #4f46e5; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; width: 100%; font-weight: 600; }
+    button:hover { background: #4338ca; }
+    button:disabled { background: #9ca3af; cursor: not-allowed; }
+    button.secondary { background: #6b7280; }
+    button.danger { background: #ef4444; }
+    .result { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-top: 12px; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; }
+    .success { color: #059669; }
+    .error { color: #dc2626; }
+    .hidden { display: none; }
+    .scope-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .scope-tag { background: #ede9fe; color: #4f46e5; padding: 4px 12px; border-radius: 16px; font-size: 0.8rem; }
+    .info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 0.85rem; color: #1e40af; }
+    .flex-row { display: flex; gap: 8px; }
+    .flex-row button { flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>EarnLearning OAuth 연동 예제</h1>
+    <p class="subtitle">이 예제는 OAuth2 Authorization Code + PKCE 플로우를 보여줍니다.</p>
+
+    <!-- 1단계: 설정 -->
+    <div class="card" id="step1">
+      <h2><span class="step-badge">1</span>앱 설정</h2>
+      <div class="info">
+        EarnLearning에서 앱을 등록한 후 받은 client_id를 입력하세요.<br>
+        PKCE를 사용하므로 client_secret은 필요하지 않습니다.
+      </div>
+      <label for="apiBase">API 서버 주소</label>
+      <input type="text" id="apiBase" value="http://localhost:8080" placeholder="http://localhost:8080">
+      <label for="clientId">Client ID</label>
+      <input type="text" id="clientId" placeholder="앱 등록 시 받은 client_id">
+      <label for="redirectUri">Redirect URI</label>
+      <input type="text" id="redirectUri" placeholder="http://localhost:3000/callback">
+      <label for="scopes">요청 스코프</label>
+      <select id="scopes" multiple size="5">
+        <option value="read:profile" selected>read:profile - 프로필 조회</option>
+        <option value="read:wallet" selected>read:wallet - 지갑 조회</option>
+        <option value="write:posts">write:posts - 게시물 작성</option>
+        <option value="read:company">read:company - 회사 정보 조회</option>
+        <option value="read:market">read:market - 마켓 조회</option>
+        <option value="read:notifications">read:notifications - 알림 조회</option>
+      </select>
+      <button onclick="startAuth()">EarnLearning으로 로그인</button>
+    </div>
+
+    <!-- 2단계: 콜백 처리 (자동) -->
+    <div class="card hidden" id="step2">
+      <h2><span class="step-badge">2</span>인가 코드 교환 중...</h2>
+      <p>서버에서 받은 인가 코드를 액세스 토큰으로 교환하고 있습니다.</p>
+      <div class="result" id="exchangeResult"></div>
+    </div>
+
+    <!-- 3단계: API 호출 데모 -->
+    <div class="card hidden" id="step3">
+      <h2><span class="step-badge">3</span>API 호출 데모</h2>
+      <div id="tokenInfo"></div>
+      <div class="scope-list" id="scopeList"></div>
+
+      <div class="flex-row" style="margin-bottom: 8px;">
+        <button onclick="callAPI('/api/oauth/userinfo', 'GET')">내 프로필</button>
+        <button onclick="callAPI('/api/wallet', 'GET')">지갑 잔액</button>
+      </div>
+      <div class="flex-row" style="margin-bottom: 8px;">
+        <button onclick="callAPI('/api/posts?limit=3', 'GET')">게시물 조회</button>
+        <button onclick="callAPI('/api/notifications?limit=3', 'GET')">알림 조회</button>
+      </div>
+      <div class="flex-row">
+        <button class="secondary" onclick="refreshToken()">토큰 갱신</button>
+        <button class="danger" onclick="revokeToken()">토큰 폐기</button>
+      </div>
+
+      <div class="result" id="apiResult">API 호출 결과가 여기에 표시됩니다.</div>
+    </div>
+  </div>
+
+  <script>
+    // ====================================================================
+    // PKCE 유틸리티 함수
+    // PKCE(Proof Key for Code Exchange)는 공개 클라이언트(SPA, 모바일)에서
+    // 인가 코드 탈취 공격을 방지하기 위한 보안 메커니즘입니다.
+    // ====================================================================
+
+    /**
+     * 랜덤 문자열 생성 (code_verifier 용)
+     * code_verifier는 43~128자의 URL-safe 랜덤 문자열입니다.
+     */
+    function generateCodeVerifier() {
+      // 32바이트 = 256비트의 랜덤 데이터 생성
+      const array = new Uint8Array(32);
+      crypto.getRandomValues(array);
+      // Base64 URL-safe 인코딩 (+ → -, / → _, = 제거)
+      return btoa(String.fromCharCode(...array))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+    }
+
+    /**
+     * code_challenge 생성 (S256 방식)
+     * code_challenge = Base64URL(SHA256(code_verifier))
+     * 서버에는 code_challenge만 보내고, 토큰 교환 시 code_verifier를 보냅니다.
+     */
+    async function generateCodeChallenge(verifier) {
+      // UTF-8로 인코딩
+      const encoder = new TextEncoder();
+      const data = encoder.encode(verifier);
+      // SHA-256 해시 계산
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      // Base64 URL-safe 인코딩
+      return btoa(String.fromCharCode(...new Uint8Array(hash)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+    }
+
+    // ====================================================================
+    // 1단계: 인가 요청 시작
+    // 사용자를 EarnLearning 인가 페이지로 리다이렉트합니다.
+    // ====================================================================
+
+    async function startAuth() {
+      const apiBase = document.getElementById('apiBase').value.replace(/\/$/, '');
+      const clientId = document.getElementById('clientId').value.trim();
+      const redirectUri = document.getElementById('redirectUri').value.trim();
+
+      // 선택된 스코프 가져오기
+      const scopeSelect = document.getElementById('scopes');
+      const scopes = Array.from(scopeSelect.selectedOptions).map(o => o.value);
+
+      if (!clientId) {
+        alert('Client ID를 입력해주세요.');
+        return;
+      }
+      if (!redirectUri) {
+        alert('Redirect URI를 입력해주세요.');
+        return;
+      }
+
+      // PKCE: code_verifier 생성 및 저장
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+      // 세션 스토리지에 저장 (콜백에서 사용)
+      sessionStorage.setItem('oauth_code_verifier', codeVerifier);
+      sessionStorage.setItem('oauth_api_base', apiBase);
+      sessionStorage.setItem('oauth_client_id', clientId);
+      sessionStorage.setItem('oauth_redirect_uri', redirectUri);
+
+      // state: CSRF 공격 방지용 랜덤 문자열
+      const state = generateCodeVerifier().substring(0, 16);
+      sessionStorage.setItem('oauth_state', state);
+
+      // 인가 URL 생성
+      // 실제로는 프론트엔드 인가 페이지로 리다이렉트해야 하지만,
+      // 이 예제에서는 API를 직접 호출합니다.
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        scope: scopes.join(' '),
+        state: state,
+        code_challenge: codeChallenge,
+        code_challenge_method: 'S256',
+        response_type: 'code',
+      });
+
+      alert(
+        '실제 앱에서는 사용자를 EarnLearning 인가 페이지로 리다이렉트합니다.\n\n' +
+        '이 데모에서는 이미 로그인된 상태에서 POST /api/oauth/authorize를\n' +
+        '직접 호출해야 합니다.\n\n' +
+        '인가 URL:\n' + apiBase + '/api/oauth/authorize?' + params.toString()
+      );
+    }
+
+    // ====================================================================
+    // 2단계: 콜백 처리
+    // URL에 code 파라미터가 있으면 자동으로 토큰 교환을 시작합니다.
+    // ====================================================================
+
+    async function handleCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+
+      if (!code) return; // 콜백이 아니면 무시
+
+      // state 검증 (CSRF 방지)
+      const savedState = sessionStorage.getItem('oauth_state');
+      if (state !== savedState) {
+        alert('State 불일치! CSRF 공격 가능성이 있습니다.');
+        return;
+      }
+
+      document.getElementById('step1').classList.add('hidden');
+      document.getElementById('step2').classList.remove('hidden');
+
+      const apiBase = sessionStorage.getItem('oauth_api_base');
+      const clientId = sessionStorage.getItem('oauth_client_id');
+      const redirectUri = sessionStorage.getItem('oauth_redirect_uri');
+      const codeVerifier = sessionStorage.getItem('oauth_code_verifier');
+
+      try {
+        // 인가 코드를 액세스 토큰으로 교환
+        const response = await fetch(apiBase + '/api/oauth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            grant_type: 'authorization_code',
+            code: code,
+            client_id: clientId,
+            redirect_uri: redirectUri,
+            code_verifier: codeVerifier, // PKCE: 원본 verifier 전송
+          }),
+        });
+
+        const result = await response.json();
+        document.getElementById('exchangeResult').textContent = JSON.stringify(result, null, 2);
+
+        if (result.success) {
+          // 토큰 저장
+          const tokenData = result.data;
+          sessionStorage.setItem('oauth_access_token', tokenData.access_token);
+          sessionStorage.setItem('oauth_refresh_token', tokenData.refresh_token);
+
+          // 3단계로 이동
+          showStep3(tokenData);
+        }
+      } catch (err) {
+        document.getElementById('exchangeResult').innerHTML =
+          '<span class="error">교환 실패: ' + err.message + '</span>';
+      }
+
+      // URL에서 code 파라미터 제거 (깔끔한 URL 유지)
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    // ====================================================================
+    // 3단계: API 호출
+    // 받은 액세스 토큰으로 EarnLearning API를 호출합니다.
+    // ====================================================================
+
+    function showStep3(tokenData) {
+      document.getElementById('step2').classList.add('hidden');
+      document.getElementById('step3').classList.remove('hidden');
+
+      // 토큰 정보 표시
+      document.getElementById('tokenInfo').innerHTML =
+        '<p style="font-size:0.85rem;color:#666;margin-bottom:8px;">' +
+        'Access Token: <code>' + tokenData.access_token.substring(0, 16) + '...</code> | ' +
+        'Expires: ' + tokenData.expires_in + '초</p>';
+
+      // 스코프 태그 표시
+      const scopeList = document.getElementById('scopeList');
+      scopeList.innerHTML = (tokenData.scopes || [])
+        .map(s => '<span class="scope-tag">' + s + '</span>')
+        .join('');
+    }
+
+    /**
+     * API 호출 함수
+     * Authorization 헤더에 Bearer 토큰을 포함하여 API를 호출합니다.
+     */
+    async function callAPI(path, method) {
+      const apiBase = sessionStorage.getItem('oauth_api_base');
+      const accessToken = sessionStorage.getItem('oauth_access_token');
+      const resultEl = document.getElementById('apiResult');
+
+      resultEl.textContent = '요청 중...';
+
+      try {
+        const response = await fetch(apiBase + path, {
+          method: method,
+          headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = await response.json();
+        resultEl.innerHTML = response.ok
+          ? '<span class="success">' + method + ' ' + path + ' → ' + response.status + '</span>\n' + JSON.stringify(result, null, 2)
+          : '<span class="error">' + method + ' ' + path + ' → ' + response.status + '</span>\n' + JSON.stringify(result, null, 2);
+      } catch (err) {
+        resultEl.innerHTML = '<span class="error">요청 실패: ' + err.message + '</span>';
+      }
+    }
+
+    // ====================================================================
+    // 4단계: 토큰 갱신 / 폐기
+    // ====================================================================
+
+    /**
+     * 리프레시 토큰으로 새 액세스 토큰 발급
+     * 액세스 토큰이 만료되었을 때 사용합니다.
+     */
+    async function refreshToken() {
+      const apiBase = sessionStorage.getItem('oauth_api_base');
+      const clientId = sessionStorage.getItem('oauth_client_id');
+      const refreshToken = sessionStorage.getItem('oauth_refresh_token');
+      const resultEl = document.getElementById('apiResult');
+
+      try {
+        const response = await fetch(apiBase + '/api/oauth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            client_id: clientId,
+          }),
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          sessionStorage.setItem('oauth_access_token', result.data.access_token);
+          sessionStorage.setItem('oauth_refresh_token', result.data.refresh_token);
+          resultEl.innerHTML = '<span class="success">토큰 갱신 성공!</span>\n' + JSON.stringify(result.data, null, 2);
+        } else {
+          resultEl.innerHTML = '<span class="error">갱신 실패</span>\n' + JSON.stringify(result, null, 2);
+        }
+      } catch (err) {
+        resultEl.innerHTML = '<span class="error">갱신 실패: ' + err.message + '</span>';
+      }
+    }
+
+    /**
+     * 토큰 폐기 (로그아웃)
+     * 더 이상 API 접근이 필요 없을 때 토큰을 폐기합니다.
+     */
+    async function revokeToken() {
+      const apiBase = sessionStorage.getItem('oauth_api_base');
+      const accessToken = sessionStorage.getItem('oauth_access_token');
+      const resultEl = document.getElementById('apiResult');
+
+      try {
+        const response = await fetch(apiBase + '/api/oauth/revoke', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + accessToken,
+          },
+          body: JSON.stringify({ token: accessToken }),
+        });
+
+        const result = await response.json();
+        resultEl.innerHTML = '<span class="success">토큰이 폐기되었습니다.</span>\n' + JSON.stringify(result, null, 2);
+
+        // 저장된 토큰 삭제
+        sessionStorage.removeItem('oauth_access_token');
+        sessionStorage.removeItem('oauth_refresh_token');
+      } catch (err) {
+        resultEl.innerHTML = '<span class="error">폐기 실패: ' + err.message + '</span>';
+      }
+    }
+
+    // 페이지 로드 시 콜백 처리 확인
+    handleCallback();
+  </script>
+</body>
+</html>
