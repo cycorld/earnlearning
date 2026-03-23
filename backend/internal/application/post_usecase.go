@@ -266,6 +266,16 @@ func (uc *PostUsecase) CreateComment(userID int, input CreateCommentInput) (*pos
 
 	_ = uc.postRepo.IncrementCommentCount(input.PostID)
 
+	// Notify post author about the new comment (skip if self-comment)
+	if uc.notifUC != nil && p.AuthorID != userID {
+		preview := input.Content
+		if len(preview) > 50 {
+			preview = preview[:50] + "..."
+		}
+		_ = uc.notifUC.CreateNotification(p.AuthorID, notification.NotifNewComment,
+			"새 댓글이 달렸습니다", preview, "post", input.PostID)
+	}
+
 	// If this is an assignment post, auto-create submission
 	if p.PostType == "assignment" {
 		assignment, err := uc.postRepo.FindAssignmentByPostID(input.PostID)
