@@ -176,5 +176,12 @@
     "date": "2026-03-22",
     "tags": ["API", "OAuth", "보안", "문서화"],
     "github": "https://github.com/cycorld/earnlearning/pull/28"
+  },
+  {
+    "slug": "026-comment-notification",
+    "title": "댓글 알림",
+    "date": "2026-03-23",
+    "tags": ["알림", "댓글", "푸시", "이메일"],
+    "github": "https://github.com/cycorld/earnlearning/pull/29"
   }
 ]
