@@ -12,18 +12,46 @@
 - **Deploy**: 로컬 buildx → GHCR → EC2 Blue-Green (Docker Compose + Host Nginx)
 - **Infra**: AWS EC2 (t3.small) + Cloudflare (SSL/CDN)
 
-## 배포
+## 배포 가이드
 - **Production**: https://earnlearning.com
 - **Staging**: https://stage.earnlearning.com
-- **방식**: 로컬 빌드 + GHCR push + Blue-Green 무중단 배포 (서버 빌드 금지)
-- **명령어**:
-  ```bash
-  ./deploy-remote.sh              # 빌드 → GHCR → Stage 배포
-  ./deploy-remote.sh promote      # Prod blue-green 배포
-  ./deploy-remote.sh rollback     # 즉시 롤백 (~2초)
-  ./deploy-remote.sh status       # 서버 상태 확인
-  ```
+- **방식**: 로컬 buildx → GHCR push → EC2 Blue-Green 무중단 배포
+- **서버 빌드 절대 금지**: t3.small(2GB) 리소스 고갈로 SSH 끊김/서비스 다운 위험
 - 상세: [docs/DEPLOY.md](docs/DEPLOY.md) | 핫픽스: [docs/HOTFIX.md](docs/HOTFIX.md)
+
+### 배포 명령어 (로컬에서 실행)
+```bash
+./deploy-remote.sh              # 1단계: 빌드 → GHCR push → Stage 배포
+./deploy-remote.sh promote      # 2단계: Stage 확인 후 Prod blue-green 배포
+./deploy-remote.sh rollback     # 긴급: Prod 즉시 롤백 (~2초)
+./deploy-remote.sh status       # 서버 상태 확인
+```
+
+### 배포 플로우
+1. PR 머지 후 로컬에서 `./deploy-remote.sh` 실행
+2. https://stage.earnlearning.com 에서 확인
+3. `./deploy-remote.sh promote` 로 Prod 배포
+4. 문제 시 `./deploy-remote.sh rollback` 즉시 롤백
+
+### 서버 직접 배포 (SSH)
+```bash
+ssh earnlearning
+cd /home/ubuntu/lms/deploy
+IMAGE_TAG=<sha> ./deploy.sh stage       # Stage 배포
+IMAGE_TAG=<sha> ./deploy.sh prod        # Prod blue-green 배포
+./deploy.sh rollback                    # 즉시 롤백
+./deploy.sh status                      # 상태 확인
+```
+
+### 아키텍처
+```
+Host Nginx (port 80)
+  ├── earnlearning.com       → active slot (blue:8180 또는 green:8181)
+  └── stage.earnlearning.com → stage (8182)
+```
+- Active slot: `/etc/nginx/earnlearning-active-slot.conf` 파일로 결정
+- 전환 = 파일 변경 + `nginx -s reload` (무중단)
+- Stage/Prod 동일 이미지 (VAPID 키는 런타임 API 주입, env_file로 환경 분리)
 
 ## 테스트 규칙
 - **TDD 방식 필수**: 버그 수정 및 새 기능 개발 시 반드시 TDD로 진행한다.
