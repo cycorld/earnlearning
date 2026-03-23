@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-# ─── EarnLearning 로컬 빌드 + GHCR Push ──────────────────────
+# ─── EarnLearning 빌드 + GHCR Push ───────────────────────────
 # 사용법: ./deploy/build-and-push.sh [IMAGE_TAG]
-# Mac에서 amd64 이미지를 빌드하여 GHCR에 Push
+# x86_64 빌드서버에서 네이티브 빌드 → GHCR Push
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -31,43 +31,35 @@ err()  { echo -e "${RED}[build]${NC} $*" >&2; }
 STARTED_AT=$(date +%s)
 elapsed() { echo "$(( $(date +%s) - STARTED_AT ))s"; }
 
-# ─── Buildx 준비 ─────────────────────────────────────────────
-ensure_builder() {
-  if ! docker buildx inspect earnlearning-builder > /dev/null 2>&1; then
-    log "Creating buildx builder..."
-    docker buildx create --name earnlearning-builder --use
-  else
-    docker buildx use earnlearning-builder
-  fi
-}
-
 # ─── Backend 빌드 ────────────────────────────────────────────
 build_backend() {
-  log "Building backend (amd64)... tag=${IMAGE_TAG}"
-  docker buildx build \
-    --platform linux/amd64 \
+  log "Building backend... tag=${IMAGE_TAG}"
+  docker build \
     --build-arg BUILD_NUMBER="$BUILD_NUMBER" \
     --build-arg COMMIT_SHA="$COMMIT_SHA" \
     -t "${BACKEND_IMAGE}:${IMAGE_TAG}" \
     -t "${BACKEND_IMAGE}:latest" \
-    --push \
     -f "$PROJECT_DIR/backend/Dockerfile" \
     "$PROJECT_DIR/backend"
+  log "Pushing backend..."
+  docker push "${BACKEND_IMAGE}:${IMAGE_TAG}"
+  docker push "${BACKEND_IMAGE}:latest"
   log "Backend pushed: ${BACKEND_IMAGE}:${IMAGE_TAG}"
 }
 
 # ─── Frontend 빌드 ───────────────────────────────────────────
 build_frontend() {
-  log "Building frontend (amd64)... tag=${IMAGE_TAG}"
-  docker buildx build \
-    --platform linux/amd64 \
+  log "Building frontend... tag=${IMAGE_TAG}"
+  docker build \
     --build-arg BUILD_NUMBER="$BUILD_NUMBER" \
     --build-arg COMMIT_SHA="$COMMIT_SHA" \
     -t "${FRONTEND_IMAGE}:${IMAGE_TAG}" \
     -t "${FRONTEND_IMAGE}:latest" \
-    --push \
     -f "$PROJECT_DIR/frontend/Dockerfile" \
     "$PROJECT_DIR"
+  log "Pushing frontend..."
+  docker push "${FRONTEND_IMAGE}:${IMAGE_TAG}"
+  docker push "${FRONTEND_IMAGE}:latest"
   log "Frontend pushed: ${FRONTEND_IMAGE}:${IMAGE_TAG}"
 }
 
@@ -75,7 +67,6 @@ build_frontend() {
 log "=== Build & Push 시작 ==="
 log "Tag: ${IMAGE_TAG} | Build #${BUILD_NUMBER} | ${COMMIT_SHA:0:7}"
 
-ensure_builder
 build_backend
 build_frontend
 

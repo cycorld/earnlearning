@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# ─── EarnLearning 원커맨드 배포 (로컬 → GHCR → EC2) ──────────
+# ─── EarnLearning 원커맨드 배포 (빌드서버 → GHCR → EC2) ─────
 # 사용법:
 #   ./deploy-remote.sh              # 빌드 → push → stage 배포
 #   ./deploy-remote.sh promote      # prod blue-green 배포
@@ -9,8 +9,15 @@ set -euo pipefail
 #   ./deploy-remote.sh status       # 서버 상태 확인
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SSH_HOST="earnlearning"
-REMOTE_DEPLOY_DIR="/home/ubuntu/lms/deploy"
+
+# 빌드 서버 (cycorld: x86_64 16코어 60GB — 네이티브 amd64 빌드)
+BUILD_HOST="cycorld"
+BUILD_REPO_DIR="/home/cycorld/Workspace/earnlearning"
+
+# 배포 서버 (EC2 t3.small)
+DEPLOY_HOST="earnlearning"
+DEPLOY_DIR="/home/ubuntu/lms/deploy"
+
 STARTED_AT=$(date +%s)
 
 RED='\033[0;31m'
@@ -27,13 +34,15 @@ elapsed() { echo "$(( $(date +%s) - STARTED_AT ))s"; }
 # ─── 빌드 + Push + Stage 배포 ────────────────────────────────
 
 deploy_to_stage() {
-  log "=== 1단계: 로컬 빌드 + GHCR Push ==="
+  log "=== 1단계: 빌드서버(cycorld)에서 빌드 + GHCR Push ==="
 
-  # 빌드 + push (마지막 줄이 IMAGE_TAG 출력)
-  IMAGE_TAG=$("$PROJECT_DIR/deploy/build-and-push.sh")
+  # 빌드 서버에서 최신 코드 pull + 빌드 + push
+  IMAGE_TAG=$(ssh "$BUILD_HOST" "cd ${BUILD_REPO_DIR} && git pull --ff-only >&2 && ./deploy/build-and-push.sh")
 
-  log "=== 2단계: Stage 배포 (SSH) ==="
-  ssh "$SSH_HOST" "cd ${REMOTE_DEPLOY_DIR} && IMAGE_TAG=${IMAGE_TAG} ./deploy.sh stage"
+  log "IMAGE_TAG: ${IMAGE_TAG}"
+
+  log "=== 2단계: Stage 배포 (EC2) ==="
+  ssh "$DEPLOY_HOST" "cd ${DEPLOY_DIR} && IMAGE_TAG=${IMAGE_TAG} ./deploy.sh stage"
 
   log ""
   log "=== Stage 배포 완료! ($(elapsed)) ==="
@@ -46,12 +55,11 @@ deploy_to_stage() {
 # ─── Prod 배포 (promote) ─────────────────────────────────────
 
 promote_to_prod() {
-  # 최신 IMAGE_TAG 확인 (GHCR에서 가져올 태그)
   local image_tag="${IMAGE_TAG:-$(cd "$PROJECT_DIR" && git rev-parse --short HEAD)}"
 
   log "=== Prod Blue-Green 배포 ==="
   log "IMAGE_TAG: ${image_tag}"
-  ssh "$SSH_HOST" "cd ${REMOTE_DEPLOY_DIR} && IMAGE_TAG=${image_tag} ./deploy.sh prod"
+  ssh "$DEPLOY_HOST" "cd ${DEPLOY_DIR} && IMAGE_TAG=${image_tag} ./deploy.sh prod"
 
   log "=== Prod 배포 완료! ($(elapsed)) ==="
   log "URL: https://earnlearning.com"
@@ -61,14 +69,14 @@ promote_to_prod() {
 
 rollback_prod() {
   log "=== Prod 롤백 ==="
-  ssh "$SSH_HOST" "cd ${REMOTE_DEPLOY_DIR} && ./deploy.sh rollback"
+  ssh "$DEPLOY_HOST" "cd ${DEPLOY_DIR} && ./deploy.sh rollback"
   log "=== 롤백 완료! ($(elapsed)) ==="
 }
 
 # ─── Status ──────────────────────────────────────────────────
 
 show_status() {
-  ssh "$SSH_HOST" "cd ${REMOTE_DEPLOY_DIR} && ./deploy.sh status"
+  ssh "$DEPLOY_HOST" "cd ${DEPLOY_DIR} && ./deploy.sh status"
 }
 
 # ─── Main ─────────────────────────────────────────────────────
@@ -89,7 +97,7 @@ case "${1:-deploy}" in
   *)
     echo "사용법: $0 {deploy|promote|rollback|status}"
     echo ""
-    echo "  deploy     빌드 → GHCR push → Stage 배포 (기본)"
+    echo "  deploy     빌드(cycorld) → GHCR push → Stage 배포 (기본)"
     echo "  promote    Prod blue-green 배포"
     echo "  rollback   Prod 즉시 롤백"
     echo "  status     서버 상태 확인"
