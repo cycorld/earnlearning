@@ -1,29 +1,4 @@
-# EarnLearning LMS
-
-## 프로젝트 개요
-이화여자대학교 "스타트업을 위한 코딩입문" 강의용 게임화 창업 교육 LMS.
-
-## 기술 스택
-- **Backend**: Go (Echo) + SQLite (Docker volume persistent)
-- **Frontend**: Vite + React 18 + TypeScript + Tailwind CSS + shadcn/ui
-- **Realtime**: WebSocket + Web Push (VAPID)
-- **PWA**: Vite PWA Plugin (홈 화면 설치, 오프라인 캐시, 웹 푸시)
-- **Auth**: JWT (이메일 회원가입 + Admin 승인제)
-- **Deploy**: 로컬 buildx → GHCR → EC2 Blue-Green (Docker Compose + Host Nginx)
-- **Infra**: AWS EC2 (t3.small) + Cloudflare (SSL/CDN)
-
-## 배포
-- **Production**: https://earnlearning.com
-- **Staging**: https://stage.earnlearning.com
-- **방식**: 로컬 빌드 + GHCR push + Blue-Green 무중단 배포 (서버 빌드 금지)
-- **명령어**:
-  ```bash
-  ./deploy-remote.sh              # 빌드 → GHCR → Stage 배포
-  ./deploy-remote.sh promote      # Prod blue-green 배포
-  ./deploy-remote.sh rollback     # 즉시 롤백 (~2초)
-  ./deploy-remote.sh status       # 서버 상태 확인
-  ```
-- 상세: [docs/DEPLOY.md](docs/DEPLOY.md) | 핫픽스: [docs/HOTFIX.md](docs/HOTFIX.md)
+# 개발 규칙
 
 ## 테스트 규칙
 - **TDD 방식 필수**: 버그 수정 및 새 기능 개발 시 반드시 TDD로 진행한다.
@@ -39,9 +14,8 @@
 - **Backend 테스트**: `go test ./tests/integration/ -timeout 60s`
 - **Frontend 테스트**: `cd frontend && npm test`
 
-
 ## 개발 워크플로우 (PR 기반)
-> 📋 상세 브랜치 전략은 Claude memory `feedback_pr_workflow.md` 참조
+> 상세 브랜치 전략은 Claude memory `feedback_pr_workflow.md` 참조
 
 - **main 직접 푸시 금지**: 모든 개발은 feature 브랜치에서 진행한다.
 - **PR 생성 필수**: 작업 완료 후 PR을 생성하고 사용자가 리뷰 후 머지한다.
@@ -56,7 +30,7 @@
 - **학생 대상**: 친절한 교재처럼 작성. 기술 용어는 설명 포함.
 - **index.json 업데이트**: 새 엔트리 추가 시 `changelog/index.json`에도 항목 추가
 
-## DB 마이그레이션 규칙 (⚠️ 프로덕션 안전)
+## DB 마이그레이션 규칙 (프로덕션 안전)
 - **001_init.sql 수정 금지**: 이미 배포된 init 마이그레이션은 절대 수정하지 않는다.
 - **ALTER TABLE 사용 필수**: 새 컬럼 추가는 반드시 `sqlite.go`의 `RunMigrations()` 내 `alterStatements` 배열에 `ALTER TABLE ... ADD COLUMN` 문을 추가한다.
 - **DEFAULT 값 필수**: 새 컬럼에는 반드시 DEFAULT 값을 지정하여 기존 데이터와 호환되게 한다.
