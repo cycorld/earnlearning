@@ -20,6 +20,9 @@ const (
 	NotifNewAssignment     NotifType = "new_assignment"
 	NotifKpiRevenue        NotifType = "kpi_revenue"
 
+	// Comment
+	NotifNewComment        NotifType = "new_comment"
+
 	// Freelance
 	NotifJobApplied        NotifType = "job_applied"
 	NotifJobDisputed       NotifType = "job_disputed"
@@ -47,6 +50,7 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifUserApproved:      true,
 	NotifNewAssignment:     true,
 	NotifKpiRevenue:        true,
+	NotifNewComment:        true,
 	NotifJobApplied:        true,
 	NotifJobDisputed:       true,
 	NotifJobCancelled:      true,
