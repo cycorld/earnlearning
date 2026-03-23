@@ -31,6 +31,7 @@ function timeAgo(dateStr: string): string {
 function getNotifIcon(type: string) {
   switch (type) {
     case 'comment':
+    case 'new_comment':
     case 'post':
     case 'assignment_graded':
       return <MessageCircle className="h-5 w-5 text-blue-500" />
