@@ -4,8 +4,20 @@
 set -euo pipefail
 
 BACKUP_DIR="/home/ubuntu/backups/earnlearning"
-CONTAINER="earnlearning-prod-backend-1"
 DB_PATH="/data/db/earnlearning.db"
+DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
+ACTIVE_SLOT_CONF="/etc/nginx/earnlearning-active-slot.conf"
+
+# 현재 active slot의 backend 컨테이너 찾기
+get_active_container() {
+  local slot="blue"
+  if [ -f "$ACTIVE_SLOT_CONF" ] && grep -q "8181" "$ACTIVE_SLOT_CONF"; then
+    slot="green"
+  fi
+  echo "earnlearning-${slot}-backend-1"
+}
+
+CONTAINER="$(get_active_container)"
 
 # Cloudflare R2 (S3-compatible)
 R2_ENDPOINT="${R2_ENDPOINT:-https://<ACCOUNT_ID>.r2.cloudflarestorage.com}"
@@ -60,8 +72,16 @@ restore() {
         exit 1
     fi
 
+    # 현재 active slot 확인
+    local slot="blue"
+    if [ -f "$ACTIVE_SLOT_CONF" ] && grep -q "8181" "$ACTIVE_SLOT_CONF"; then
+      slot="green"
+    fi
+    local compose_file="${DEPLOY_DIR}/docker-compose.${slot}.yml"
+    local project="earnlearning-${slot}"
+
     # Stop backend
-    sudo docker compose -f /home/ubuntu/lms/deploy/docker-compose.prod.yml -p earnlearning-prod stop backend
+    sudo docker compose -f "$compose_file" -p "$project" stop backend
 
     # Restore
     gunzip -k "$file"
@@ -70,7 +90,7 @@ restore() {
     rm "$dbfile"
 
     # Restart
-    sudo docker compose -f /home/ubuntu/lms/deploy/docker-compose.prod.yml -p earnlearning-prod start backend
+    sudo docker compose -f "$compose_file" -p "$project" start backend
     echo "[$(date)] Restore complete"
 }
 
