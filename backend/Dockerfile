@@ -15,5 +15,6 @@ RUN apk add --no-cache ca-certificates sqlite-libs
 WORKDIR /app
 COPY --from=builder /app/server .
 COPY --from=builder /app/internal/infrastructure/persistence/migrations ./internal/infrastructure/persistence/migrations
+COPY --from=builder /app/docs ./docs
 EXPOSE 8080
 CMD ["./server"]
