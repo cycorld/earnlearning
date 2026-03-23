@@ -9,13 +9,14 @@
 - **Realtime**: WebSocket + Web Push (VAPID)
 - **PWA**: Vite PWA Plugin (홈 화면 설치, 오프라인 캐시, 웹 푸시)
 - **Auth**: JWT (이메일 회원가입 + Admin 승인제)
-- **Deploy**: 로컬 buildx → GHCR → EC2 Blue-Green (Docker Compose + Host Nginx)
+- **Deploy**: 빌드서버(cycorld) → GHCR → EC2 Blue-Green (Docker Compose + Host Nginx)
 - **Infra**: AWS EC2 (t3.small) + Cloudflare (SSL/CDN)
+- **빌드서버**: cycorld (x86_64 16코어 60GB RAM — 네이티브 amd64 빌드)
 
 ## 배포 가이드
 - **Production**: https://earnlearning.com
 - **Staging**: https://stage.earnlearning.com
-- **방식**: 로컬 buildx → GHCR push → EC2 Blue-Green 무중단 배포
+- **방식**: 빌드서버(cycorld)에서 네이티브 빌드 → GHCR push → EC2 Blue-Green 무중단 배포
 - **서버 빌드 절대 금지**: t3.small(2GB) 리소스 고갈로 SSH 끊김/서비스 다운 위험
 - 상세: [docs/DEPLOY.md](docs/DEPLOY.md) | 핫픽스: [docs/HOTFIX.md](docs/HOTFIX.md)
 
@@ -75,7 +76,8 @@ Host Nginx (port 80)
 - **PR 생성 필수**: 작업 완료 후 PR을 생성하고 사용자가 리뷰 후 머지한다.
 - **브랜치 네이밍**: `feat/기능명`, `fix/버그명`, `chore/작업명` 형식 사용.
 - **배포**: 로컬에서 `./deploy-remote.sh` (빌드→GHCR→Stage) → 확인 → `./deploy-remote.sh promote` (Prod blue-green).
-- **서버에서 빌드 금지**: t3.small 리소스 고갈 방지. 반드시 로컬에서 빌드 후 이미지를 push한다.
+- **EC2 서버에서 빌드 금지**: t3.small 리소스 고갈 방지. 빌드는 cycorld 서버에서 수행.
+- **빌드서버 리포**: `cycorld:~/Workspace/earnlearning` (deploy-remote.sh가 자동 git pull + 빌드)
 
 ## 개발일지 (Changelog)
 - **PR 생성 시 필수**: 모든 PR에 대해 `changelog/`에 교육용 개발일지 엔트리를 추가한다.
