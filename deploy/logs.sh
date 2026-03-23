@@ -14,8 +14,18 @@ ENV="${1:-prod}"
 ACTION="${2:-}"
 LINES="${3:-50}"
 
+ACTIVE_SLOT_CONF="/etc/nginx/earnlearning-active-slot.conf"
+
+get_prod_project() {
+  local slot="blue"
+  if [ -f "$ACTIVE_SLOT_CONF" ] && grep -q "8181" "$ACTIVE_SLOT_CONF"; then
+    slot="green"
+  fi
+  echo "earnlearning-${slot}"
+}
+
 case "$ENV" in
-  prod)  PROJECT="earnlearning-prod" ;;
+  prod)  PROJECT="$(get_prod_project)" ;;
   stage) PROJECT="earnlearning-stage" ;;
   *)     echo "Usage: $0 [prod|stage] [options]"; exit 1 ;;
 esac

@@ -3,39 +3,43 @@ services:
     image: ghcr.io/cycorld/earnlearning-backend:${IMAGE_TAG:-latest}
     restart: always
     volumes:
-      - stage_db:/data/db
-      - stage_uploads:/data/uploads
+      - prod_db:/data/db
+      - prod_uploads:/data/uploads
       - ../tasks:/data/tasks:ro
     environment:
       - DB_PATH=/data/db/earnlearning.db
       - UPLOAD_PATH=/data/uploads
       - TASKS_PATH=/data/tasks
-    env_file: .env.stage
+    env_file: .env.prod
     networks:
-      - stage
+      - green
 
   frontend:
     image: ghcr.io/cycorld/earnlearning-frontend:${IMAGE_TAG:-latest}
     restart: always
     networks:
-      - stage
+      - green
 
   nginx:
     image: nginx:alpine
     restart: always
     ports:
-      - "8182:80"
+      - "8181:80"
     volumes:
       - ./nginx-app.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - backend
       - frontend
     networks:
-      - stage
+      - green
 
 volumes:
-  stage_db:
-  stage_uploads:
+  prod_db:
+    name: earnlearning-prod_prod_db
+    external: true
+  prod_uploads:
+    name: earnlearning-prod_prod_uploads
+    external: true
 
 networks:
-  stage:
+  green:

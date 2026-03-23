@@ -16,8 +16,7 @@
 ### 1. 문제 확인
 ```bash
 # 프로덕션 서버 로그 확인
-ssh earnlearning "cd /home/ubuntu/lms/deploy && \
-  sudo docker compose -f docker-compose.prod.yml -p earnlearning-prod logs --tail 30 backend"
+ssh earnlearning "cd /home/ubuntu/lms/deploy && ./logs.sh prod"
 
 # API 직접 호출로 에러 재현
 curl -s -H "Authorization: Bearer $TOKEN" "https://earnlearning.com/api/문제API"
@@ -42,16 +41,11 @@ git push -u origin fix/버그명
 gh pr create --title "fix: 설명"
 gh pr merge N --merge
 
-# Stage 자동 배포 대기 (~2분 30초)
-gh run watch $(gh run list --limit 1 --json databaseId -q '.[0].databaseId')
+# 빌드 → Stage 배포
+./deploy-remote.sh
 
-# 프로덕션 배포
-ssh earnlearning "cd /home/ubuntu/lms && git pull --ff-only && \
-  cd deploy && \
-  sudo BUILD_NUMBER=\$(git -C /home/ubuntu/lms rev-list --count HEAD) \
-  COMMIT_SHA=\$(git -C /home/ubuntu/lms rev-parse HEAD) \
-  docker compose -f docker-compose.prod.yml -p earnlearning-prod --env-file .env.prod up --build -d && \
-  sudo docker compose -f docker-compose.prod.yml -p earnlearning-prod restart nginx"
+# Stage 확인 후 Prod 배포
+./deploy-remote.sh promote
 ```
 
 ### 4. 검증
