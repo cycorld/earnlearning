@@ -80,8 +80,8 @@ describe('FeedPage 타임라인', () => {
 
     await waitFor(() => {
       // 25개 중 20개 (1페이지), 다양한 작성자 이름이 표시되어야 함
-      expect(screen.getAllByText('김학생').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('이개발').length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/김학생/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/이개발/).length).toBeGreaterThan(0)
     })
   })
 
@@ -198,8 +198,10 @@ describe('FeedPage 타임라인', () => {
     renderWithProviders(<FeedPage />)
 
     await waitFor(() => {
-      // author가 없으면 '?'가 아바타 fallback으로 표시됨
-      expect(screen.getByText('?')).toBeInTheDocument()
+      // author가 없어도 게시글이 크래시 없이 렌더링되어야 함
+      expect(screen.getByText(/테스트 게시글 #101번/)).toBeInTheDocument()
+      // displayName(undefined) → '?'가 작성자 이름과 아바타 fallback에 표시됨
+      expect(screen.getAllByText('?').length).toBeGreaterThan(0)
     })
   })
 
@@ -461,8 +463,8 @@ describe('FeedPage 댓글 작성자 표시', () => {
 
     await waitFor(() => {
       // 댓글 작성자들의 이름이 표시됨
-      expect(screen.getAllByText('김학생').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('이개발').length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/김학생/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/이개발/).length).toBeGreaterThan(0)
     })
   })
 

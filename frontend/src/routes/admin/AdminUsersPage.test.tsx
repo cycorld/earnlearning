@@ -134,7 +134,7 @@ describe('AdminUsersPage 유저 목록', () => {
     await waitFor(() => {
       const firstUser = fiftyUsers[0]
       // 이름은 여러 명이 같을 수 있으므로 getAllByText 사용
-      expect(screen.getAllByText(firstUser.name).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(new RegExp(firstUser.name)).length).toBeGreaterThan(0)
       // email | department | student_id 조합으로 확인
       expect(
         screen.getByText(new RegExp(firstUser.email)),
