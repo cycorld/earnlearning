@@ -55,7 +55,8 @@ deploy_to_stage() {
 # ─── Prod 배포 (promote) ─────────────────────────────────────
 
 promote_to_prod() {
-  local image_tag="${IMAGE_TAG:-$(cd "$PROJECT_DIR" && git rev-parse --short HEAD)}"
+  # Stage에 배포된 이미지 태그를 서버에서 가져옴 (로컬 HEAD와 다를 수 있음)
+  local image_tag="${IMAGE_TAG:-$(ssh "$DEPLOY_HOST" "cd /home/ubuntu/lms && git rev-parse --short HEAD")}"
 
   log "=== Prod Blue-Green 배포 ==="
   log "IMAGE_TAG: ${image_tag}"

@@ -40,10 +40,10 @@ build_backend() {
     -t "${BACKEND_IMAGE}:${IMAGE_TAG}" \
     -t "${BACKEND_IMAGE}:latest" \
     -f "$PROJECT_DIR/backend/Dockerfile" \
-    "$PROJECT_DIR/backend"
+    "$PROJECT_DIR/backend" >&2
   log "Pushing backend..."
-  docker push "${BACKEND_IMAGE}:${IMAGE_TAG}"
-  docker push "${BACKEND_IMAGE}:latest"
+  docker push "${BACKEND_IMAGE}:${IMAGE_TAG}" >&2
+  docker push "${BACKEND_IMAGE}:latest" >&2
   log "Backend pushed: ${BACKEND_IMAGE}:${IMAGE_TAG}"
 }
 
@@ -56,10 +56,10 @@ build_frontend() {
     -t "${FRONTEND_IMAGE}:${IMAGE_TAG}" \
     -t "${FRONTEND_IMAGE}:latest" \
     -f "$PROJECT_DIR/frontend/Dockerfile" \
-    "$PROJECT_DIR"
+    "$PROJECT_DIR" >&2
   log "Pushing frontend..."
-  docker push "${FRONTEND_IMAGE}:${IMAGE_TAG}"
-  docker push "${FRONTEND_IMAGE}:latest"
+  docker push "${FRONTEND_IMAGE}:${IMAGE_TAG}" >&2
+  docker push "${FRONTEND_IMAGE}:latest" >&2
   log "Frontend pushed: ${FRONTEND_IMAGE}:${IMAGE_TAG}"
 }
 
