@@ -8,6 +8,7 @@
     },
     "host": "earnlearning.com",
     "basePath": "/api",
+    "schemes": ["https"],
     "paths": {
         "/admin/classrooms/{id}/dashboard": {
             "get": {

@@ -21,6 +21,7 @@ import (
 // @description	이화여대 창업 교육 LMS API
 // @host			earnlearning.com
 // @BasePath		/api
+// @schemes		https
 // @securityDefinitions.apikey	BearerAuth
 // @in							header
 // @name						Authorization
