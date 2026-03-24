@@ -190,6 +190,6 @@
     "date": "2026-03-23",
     "tags": ["배포", "Docker", "Blue-Green", "GHCR", "무중단"],
     "github": "https://github.com/cycorld/earnlearning/pull/30",
-    "fix": "https://github.com/cycorld/earnlearning/pull/31"
+    "fix": "https://github.com/cycorld/earnlearning/pull/31", "fix2": "https://github.com/cycorld/earnlearning/pull/32"
   }
 ]
