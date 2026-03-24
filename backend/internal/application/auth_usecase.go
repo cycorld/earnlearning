@@ -32,8 +32,9 @@ type RegisterInput struct {
 }
 
 type LoginInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email      string `json:"email"`
+	Password   string `json:"password"`
+	RememberMe bool   `json:"remember_me"`
 }
 
 type AuthResponse struct {
@@ -92,7 +93,12 @@ func (uc *AuthUseCase) Login(input LoginInput) (*AuthResponse, error) {
 		return nil, user.ErrInvalidCreds
 	}
 
-	token, err := uc.generateToken(u)
+	duration := 24 * time.Hour
+	if input.RememberMe {
+		duration = 180 * 24 * time.Hour // 6 months
+	}
+
+	token, err := uc.generateTokenWithDuration(u, duration)
 	if err != nil {
 		return nil, err
 	}
@@ -221,13 +227,17 @@ func (uc *AuthUseCase) ImpersonateUser(userID int) (*AuthResponse, error) {
 }
 
 func (uc *AuthUseCase) generateToken(u *user.User) (string, error) {
+	return uc.generateTokenWithDuration(u, 24*time.Hour)
+}
+
+func (uc *AuthUseCase) generateTokenWithDuration(u *user.User, duration time.Duration) (string, error) {
 	claims := jwtClaims{
 		UserID: u.ID,
 		Email:  u.Email,
 		Role:   string(u.Role),
 		Status: string(u.Status),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
