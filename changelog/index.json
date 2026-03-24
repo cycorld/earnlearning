@@ -191,5 +191,12 @@
     "tags": ["배포", "Docker", "Blue-Green", "GHCR", "무중단"],
     "github": "https://github.com/cycorld/earnlearning/pull/30",
     "fix": "https://github.com/cycorld/earnlearning/pull/31", "fix2": "https://github.com/cycorld/earnlearning/pull/32"
+  },
+  {
+    "slug": "028-remember-login",
+    "title": "아이디 저장 & 로그인 유지 + 댓글 작성자 버그 수정",
+    "date": "2026-03-24",
+    "tags": ["인증", "UX", "JWT", "버그수정"],
+    "github": "https://github.com/cycorld/earnlearning/pull/34"
   }
 ]
