@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,6 +7,10 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { useAuth } from '@/hooks/use-auth'
 import { Loader2 } from 'lucide-react'
 
+const SAVED_EMAIL_KEY = 'el_saved_email'
+const REMEMBER_EMAIL_KEY = 'el_remember_email'
+const REMEMBER_ME_KEY = 'el_remember_me'
+
 export default function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
@@ -14,6 +18,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [rememberEmail, setRememberEmail] = useState(true)
+  const [rememberMe, setRememberMe] = useState(false)
+
+  useEffect(() => {
+    const savedRememberEmail = localStorage.getItem(REMEMBER_EMAIL_KEY)
+    // Default to true if not set
+    const shouldRememberEmail = savedRememberEmail === null || savedRememberEmail === 'true'
+    setRememberEmail(shouldRememberEmail)
+
+    if (shouldRememberEmail) {
+      const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY)
+      if (savedEmail) setEmail(savedEmail)
+    }
+
+    const savedRememberMe = localStorage.getItem(REMEMBER_ME_KEY)
+    if (savedRememberMe === 'true') setRememberMe(true)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,9 +42,18 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      await login(email, password)
-      // login in use-auth.ts doesn't return user, 
-      // but after login the user state updates and AuthGuard handles routing
+      // Save/clear email preference
+      localStorage.setItem(REMEMBER_EMAIL_KEY, String(rememberEmail))
+      if (rememberEmail) {
+        localStorage.setItem(SAVED_EMAIL_KEY, email)
+      } else {
+        localStorage.removeItem(SAVED_EMAIL_KEY)
+      }
+
+      // Save remember me preference
+      localStorage.setItem(REMEMBER_ME_KEY, String(rememberMe))
+
+      await login(email, password, rememberMe)
       navigate('/feed', { replace: true })
     } catch (err: unknown) {
       const message =
@@ -69,6 +99,26 @@ export default function LoginPage() {
               required
               autoComplete="current-password"
             />
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberEmail}
+                onChange={(e) => setRememberEmail(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 accent-primary"
+              />
+              <span className="text-muted-foreground">아이디 저장</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 accent-primary"
+              />
+              <span className="text-muted-foreground">로그인 유지</span>
+            </label>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">

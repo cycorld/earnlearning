@@ -179,6 +179,35 @@ func TestComments_RegressionSuite(t *testing.T) {
 		}
 	})
 
+	// Regression: CreateComment returned empty author.name causing '?' display in frontend
+	t.Run("CreateComment returns non-empty author name", func(t *testing.T) {
+		r := ts.post(fmt.Sprintf("/api/posts/%d/comments", postID), map[string]string{
+			"content": "작성자 이름 회귀 테스트",
+		}, studentToken)
+		if !r.Success {
+			t.Fatalf("create comment: %v", r.Error)
+		}
+
+		var comment struct {
+			Author struct {
+				ID        int    `json:"id"`
+				Name      string `json:"name"`
+				StudentID string `json:"student_id"`
+			} `json:"author"`
+		}
+		json.Unmarshal(r.Data, &comment)
+
+		if comment.Author.Name == "" {
+			t.Error("CreateComment must return non-empty author.name (was causing '?' in frontend)")
+		}
+		if comment.Author.Name != "댓글학생" {
+			t.Errorf("expected author.name='댓글학생', got '%s'", comment.Author.Name)
+		}
+		if comment.Author.ID == 0 {
+			t.Error("author.id should not be 0")
+		}
+	})
+
 	t.Run("GetComments returns created comments", func(t *testing.T) {
 		r := ts.get(fmt.Sprintf("/api/posts/%d/comments?page=1&limit=50", postID), studentToken)
 		if !r.Success {

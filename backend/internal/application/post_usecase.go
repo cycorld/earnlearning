@@ -9,6 +9,7 @@ import (
 
 	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/post"
+	"github.com/earnlearning/backend/internal/domain/user"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
 
@@ -17,13 +18,15 @@ var tagRegex = regexp.MustCompile(`#([^\s#]+)`)
 type PostUsecase struct {
 	postRepo   post.PostRepository
 	walletRepo wallet.Repository
+	userRepo   user.Repository
 	notifUC    *NotificationUseCase
 }
 
-func NewPostUsecase(pr post.PostRepository, wr wallet.Repository) *PostUsecase {
+func NewPostUsecase(pr post.PostRepository, wr wallet.Repository, ur user.Repository) *PostUsecase {
 	return &PostUsecase{
 		postRepo:   pr,
 		walletRepo: wr,
+		userRepo:   ur,
 	}
 }
 
@@ -263,6 +266,14 @@ func (uc *PostUsecase) CreateComment(userID int, input CreateCommentInput) (*pos
 	}
 	c.ID = commentID
 	c.CreatedAt = time.Now()
+
+	// Fill author info for JSON response
+	if u, err := uc.userRepo.FindByID(userID); err == nil {
+		c.AuthorName = u.Name
+		c.AuthorAvatar = u.AvatarURL
+		c.AuthorStudentID = u.StudentID
+		c.AuthorDepartment = u.Department
+	}
 
 	_ = uc.postRepo.IncrementCommentCount(input.PostID)
 

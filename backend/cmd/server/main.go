@@ -92,7 +92,7 @@ func main() {
 	walletUC := application.NewWalletUseCase(walletRepo, userRepo)
 	classroomUC := application.NewClassroomUseCase(classroomRepo, walletRepo)
 	companyUC := application.NewCompanyUsecase(companyRepo, userRepo, walletRepo)
-	postUC := application.NewPostUsecase(postRepo, walletRepo)
+	postUC := application.NewPostUsecase(postRepo, walletRepo, userRepo)
 	uploadUC := application.NewUploadUsecase(postRepo, cfg.UploadPath)
 	notifUC := application.NewNotificationUseCase(notifRepo, pushSvc, emailSvc, hub)
 	notifUC.SetAutoPoster(application.NewAutoPoster(db))
