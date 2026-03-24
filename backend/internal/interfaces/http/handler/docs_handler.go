@@ -37,8 +37,13 @@ func (h *DocsHandler) ServeUI(c echo.Context) error {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body>
-  <script id="api-reference" data-url="/docs/openapi.json"></script>
+  <div id="api-docs"></div>
   <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  <script>
+    Scalar.createApiReference('#api-docs', {
+      url: '/docs/openapi.json',
+    })
+  </script>
 </body>
 </html>`
 	return c.HTML(http.StatusOK, html)
