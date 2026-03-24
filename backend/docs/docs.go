@@ -4370,7 +4370,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "earnlearning.com",
 	BasePath:         "/api",
-	Schemes:          []string{},
+	Schemes:          []string{"https"},
 	Title:            "EarnLearning LMS API",
 	Description:      "이화여대 창업 교육 LMS API",
 	InfoInstanceName: "swagger",
