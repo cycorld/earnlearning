@@ -197,6 +197,7 @@
     "title": "아이디 저장 & 로그인 유지 + 댓글 작성자 버그 수정",
     "date": "2026-03-24",
     "tags": ["인증", "UX", "JWT", "버그수정"],
-    "github": "https://github.com/cycorld/earnlearning/pull/34"
+    "github": "https://github.com/cycorld/earnlearning/pull/34",
+    "fix": "https://github.com/cycorld/earnlearning/pull/35"
   }
 ]

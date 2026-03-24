@@ -25,6 +25,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         importScripts: ['/sw-push.js'],
+        navigateFallbackDenylist: [/^\/docs/, /^\/api\//, /^\/uploads\//],
         runtimeCaching: [
           {
             urlPattern: /^\/api\//,
