@@ -64,6 +64,8 @@ export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [classroomLoading, setClassroomLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
   // Join classroom
   const [inviteCode, setInviteCode] = useState('')
@@ -145,7 +147,7 @@ export default function FeedPage() {
   }, [selectedClassroom])
 
   // Load posts
-  const fetchPosts = useCallback(async () => {
+  const fetchPosts = useCallback(async (page = 1) => {
     if (!selectedClassroom) {
       setPosts([])
       setLoading(false)
@@ -157,9 +159,11 @@ export default function FeedPage() {
         activeChannel !== 'all' ? `&channel_id=${activeChannel}` : ''
       const tagParam = activeTag ? `&tag=${encodeURIComponent(activeTag)}` : ''
       const data = await api.get<PaginatedData<Post>>(
-        `/posts?classroom_id=${selectedClassroom}${channelParam}${tagParam}&page=1&limit=20`,
+        `/posts?classroom_id=${selectedClassroom}${channelParam}${tagParam}&page=${page}&limit=20`,
       )
       setPosts(data.data)
+      setCurrentPage(data.pagination.page)
+      setTotalPages(data.pagination.total_pages)
     } catch {
       setPosts([])
     } finally {
@@ -729,6 +733,31 @@ export default function FeedPage() {
               </CardContent>
             </Card>
           ))}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 py-4">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => fetchPosts(currentPage - 1)}
+              >
+                이전
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => fetchPosts(currentPage + 1)}
+              >
+                다음
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
