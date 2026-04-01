@@ -31,11 +31,6 @@ export default defineConfig({
             urlPattern: /^\/api\//,
             handler: 'NetworkFirst',
             options: { cacheName: 'api-cache', expiration: { maxEntries: 50 } }
-          },
-          {
-            urlPattern: /^\/uploads\//,
-            handler: 'CacheFirst',
-            options: { cacheName: 'upload-cache', expiration: { maxEntries: 100 } }
           }
         ]
       },
