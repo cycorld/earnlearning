@@ -213,5 +213,12 @@
     "date": "2026-04-01",
     "tags": ["PWA", "모바일", "버그수정", "파일"],
     "github": "https://github.com/cycorld/earnlearning/pull/38"
+  },
+  {
+    "slug": "031-feed-pagination",
+    "title": "피드 페이지네이션 추가",
+    "date": "2026-04-02",
+    "tags": ["UX", "피드", "페이지네이션"],
+    "github": "https://github.com/cycorld/earnlearning/pull/39"
   }
 ]
