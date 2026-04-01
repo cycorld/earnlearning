@@ -215,3 +215,13 @@ func (r *GrantRepo) UpdateApplicationStatus(id int, status grant.ApplicationStat
 	_, err := r.db.Exec("UPDATE grant_applications SET status = ? WHERE id = ?", status, id)
 	return err
 }
+
+func (r *GrantRepo) UpdateApplicationProposal(id int, proposal string) error {
+	_, err := r.db.Exec("UPDATE grant_applications SET proposal = ? WHERE id = ?", proposal, id)
+	return err
+}
+
+func (r *GrantRepo) DeleteApplication(id int) error {
+	_, err := r.db.Exec("DELETE FROM grant_applications WHERE id = ?", id)
+	return err
+}

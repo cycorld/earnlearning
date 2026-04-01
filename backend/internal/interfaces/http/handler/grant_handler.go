@@ -163,6 +163,33 @@ func (h *GrantHandler) ApproveApplication(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "지원이 승인되었습니다"}))
 }
 
+// RevokeApplication godoc
+//
+//	@Summary		정부과제 승인 취소
+//	@Description	관리자용: 승인된 지원을 취소하고 보상금을 회수
+//	@Tags			Admin
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int	true	"과제 ID"
+//	@Param			appId	path		int	true	"지원 ID"
+//	@Success		200		{object}	APIResponse
+//	@Router			/admin/grants/{id}/revoke/{appId} [post]
+func (h *GrantHandler) RevokeApplication(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	grantID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 ID입니다"))
+	}
+	appID, err := strconv.Atoi(c.Param("appId"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 지원 ID입니다"))
+	}
+	if err := h.uc.RevokeApplication(grantID, appID, userID); err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
+	}
+	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "승인이 취소되었습니다. 보상금이 회수됩니다."}))
+}
+
 // CloseGrant godoc
 //
 //	@Summary		정부과제 종료
@@ -183,4 +210,54 @@ func (h *GrantHandler) CloseGrant(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
 	}
 	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "과제가 종료되었습니다"}))
+}
+
+// UpdateApplication godoc
+//
+//	@Summary		지원서 수정
+//	@Description	본인의 지원서 내용 수정 (승인 전에만 가능)
+//	@Tags			Grant
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int				true	"과제 ID"
+//	@Param			appId	path		int				true	"지원 ID"
+//	@Param			body	body		ApplyGrantRequest	true	"수정 내용"
+//	@Success		200		{object}	APIResponse
+//	@Router			/grants/{id}/applications/{appId} [put]
+func (h *GrantHandler) UpdateApplication(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	appID, err := strconv.Atoi(c.Param("appId"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 지원 ID입니다"))
+	}
+	var input application.ApplyGrantInput
+	_ = c.Bind(&input)
+	if err := h.uc.UpdateApplication(appID, userID, input); err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
+	}
+	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "지원서가 수정되었습니다"}))
+}
+
+// DeleteApplication godoc
+//
+//	@Summary		지원서 삭제
+//	@Description	본인의 지원서 삭제 (승인 전에만 가능)
+//	@Tags			Grant
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int	true	"과제 ID"
+//	@Param			appId	path		int	true	"지원 ID"
+//	@Success		200		{object}	APIResponse
+//	@Router			/grants/{id}/applications/{appId} [delete]
+func (h *GrantHandler) DeleteApplication(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	appID, err := strconv.Atoi(c.Param("appId"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 지원 ID입니다"))
+	}
+	if err := h.uc.DeleteApplication(appID, userID); err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
+	}
+	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "지원서가 삭제되었습니다"}))
 }
