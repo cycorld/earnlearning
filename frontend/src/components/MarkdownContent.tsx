@@ -43,15 +43,24 @@ export function MarkdownContent({
                 loading="lazy"
               />
             ),
-            a: ({ href, children }) => (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {children}
-              </a>
-            ),
+            a: ({ href, children }) => {
+              const isUpload = href?.startsWith('/uploads/')
+              return (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  {...(isUpload ? { download: '' } : {})}
+                  onClick={isUpload ? (e) => {
+                    // PWA standalone 모드에서 파일 다운로드 보장
+                    e.preventDefault()
+                    window.open(href!, '_blank')
+                  } : undefined}
+                >
+                  {children}
+                </a>
+              )
+            },
           }}
         >
           {content}
