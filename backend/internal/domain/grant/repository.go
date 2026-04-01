@@ -15,4 +15,6 @@ type Repository interface {
 	FindApplicationByGrantAndUser(grantID, userID int) (*GrantApplication, error)
 	ListApplicationsByGrant(grantID int) ([]*GrantApplication, error)
 	UpdateApplicationStatus(id int, status ApplicationStatus) error
+	UpdateApplicationProposal(id int, proposal string) error
+	DeleteApplication(id int) error
 }

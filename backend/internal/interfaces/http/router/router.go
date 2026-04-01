@@ -132,6 +132,8 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.GET("/grants", h.Grant.ListGrants)
 	approved.GET("/grants/:id", h.Grant.GetGrant)
 	approved.POST("/grants/:id/apply", h.Grant.ApplyToGrant)
+	approved.PUT("/grants/:id/applications/:appId", h.Grant.UpdateApplication)
+	approved.DELETE("/grants/:id/applications/:appId", h.Grant.DeleteApplication)
 
 	// Freelance Market
 	approved.GET("/freelance/jobs", h.Freelance.ListJobs)
@@ -203,6 +205,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	// Grant admin routes
 	admin.POST("/grants", h.Grant.CreateGrant)
 	admin.POST("/grants/:id/approve/:appId", h.Grant.ApproveApplication)
+	admin.POST("/grants/:id/revoke/:appId", h.Grant.RevokeApplication)
 	admin.POST("/grants/:id/close", h.Grant.CloseGrant)
 
 	// ================================================================

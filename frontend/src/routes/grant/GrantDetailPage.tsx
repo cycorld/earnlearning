@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
-import { ArrowLeft, Loader2, CheckCircle, Send } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle, Send, Pencil, Trash2, X } from 'lucide-react'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import { formatMoney, displayName } from '@/lib/utils'
@@ -33,6 +33,10 @@ export default function GrantDetailPage() {
 
   const [showApplyForm, setShowApplyForm] = useState(false)
   const [proposal, setProposal] = useState('')
+
+  // Edit state
+  const [editingAppId, setEditingAppId] = useState<number | null>(null)
+  const [editProposal, setEditProposal] = useState('')
 
   const isAdmin = user?.role === 'admin'
 
@@ -82,6 +86,20 @@ export default function GrantDetailPage() {
     }
   }
 
+  const handleRevoke = async (appId: number) => {
+    if (!confirm('승인을 취소하시겠습니까? 지급된 보상금이 회수됩니다.')) return
+    setActionLoading(true)
+    try {
+      await api.post(`/admin/grants/${id}/revoke/${appId}`, {})
+      toast.success('승인이 취소되었습니다. 보상금이 회수됩니다.')
+      await fetchGrant()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '승인 취소에 실패했습니다.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const handleClose = async () => {
     setActionLoading(true)
     try {
@@ -93,6 +111,39 @@ export default function GrantDetailPage() {
     } finally {
       setActionLoading(false)
     }
+  }
+
+  const handleUpdate = async (appId: number) => {
+    setActionLoading(true)
+    try {
+      await api.put(`/grants/${id}/applications/${appId}`, { proposal: editProposal })
+      toast.success('지원서가 수정되었습니다.')
+      setEditingAppId(null)
+      await fetchGrant()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '수정에 실패했습니다.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleDelete = async (appId: number) => {
+    if (!confirm('지원서를 삭제하시겠습니까?')) return
+    setActionLoading(true)
+    try {
+      await api.del(`/grants/${id}/applications/${appId}`)
+      toast.success('지원서가 삭제되었습니다.')
+      await fetchGrant()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const startEdit = (app: GrantApplication) => {
+    setEditingAppId(app.id)
+    setEditProposal(app.proposal || '')
   }
 
   if (loading) {
@@ -216,38 +267,117 @@ export default function GrantDetailPage() {
             <CardTitle className="text-base">지원자 ({applications.length}명)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {applications.map((app) => (
-              <div key={app.id} className="rounded-lg border p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{displayName(app.user)}</span>
-                  <Badge
-                    variant={app.status === 'approved' ? 'default' : 'secondary'}
-                    className="text-xs"
-                  >
-                    {appStatusLabels[app.status] || app.status}
-                  </Badge>
-                </div>
-                {app.proposal && (
-                  <MarkdownContent content={app.proposal} className="mt-2 text-sm" />
-                )}
-                {isAdmin && app.status === 'pending' && grant.status === 'open' && (
-                  <div className="mt-2 flex justify-end">
-                    <Button
-                      size="sm"
-                      onClick={() => handleApprove(app.id)}
-                      disabled={actionLoading}
-                    >
-                      {actionLoading ? (
-                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                      ) : (
-                        <CheckCircle className="mr-1 h-3 w-3" />
+            {applications.map((app) => {
+              const isOwner = app.user?.id === user?.id
+              const canEdit = isOwner && app.status === 'pending'
+              const isEditing = editingAppId === app.id
+
+              return (
+                <div key={app.id} className="rounded-lg border p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{displayName(app.user)}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={app.status === 'approved' ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {appStatusLabels[app.status] || app.status}
+                      </Badge>
+                      {canEdit && !isEditing && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => startEdit(app)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => handleDelete(app.id)}
+                            disabled={actionLoading}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
                       )}
-                      승인 (보상 지급)
-                    </Button>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+                  {isEditing ? (
+                    <div className="mt-2 space-y-2">
+                      <MarkdownEditor
+                        value={editProposal}
+                        onChange={setEditProposal}
+                        placeholder="지원서를 수정해 주세요"
+                        rows={6}
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          onClick={() => handleUpdate(app.id)}
+                          disabled={actionLoading}
+                        >
+                          {actionLoading ? (
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          ) : (
+                            <CheckCircle className="mr-1 h-3 w-3" />
+                          )}
+                          저장
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingAppId(null)}
+                        >
+                          <X className="mr-1 h-3 w-3" />
+                          취소
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    app.proposal && (
+                      <MarkdownContent content={app.proposal} className="mt-2 text-sm" />
+                    )
+                  )}
+                  {isAdmin && app.status === 'pending' && grant.status === 'open' && (
+                    <div className="mt-2 flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => handleApprove(app.id)}
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        ) : (
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                        )}
+                        승인 (보상 지급)
+                      </Button>
+                    </div>
+                  )}
+                  {isAdmin && app.status === 'approved' && (
+                    <div className="mt-2 flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleRevoke(app.id)}
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        ) : (
+                          <X className="mr-1 h-3 w-3" />
+                        )}
+                        승인 취소 (보상 회수)
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </CardContent>
         </Card>
       )}
