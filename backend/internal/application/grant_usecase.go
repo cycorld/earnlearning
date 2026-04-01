@@ -186,6 +186,61 @@ func (uc *GrantUseCase) ApproveApplication(grantID, applicationID, adminID int) 
 	return nil
 }
 
+func (uc *GrantUseCase) RevokeApplication(grantID, applicationID, adminID int) error {
+	g, err := uc.repo.FindByID(grantID)
+	if err != nil {
+		return err
+	}
+	if g.AdminID != adminID {
+		return grant.ErrNotAdmin
+	}
+
+	app, err := uc.repo.FindApplicationByID(applicationID)
+	if err != nil {
+		return err
+	}
+	if app.GrantID != grantID {
+		return grant.ErrApplicationNotFound
+	}
+	if app.Status != grant.AppApproved {
+		return fmt.Errorf("승인된 지원만 취소할 수 있습니다")
+	}
+
+	// Revert status to pending
+	if err := uc.repo.UpdateApplicationStatus(applicationID, grant.AppPending); err != nil {
+		return err
+	}
+
+	// Rollback money: debit from student, credit to admin
+	applicantWallet, err := uc.walletRepo.FindByUserID(app.UserID)
+	if err != nil {
+		return err
+	}
+	err = uc.walletRepo.Debit(applicantWallet.ID, g.Reward, wallet.TxFreelanceEscrow,
+		fmt.Sprintf("정부과제 승인 취소: %s", g.Title), "grant", g.ID)
+	if err != nil {
+		return err
+	}
+
+	adminWallet, err := uc.walletRepo.FindByUserID(adminID)
+	if err != nil {
+		return err
+	}
+	err = uc.walletRepo.Credit(adminWallet.ID, g.Reward, wallet.TxFreelancePay,
+		fmt.Sprintf("정부과제 승인 취소 환불: %s", g.Title), "grant", g.ID)
+	if err != nil {
+		return err
+	}
+
+	// Notify applicant
+	uc.notify(app.UserID, notification.NotifGrantClosed,
+		"정부과제 승인이 취소되었습니다",
+		fmt.Sprintf("'%s' 과제 승인이 취소되어 %d원이 회수되었습니다.", g.Title, g.Reward),
+		"grant", grantID)
+
+	return nil
+}
+
 func (uc *GrantUseCase) CloseGrant(grantID, adminID int) error {
 	g, err := uc.repo.FindByID(grantID)
 	if err != nil {
@@ -216,6 +271,34 @@ func (uc *GrantUseCase) CloseGrant(grantID, adminID int) error {
 	}
 
 	return nil
+}
+
+func (uc *GrantUseCase) UpdateApplication(appID, userID int, input ApplyGrantInput) error {
+	app, err := uc.repo.FindApplicationByID(appID)
+	if err != nil {
+		return err
+	}
+	if app.UserID != userID {
+		return grant.ErrNotOwner
+	}
+	if app.Status != grant.AppPending {
+		return grant.ErrAlreadyApproved
+	}
+	return uc.repo.UpdateApplicationProposal(appID, input.Proposal)
+}
+
+func (uc *GrantUseCase) DeleteApplication(appID, userID int) error {
+	app, err := uc.repo.FindApplicationByID(appID)
+	if err != nil {
+		return err
+	}
+	if app.UserID != userID {
+		return grant.ErrNotOwner
+	}
+	if app.Status != grant.AppPending {
+		return grant.ErrAlreadyApproved
+	}
+	return uc.repo.DeleteApplication(appID)
 }
 
 func (uc *GrantUseCase) notify(userID int, notifType notification.NotifType, title, body, refType string, refID int) {

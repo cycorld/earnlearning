@@ -199,5 +199,12 @@
     "tags": ["인증", "UX", "JWT", "버그수정"],
     "github": "https://github.com/cycorld/earnlearning/pull/34",
     "fix": "https://github.com/cycorld/earnlearning/pull/35"
+  },
+  {
+    "slug": "029-grant-app-edit",
+    "title": "정부과제 지원서 수정/삭제 및 승인 취소 기능",
+    "date": "2026-04-01",
+    "tags": ["정부과제", "UX", "관리자", "보상"],
+    "github": "https://github.com/cycorld/earnlearning/pull/37"
   }
 ]
