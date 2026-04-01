@@ -206,5 +206,12 @@
     "date": "2026-04-01",
     "tags": ["정부과제", "UX", "관리자", "보상"],
     "github": "https://github.com/cycorld/earnlearning/pull/37"
+  },
+  {
+    "slug": "030-mobile-file-download",
+    "title": "모바일 PWA 파일 다운로드 수정",
+    "date": "2026-04-01",
+    "tags": ["PWA", "모바일", "버그수정", "파일"],
+    "github": "https://github.com/cycorld/earnlearning/pull/38"
   }
 ]
