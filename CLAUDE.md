@@ -18,7 +18,7 @@
 - **Staging**: https://stage.earnlearning.com
 - **방식**: 빌드서버(cycorld)에서 네이티브 빌드 → GHCR push → EC2 Blue-Green 무중단 배포
 - **서버 빌드 절대 금지**: t3.small(2GB) 리소스 고갈로 SSH 끊김/서비스 다운 위험
-- 상세: [docs/DEPLOY.md](docs/DEPLOY.md) | 핫픽스: [docs/HOTFIX.md](docs/HOTFIX.md)
+- 상세: [docs/DEPLOY.md](docs/DEPLOY.md) | 핫픽스: [docs/HOTFIX.md](docs/HOTFIX.md) | 백업: [docs/BACKUP.md](docs/BACKUP.md)
 
 ### 배포 명령어 (로컬에서 실행)
 ```bash
