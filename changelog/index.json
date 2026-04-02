@@ -249,5 +249,12 @@
     "date": "2026-04-03",
     "tags": ["피드", "UX", "안전장치"],
     "github": "https://github.com/cycorld/earnlearning/pull/43"
+  },
+  {
+    "slug": "036-dm-push-notify",
+    "title": "DM 수신 시 웹 푸시 + 이메일 알림",
+    "date": "2026-04-03",
+    "tags": ["DM", "푸시알림", "이메일"],
+    "github": "https://github.com/cycorld/earnlearning/pull/45"
   }
 ]
