@@ -34,7 +34,13 @@ type Post struct {
 	AuthorAvatar     string `json:"-"`
 	AuthorStudentID  string `json:"-"`
 	AuthorDepartment string `json:"-"`
+	ChannelName      string `json:"-"`
 	IsLiked          bool   `json:"is_liked"`
+}
+
+type PostChannel struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 type PostAuthor struct {
@@ -47,9 +53,14 @@ type PostAuthor struct {
 
 func (p Post) MarshalJSON() ([]byte, error) {
 	type Alias Post
+	var ch *PostChannel
+	if p.ChannelName != "" {
+		ch = &PostChannel{ID: p.ChannelID, Name: p.ChannelName}
+	}
 	return json.Marshal(&struct {
 		Alias
-		Author PostAuthor `json:"author"`
+		Author  PostAuthor   `json:"author"`
+		Channel *PostChannel `json:"channel"`
 	}{
 		Alias: (Alias)(p),
 		Author: PostAuthor{
@@ -59,6 +70,7 @@ func (p Post) MarshalJSON() ([]byte, error) {
 			StudentID:  p.AuthorStudentID,
 			Department: p.AuthorDepartment,
 		},
+		Channel: ch,
 	})
 }
 
