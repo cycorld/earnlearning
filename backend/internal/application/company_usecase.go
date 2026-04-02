@@ -251,8 +251,9 @@ func (uc *CompanyUsecase) CreateBusinessCard(companyID, userID int, card company
 }
 
 type BusinessCardOwner struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 type BusinessCardCompany struct {
@@ -296,8 +297,9 @@ func (uc *CompanyUsecase) GetBusinessCard(companyID int) (*BusinessCardResponse,
 	owner, err := uc.userRepo.FindByID(c.OwnerID)
 	if err == nil {
 		bc.Owner = &BusinessCardOwner{
-			ID:   owner.ID,
-			Name: owner.Name,
+			ID:    owner.ID,
+			Name:  owner.Name,
+			Email: owner.Email,
 		}
 	}
 
