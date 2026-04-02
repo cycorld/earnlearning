@@ -14,6 +14,7 @@ import {
   MessageSquare,
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 
 interface UserProfile extends User {
   companies?: Company[]
