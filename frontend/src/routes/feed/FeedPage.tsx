@@ -590,16 +590,13 @@ export default function FeedPage() {
                 <div className="flex items-start gap-3">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild disabled={!post.author?.id}>
-                      <button className="flex items-center gap-3 text-left">
-                        <Avatar className="h-9 w-9 shrink-0">
+                      <button className="shrink-0">
+                        <Avatar className="h-9 w-9">
                           <AvatarImage src={post.author?.avatar_url} />
                           <AvatarFallback>
                             {post.author?.name?.charAt(0) || '?'}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-medium hover:underline">
-                          {displayName(post.author)}
-                        </span>
                       </button>
                     </DropdownMenuTrigger>
                     {post.author?.id && (
@@ -619,6 +616,9 @@ export default function FeedPage() {
                   </DropdownMenu>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {displayName(post.author)}
+                      </span>
                       {post.channel && (
                         <Badge variant="secondary" className="text-xs">
                           {post.channel.name}
@@ -702,16 +702,13 @@ export default function FeedPage() {
                               <div key={c.id} className="flex gap-2">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild disabled={!c.author?.id}>
-                                    <button className="flex items-center gap-2 text-left">
-                                      <Avatar className="h-6 w-6 shrink-0">
+                                    <button className="shrink-0">
+                                      <Avatar className="h-6 w-6">
                                         <AvatarImage src={c.author?.avatar_url} />
                                         <AvatarFallback className="text-xs">
                                           {c.author?.name?.charAt(0) || '?'}
                                         </AvatarFallback>
                                       </Avatar>
-                                      <span className="text-xs font-medium hover:underline">
-                                        {displayName(c.author)}
-                                      </span>
                                     </button>
                                   </DropdownMenuTrigger>
                                   {c.author?.id && (
@@ -731,6 +728,9 @@ export default function FeedPage() {
                                 </DropdownMenu>
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1">
+                                    <span className="text-xs font-medium">
+                                      {displayName(c.author)}
+                                    </span>
                                     <span className="text-xs text-muted-foreground">
                                       {timeAgo(c.created_at)}
                                     </span>
