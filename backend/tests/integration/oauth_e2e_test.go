@@ -145,6 +145,57 @@ func TestOAuthE2E(t *testing.T) {
 		}
 	})
 
+	// 4d. 스코프 제한 검증 — read:profile만으로 제한된 토큰 생성
+	t.Run("스코프 제한: read:profile 토큰으로 wallet 접근 불가", func(t *testing.T) {
+		// 새 인가 (read:profile만)
+		v2 := "limited-scope-verifier-1234567890123456789012"
+		h2 := sha256.Sum256([]byte(v2))
+		ch2 := base64.RawURLEncoding.EncodeToString(h2[:])
+
+		authR := ts.post("/api/oauth/authorize", map[string]interface{}{
+			"client_id":              client.ClientID,
+			"redirect_uri":          "http://localhost:3000/callback",
+			"scopes":                []string{"read:profile"},
+			"state":                 "limited",
+			"code_challenge":        ch2,
+			"code_challenge_method": "S256",
+		}, apiUserToken)
+		if !authR.Success {
+			t.Fatalf("limited auth failed: %v", authR.Error)
+		}
+		var ad struct{ Code string `json:"code"` }
+		json.Unmarshal(authR.Data, &ad)
+
+		tokR := ts.post("/api/oauth/token", map[string]interface{}{
+			"grant_type": "authorization_code", "code": ad.Code,
+			"client_id": client.ClientID, "redirect_uri": "http://localhost:3000/callback",
+			"code_verifier": v2,
+		}, "")
+		if !tokR.Success {
+			t.Fatalf("limited token failed: %v", tokR.Error)
+		}
+		var lt struct{ AccessToken string `json:"access_token"` }
+		json.Unmarshal(tokR.Data, &lt)
+
+		// read:profile → wallet 접근 불가 (403)
+		walletR := ts.get("/api/wallet", lt.AccessToken)
+		if walletR.Success {
+			t.Error("wallet should be forbidden with read:profile only scope")
+		}
+
+		// read:profile → posts 접근 불가 (403)
+		postsR := ts.get("/api/posts?classroom_id=0&page=1&limit=1", lt.AccessToken)
+		if postsR.Success {
+			t.Error("posts should be forbidden with read:profile only scope")
+		}
+
+		// read:profile → userinfo 접근 가능
+		infoR := ts.get("/api/oauth/userinfo", lt.AccessToken)
+		if !infoR.Success {
+			t.Error("userinfo should work with read:profile scope")
+		}
+	})
+
 	// ============================================================
 	// Step 5: Refresh token
 	// ============================================================
