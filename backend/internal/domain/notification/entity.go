@@ -32,6 +32,9 @@ const (
 	NotifGrantApproved     NotifType = "grant_approved"
 	NotifGrantApplied      NotifType = "grant_applied"
 	NotifGrantClosed       NotifType = "grant_closed"
+
+	// DM
+	NotifNewDM             NotifType = "new_dm"
 )
 
 // PushEligibleTypes are notification types that should trigger push notifications.
@@ -57,6 +60,7 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifGrantApproved:     true,
 	NotifGrantApplied:      true,
 	NotifGrantClosed:       true,
+	NotifNewDM:             true,
 }
 
 type Notification struct {
