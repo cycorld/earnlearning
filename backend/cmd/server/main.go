@@ -111,7 +111,12 @@ func main() {
 	// Task repo (reads tasks/ markdown files)
 	tasksPath := os.Getenv("TASKS_PATH")
 	if tasksPath == "" {
-		tasksPath = "./tasks"
+		// Default: try project root tasks/ first, fallback to ./tasks
+		if _, err := os.Stat("../tasks"); err == nil {
+			tasksPath = "../tasks"
+		} else {
+			tasksPath = "./tasks"
+		}
 	}
 	taskRepo := persistence.NewTaskRepo(tasksPath)
 
