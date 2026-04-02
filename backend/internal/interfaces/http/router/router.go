@@ -118,6 +118,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.GET("/channels/:channelId/posts", h.Post.GetPosts, middleware.RequireScope("read:posts"))
 	approved.POST("/channels/:channelId/posts", h.Post.CreatePost, middleware.RequireScope("write:posts"))
 	approved.PUT("/posts/:id", h.Post.UpdatePost, middleware.RequireScope("write:posts"))
+	approved.DELETE("/posts/:id", h.Post.DeletePost, middleware.RequireScope("write:posts"))
 	approved.POST("/posts/:id/like", h.Post.LikePost, middleware.RequireScope("write:posts"))
 	approved.GET("/posts/:id/comments", h.Post.GetComments, middleware.RequireScope("read:posts"))
 	approved.POST("/posts/:id/comments", h.Post.CreateComment, middleware.RequireScope("write:posts"))

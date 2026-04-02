@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { ArrowLeft, Loader2, CheckCircle, Send, Pencil, Trash2, X } from 'lucide-react'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
@@ -37,6 +39,10 @@ export default function GrantDetailPage() {
   // Edit state
   const [editingAppId, setEditingAppId] = useState<number | null>(null)
   const [editProposal, setEditProposal] = useState('')
+
+  // Delete state
+  const [deleteAppId, setDeleteAppId] = useState<number | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   const isAdmin = user?.role === 'admin'
 
@@ -127,12 +133,15 @@ export default function GrantDetailPage() {
     }
   }
 
-  const handleDelete = async (appId: number) => {
-    if (!confirm('지원서를 삭제하시겠습니까?')) return
+  const handleDelete = async () => {
+    if (!deleteAppId || deleteConfirmText !== '삭제') return
+    const appId = deleteAppId
     setActionLoading(true)
     try {
       await api.del(`/grants/${id}/applications/${appId}`)
       toast.success('지원서가 삭제되었습니다.')
+      setDeleteAppId(null)
+      setDeleteConfirmText('')
       await fetchGrant()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.')
@@ -297,7 +306,7 @@ export default function GrantDetailPage() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(app.id)}
+                            onClick={() => { setDeleteAppId(app.id); setDeleteConfirmText('') }}
                             disabled={actionLoading}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -381,6 +390,41 @@ export default function GrantDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteAppId !== null} onOpenChange={(open) => { if (!open) { setDeleteAppId(null); setDeleteConfirmText('') } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>지원서 삭제</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              지원서를 정말 삭제하시겠습니까? 삭제된 지원서는 복구할 수 없습니다.
+            </p>
+            <p className="text-sm font-medium">
+              확인을 위해 아래에 <span className="text-destructive">"삭제"</span>를 입력하세요.
+            </p>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="삭제"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteAppId(null); setDeleteConfirmText('') }}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteConfirmText !== '삭제' || actionLoading}
+              onClick={handleDelete}
+            >
+              {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
