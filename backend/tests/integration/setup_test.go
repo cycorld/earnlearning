@@ -94,6 +94,10 @@ func setupTestServer(t *testing.T) *testServer {
 	exchangeUC.SetShareholderUpdater(shareholderUpdater)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
 
+	// DM
+	dmRepo := persistence.NewDMRepo(db)
+	dmUC := application.NewDMUseCase(dmRepo, userRepo, hub)
+
 	// OAuth
 	oauthRepo := persistence.NewOAuthRepo(db)
 	oauthUC := application.NewOAuthUseCase(oauthRepo, userRepo)
@@ -118,6 +122,7 @@ func setupTestServer(t *testing.T) *testServer {
 		Docs:         handler.NewDocsHandler(docsDir),
 		OAuth:        handler.NewOAuthHandler(oauthUC),
 		OAuthUC:      oauthUC,
+		DM:           handler.NewDMHandler(dmUC),
 	}
 
 	e := echo.New()

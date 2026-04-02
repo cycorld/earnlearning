@@ -136,5 +136,24 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// DM tables
+	dmTables := []string{
+		`CREATE TABLE IF NOT EXISTS dm_messages (
+			id          INTEGER PRIMARY KEY AUTOINCREMENT,
+			sender_id   INTEGER NOT NULL REFERENCES users(id),
+			receiver_id INTEGER NOT NULL REFERENCES users(id),
+			content     TEXT NOT NULL,
+			is_read     INTEGER NOT NULL DEFAULT 0,
+			created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_dm_sender_receiver ON dm_messages(sender_id, receiver_id, created_at DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_dm_receiver_unread ON dm_messages(receiver_id, is_read)`,
+	}
+	for _, stmt := range dmTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create dm tables: %w", err)
+		}
+	}
+
 	return nil
 }

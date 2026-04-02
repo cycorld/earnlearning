@@ -115,6 +115,10 @@ func main() {
 	}
 	taskRepo := persistence.NewTaskRepo(tasksPath)
 
+	// DM
+	dmRepo := persistence.NewDMRepo(db)
+	dmUC := application.NewDMUseCase(dmRepo, userRepo, hub)
+
 	// OAuth
 	oauthRepo := persistence.NewOAuthRepo(db)
 	oauthUC := application.NewOAuthUseCase(oauthRepo, userRepo)
@@ -144,6 +148,7 @@ func main() {
 		Docs:         handler.NewDocsHandler(docsDir),
 		OAuth:        handler.NewOAuthHandler(oauthUC),
 		OAuthUC:      oauthUC,
+		DM:           handler.NewDMHandler(dmUC),
 	}
 
 	// Echo server
