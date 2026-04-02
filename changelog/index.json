@@ -256,5 +256,12 @@
     "date": "2026-04-03",
     "tags": ["DM", "푸시알림", "이메일"],
     "github": "https://github.com/cycorld/earnlearning/pull/45"
+  },
+  {
+    "slug": "037-business-card",
+    "title": "명함 5종 프리미엄 템플릿 + PNG 다운로드",
+    "date": "2026-04-03",
+    "tags": ["명함", "UX", "디자인"],
+    "github": "https://github.com/cycorld/earnlearning/pull/47"
   }
 ]
