@@ -108,6 +108,22 @@ func (r *PostRepo) UpdatePost(postID int, content string, tags string) error {
 	return nil
 }
 
+func (r *PostRepo) DeletePost(postID int) error {
+	_, err := r.db.Exec("DELETE FROM comments WHERE post_id = ?", postID)
+	if err != nil {
+		return fmt.Errorf("delete post comments: %w", err)
+	}
+	_, err = r.db.Exec("DELETE FROM post_likes WHERE post_id = ?", postID)
+	if err != nil {
+		return fmt.Errorf("delete post likes: %w", err)
+	}
+	_, err = r.db.Exec("DELETE FROM posts WHERE id = ?", postID)
+	if err != nil {
+		return fmt.Errorf("delete post: %w", err)
+	}
+	return nil
+}
+
 func (r *PostRepo) GetPosts(classroomID, channelID int, page, limit int, tag string, currentUserID int) ([]*post.Post, int, error) {
 	offset := (page - 1) * limit
 

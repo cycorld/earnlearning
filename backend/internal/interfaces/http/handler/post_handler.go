@@ -207,6 +207,37 @@ func (h *PostHandler) UpdatePost(c echo.Context) error {
 	})
 }
 
+// DeletePost godoc
+//
+//	@Summary		게시물 삭제
+//	@Description	본인 또는 관리자가 게시물 삭제
+//	@Tags			Feed
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"게시물 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/posts/{id} [delete]
+func (h *PostHandler) DeletePost(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	postID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 게시글 ID입니다"},
+		})
+	}
+	if err := h.uc.DeletePost(postID, userID, role); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "DELETE_FAILED", "message": err.Error()},
+		})
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": map[string]string{"message": "게시글이 삭제되었습니다"}, "error": nil,
+	})
+}
+
 // LikePost godoc
 //
 //	@Summary		게시물 좋아요
