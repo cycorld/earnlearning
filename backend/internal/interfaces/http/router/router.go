@@ -80,7 +80,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	// ================================================================
 	// Auth routes (JWT required, any status)
 	// ================================================================
-	auth := api.Group("", middleware.JWTAuth(jwtSecret))
+	auth := api.Group("", middleware.JWTAuth(jwtSecret, h.OAuthUC))
 	auth.GET("/auth/me", h.Auth.GetMe)
 	auth.PUT("/auth/avatar", h.Auth.UpdateAvatar)
 	auth.GET("/users/:id/profile", h.Auth.GetProfile)
