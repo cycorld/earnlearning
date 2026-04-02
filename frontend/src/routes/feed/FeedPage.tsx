@@ -31,6 +31,7 @@ import {
   X,
   Hash,
   Pencil,
+  Trash2,
   User,
   MessageSquare,
 } from 'lucide-react'
@@ -96,6 +97,11 @@ export default function FeedPage() {
   const [editPostTags, setEditPostTags] = useState('')
   const [editPostOpen, setEditPostOpen] = useState(false)
   const [editing, setEditing] = useState(false)
+
+  // Delete post
+  const [deletePostId, setDeletePostId] = useState<number | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   // Comments
   const [expandedPost, setExpandedPost] = useState<number | null>(null)
@@ -295,6 +301,23 @@ export default function FeedPage() {
       toast.error(message)
     } finally {
       setEditing(false)
+    }
+  }
+
+  // Delete post
+  const handleDeletePost = async () => {
+    if (!deletePostId || deleteConfirmText !== '삭제') return
+    setDeleting(true)
+    try {
+      await api.del(`/posts/${deletePostId}`)
+      setPosts((prev) => prev.filter((p) => p.id !== deletePostId))
+      toast.success('게시물이 삭제되었습니다.')
+      setDeletePostId(null)
+      setDeleteConfirmText('')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : '삭제에 실패했습니다.')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -628,13 +651,26 @@ export default function FeedPage() {
                       <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
                         {timeAgo(post.created_at)}
                         {(post.author?.id === user?.id || user?.role === 'admin') && (
-                          <button
-                            onClick={() => openEditPost(post)}
-                            className="ml-1 rounded p-0.5 hover:bg-muted"
-                            title="수정"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="ml-1 rounded p-0.5 hover:bg-muted">
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditPost(post)}>
+                                <Pencil className="mr-2 h-3.5 w-3.5" />
+                                수정
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => { setDeletePostId(post.id); setDeleteConfirmText('') }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                삭제
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </span>
                     </div>
@@ -699,7 +735,7 @@ export default function FeedPage() {
                         ) : (
                           <>
                             {(comments[post.id] || []).map((c) => (
-                              <div key={c.id} className="flex gap-2">
+                              <div key={c.id} className="flex items-start gap-2">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild disabled={!c.author?.id}>
                                     <button className="shrink-0">
@@ -809,6 +845,41 @@ export default function FeedPage() {
           )}
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deletePostId !== null} onOpenChange={(open) => { if (!open) { setDeletePostId(null); setDeleteConfirmText('') } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>게시글 삭제</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              이 게시글을 정말 삭제하시겠습니까? 댓글과 좋아요도 함께 삭제됩니다.
+            </p>
+            <p className="text-sm font-medium">
+              확인을 위해 아래에 <span className="text-destructive">"삭제"</span>를 입력하세요.
+            </p>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="삭제"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeletePostId(null); setDeleteConfirmText('') }}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteConfirmText !== '삭제' || deleting}
+              onClick={handleDeletePost}
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

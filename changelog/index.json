@@ -242,5 +242,12 @@
     "tags": ["OAuth", "보안", "버그수정", "버그바운티"],
     "github": "https://github.com/cycorld/earnlearning/pull/42",
     "contributor": "Student-#266"
+  },
+  {
+    "slug": "035-post-delete",
+    "title": "게시글 삭제 기능 + 삭제 확인 다이얼로그",
+    "date": "2026-04-03",
+    "tags": ["피드", "UX", "안전장치"],
+    "github": "https://github.com/cycorld/earnlearning/pull/43"
   }
 ]

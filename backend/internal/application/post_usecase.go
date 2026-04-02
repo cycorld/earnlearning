@@ -204,6 +204,17 @@ func (uc *PostUsecase) UpdatePost(postID, userID int, role string, input UpdateP
 	return uc.postRepo.FindPostByID(postID)
 }
 
+func (uc *PostUsecase) DeletePost(postID, userID int, role string) error {
+	p, err := uc.postRepo.FindPostByID(postID)
+	if err != nil {
+		return err
+	}
+	if p.AuthorID != userID && role != "admin" {
+		return fmt.Errorf("본인이 작성한 게시글만 삭제할 수 있습니다")
+	}
+	return uc.postRepo.DeletePost(postID)
+}
+
 func (uc *PostUsecase) LikePost(postID, userID int) (bool, error) {
 	// Check if post exists
 	_, err := uc.postRepo.FindPostByID(postID)
