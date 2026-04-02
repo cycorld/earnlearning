@@ -220,5 +220,12 @@
     "date": "2026-04-02",
     "tags": ["UX", "피드", "페이지네이션"],
     "github": "https://github.com/cycorld/earnlearning/pull/39"
+  },
+  {
+    "slug": "032-dm-feature",
+    "title": "유저 간 1:1 DM(메시지) 기능",
+    "date": "2026-04-02",
+    "tags": ["DM", "WebSocket", "실시간", "UX"],
+    "github": "https://github.com/cycorld/earnlearning/pull/40"
   }
 ]
