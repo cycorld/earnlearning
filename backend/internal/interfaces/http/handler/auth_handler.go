@@ -157,6 +157,29 @@ func (h *AuthHandler) GetProfile(c echo.Context) error {
 	return successResponse(c, http.StatusOK, userToResponse(u, viewerRole))
 }
 
+// GetUserActivity godoc
+//
+//	@Summary		사용자 활동 조회
+//	@Description	특정 사용자의 포스트, 프리랜서 잡, 정부과제 지원 내역
+//	@Tags			Auth
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"사용자 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/users/{id}/activity [get]
+func (h *AuthHandler) GetUserActivity(c echo.Context) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_ID", "유효하지 않은 ID입니다")
+	}
+
+	activity, err := h.authUC.GetUserActivity(id)
+	if err != nil {
+		return errorResponse(c, http.StatusInternalServerError, "FETCH_FAILED", err.Error())
+	}
+	return successResponse(c, http.StatusOK, activity)
+}
+
 type userResponse struct {
 	ID         int       `json:"id"`
 	Email      string    `json:"email"`
