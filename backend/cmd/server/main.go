@@ -118,6 +118,7 @@ func main() {
 	// DM
 	dmRepo := persistence.NewDMRepo(db)
 	dmUC := application.NewDMUseCase(dmRepo, userRepo, hub)
+	dmUC.SetNotificationUseCase(notifUC)
 
 	// OAuth
 	oauthRepo := persistence.NewOAuthRepo(db)

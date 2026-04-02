@@ -2,9 +2,11 @@ package application
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/earnlearning/backend/internal/domain/dm"
+	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/user"
 )
 
@@ -12,10 +14,15 @@ type DMUseCase struct {
 	repo     dm.Repository
 	userRepo user.Repository
 	hub      WSBroadcaster
+	notifUC  *NotificationUseCase
 }
 
 func NewDMUseCase(repo dm.Repository, userRepo user.Repository, hub WSBroadcaster) *DMUseCase {
 	return &DMUseCase{repo: repo, userRepo: userRepo, hub: hub}
+}
+
+func (uc *DMUseCase) SetNotificationUseCase(notifUC *NotificationUseCase) {
+	uc.notifUC = notifUC
 }
 
 type SendDMInput struct {
@@ -24,9 +31,9 @@ type SendDMInput struct {
 }
 
 var (
-	ErrCannotDMSelf  = errors.New("자기 자신에게 메시지를 보낼 수 없습니다")
-	ErrEmptyMessage  = errors.New("메시지 내용을 입력하세요")
-	ErrUserNotFound  = errors.New("사용자를 찾을 수 없습니다")
+	ErrCannotDMSelf = errors.New("자기 자신에게 메시지를 보낼 수 없습니다")
+	ErrEmptyMessage = errors.New("메시지 내용을 입력하세요")
+	ErrUserNotFound = errors.New("사용자를 찾을 수 없습니다")
 )
 
 func (uc *DMUseCase) SendMessage(senderID int, input SendDMInput) (*dm.Message, error) {
@@ -62,6 +69,26 @@ func (uc *DMUseCase) SendMessage(senderID int, input SendDMInput) (*dm.Message, 
 		}
 		uc.hub.SendToUser(input.ReceiverID, wsMsg)
 		uc.hub.SendToUser(senderID, wsMsg)
+	}
+
+	// Send push/email notification to receiver
+	if uc.notifUC != nil {
+		sender, _ := uc.userRepo.FindByID(senderID)
+		senderName := "알 수 없음"
+		if sender != nil {
+			senderName = sender.Name
+		}
+		preview := input.Content
+		if len(preview) > 50 {
+			preview = preview[:50] + "..."
+		}
+		_ = uc.notifUC.CreateNotification(
+			input.ReceiverID,
+			notification.NotifNewDM,
+			fmt.Sprintf("%s님의 새 메시지", senderName),
+			preview,
+			"dm", senderID,
+		)
 	}
 
 	return msg, nil

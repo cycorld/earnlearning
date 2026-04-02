@@ -53,6 +53,8 @@ function getNotifIcon(type: string) {
     case 'grant_approved':
     case 'grant_closed':
       return <ShieldCheck className="h-5 w-5 text-emerald-500" />
+    case 'new_dm':
+      return <MessageCircle className="h-5 w-5 text-teal-500" />
     case 'job_applied':
     case 'job_accepted':
     case 'job_work_done':
@@ -89,6 +91,8 @@ function getReferencePath(refType: string, refId: number): string | null {
       return `/market/${refId}`
     case 'grant':
       return `/grant/${refId}`
+    case 'dm':
+      return `/messages/${refId}`
     case 'user':
       return `/profile/${refId}`
     default:
