@@ -72,10 +72,17 @@ export default function ConversationPage() {
   const handleDM = useCallback(
     (data: unknown) => {
       const msg = data as DMMessage
-      if (msg.sender_id === peerID) {
-        setMessages((prev) => [...prev, msg])
-        api.put(`/dm/messages/${peerID}/read`).catch(() => {})
-      }
+      // Avoid duplicates (sender gets WS echo of own message)
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev
+        if (msg.sender_id === peerID || msg.receiver_id === peerID) {
+          if (msg.sender_id === peerID) {
+            api.put(`/dm/messages/${peerID}/read`).catch(() => {})
+          }
+          return [...prev, msg]
+        }
+        return prev
+      })
     },
     [peerID],
   )

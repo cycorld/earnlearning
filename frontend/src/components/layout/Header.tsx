@@ -44,8 +44,8 @@ export default function Header() {
   }, [])
 
   const handleDM = useCallback(() => {
-    setDmUnreadCount((prev) => prev + 1)
-  }, [])
+    fetchDMUnread()
+  }, [fetchDMUnread])
 
   useWebSocket('notification', handleNotification)
   useWebSocket('dm', handleDM)

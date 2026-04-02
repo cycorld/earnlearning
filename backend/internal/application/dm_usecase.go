@@ -54,12 +54,14 @@ func (uc *DMUseCase) SendMessage(senderID int, input SendDMInput) (*dm.Message, 
 	msg.ID = id
 	msg.CreatedAt = time.Now()
 
-	// Send real-time notification via WebSocket
+	// Send real-time notification via WebSocket to both parties
 	if uc.hub != nil {
-		uc.hub.SendToUser(input.ReceiverID, map[string]interface{}{
+		wsMsg := map[string]interface{}{
 			"event": "dm",
 			"data":  msg,
-		})
+		}
+		uc.hub.SendToUser(input.ReceiverID, wsMsg)
+		uc.hub.SendToUser(senderID, wsMsg)
 	}
 
 	return msg, nil
