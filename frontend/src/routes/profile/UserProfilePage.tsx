@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
 import type { User, Company } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,7 @@ import {
   Building2,
   ChevronRight,
   ArrowLeft,
+  MessageSquare,
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
 
@@ -20,6 +21,8 @@ interface UserProfile extends User {
 
 export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { user: currentUser } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -98,6 +101,17 @@ export default function UserProfilePage() {
               <p className="mt-3 text-sm text-muted-foreground">
                 {profile.bio}
               </p>
+            )}
+            {currentUser?.id !== profile.id && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 gap-2"
+                onClick={() => navigate(`/messages/${profile.id}`)}
+              >
+                <MessageSquare className="h-4 w-4" />
+                메시지 보내기
+              </Button>
             )}
           </div>
         </CardContent>
