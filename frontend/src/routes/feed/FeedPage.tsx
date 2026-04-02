@@ -642,7 +642,7 @@ export default function FeedPage() {
                       <span className="text-sm font-medium">
                         {displayName(post.author)}
                       </span>
-                      {post.channel && (
+                      {activeChannel === 'all' && post.channel && (
                         <Badge variant="secondary" className="text-xs">
                           {post.channel.name}
                         </Badge>
