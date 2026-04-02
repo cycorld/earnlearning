@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { api } from '@/lib/api'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -55,6 +55,13 @@ export function MarkdownEditor({
   const [preview, setPreview] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+
+  // Clear uploaded files when value is reset externally (e.g. after comment submit)
+  useEffect(() => {
+    if (value === '' && uploadedFiles.length > 0) {
+      setUploadedFiles([])
+    }
+  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const insertText = useCallback(
     (before: string, after: string = '') => {

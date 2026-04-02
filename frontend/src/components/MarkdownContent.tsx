@@ -57,7 +57,7 @@ export function MarkdownContent({
                     window.open(href!, '_blank')
                   } : undefined}
                 >
-                  {children}
+                  {typeof children === 'string' ? decodeURIComponent(children) : children}
                 </a>
               )
             },
