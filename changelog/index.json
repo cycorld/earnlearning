@@ -227,5 +227,12 @@
     "date": "2026-04-02",
     "tags": ["DM", "WebSocket", "실시간", "UX"],
     "github": "https://github.com/cycorld/earnlearning/pull/40"
+  },
+  {
+    "slug": "033-profile-detail",
+    "title": "프로필 상세 활동 내역 + 아바타 변경",
+    "date": "2026-04-02",
+    "tags": ["프로필", "UX", "아바타"],
+    "github": "https://github.com/cycorld/earnlearning/pull/41"
   }
 ]
