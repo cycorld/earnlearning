@@ -12,12 +12,61 @@ import {
   ChevronRight,
   ArrowLeft,
   MessageSquare,
+  FileText,
+  Briefcase,
+  FileCheck,
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
+import { MarkdownContent } from '@/components/MarkdownContent'
 
 interface UserProfile extends User {
   companies?: Company[]
+}
+
+interface ActivityPost {
+  id: number
+  content: string
+  post_type: string
+  channel: string
+  like_count: number
+  created_at: string
+}
+
+interface ActivityFreelanceJob {
+  id: number
+  title: string
+  budget: number
+  status: string
+  created_at: string
+}
+
+interface ActivityGrantApp {
+  id: number
+  grant_id: number
+  grant_title: string
+  status: string
+  proposal: string
+  created_at: string
+}
+
+interface UserActivity {
+  posts: ActivityPost[] | null
+  freelance_jobs: ActivityFreelanceJob[] | null
+  grant_apps: ActivityGrantApp[] | null
+}
+
+const grantStatusLabels: Record<string, string> = {
+  pending: '심사 중',
+  approved: '승인됨',
+  rejected: '거절됨',
+}
+
+const jobStatusLabels: Record<string, string> = {
+  open: '모집 중',
+  in_progress: '진행 중',
+  completed: '완료',
+  cancelled: '취소',
 }
 
 export default function UserProfilePage() {
@@ -25,6 +74,7 @@ export default function UserProfilePage() {
   const navigate = useNavigate()
   const { user: currentUser } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [activity, setActivity] = useState<UserActivity | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -32,9 +82,14 @@ export default function UserProfilePage() {
     if (!id) return
     setLoading(true)
     setError('')
-    api
-      .get<UserProfile>(`/users/${id}/profile`)
-      .then(setProfile)
+    Promise.all([
+      api.get<UserProfile>(`/users/${id}/profile`),
+      api.get<UserActivity>(`/users/${id}/activity`),
+    ])
+      .then(([p, a]) => {
+        setProfile(p)
+        setActivity(a)
+      })
       .catch((err: unknown) => {
         setProfile(null)
         const message =
@@ -67,6 +122,10 @@ export default function UserProfilePage() {
       </div>
     )
   }
+
+  const posts = activity?.posts ?? []
+  const freelanceJobs = activity?.freelance_jobs ?? []
+  const grantApps = activity?.grant_apps ?? []
 
   return (
     <div className="mx-auto max-w-lg space-y-4 p-4">
@@ -190,6 +249,106 @@ export default function UserProfilePage() {
                   </p>
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Posts */}
+      {posts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-4 w-4" />
+              게시글 ({posts.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {posts.map((post) => (
+              <div key={post.id} className="rounded-md border p-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {post.channel && <Badge variant="secondary" className="text-[10px]">{post.channel}</Badge>}
+                  <span>{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
+                  {post.like_count > 0 && <span>♥ {post.like_count}</span>}
+                </div>
+                <MarkdownContent
+                  content={post.content}
+                  maxLines={3}
+                  className="mt-1 text-sm"
+                />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Freelance Jobs */}
+      {freelanceJobs.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Briefcase className="h-4 w-4" />
+              마켓 포스팅 ({freelanceJobs.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {freelanceJobs.map((job) => (
+              <Link
+                key={job.id}
+                to={`/market/${job.id}`}
+                className="flex items-center justify-between rounded-md border p-3 transition-colors hover:bg-accent"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{job.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatMoney(job.budget)} · {new Date(job.created_at).toLocaleDateString('ko-KR')}
+                  </p>
+                </div>
+                <Badge
+                  variant={job.status === 'open' ? 'default' : 'secondary'}
+                  className="text-xs"
+                >
+                  {jobStatusLabels[job.status] || job.status}
+                </Badge>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Grant Applications */}
+      {grantApps.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileCheck className="h-4 w-4" />
+              정부과제 지원 ({grantApps.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {grantApps.map((app) => (
+              <Link
+                key={app.id}
+                to={`/grant/${app.grant_id}`}
+                className="block rounded-md border p-3 transition-colors hover:bg-accent"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">{app.grant_title}</p>
+                  <Badge
+                    variant={app.status === 'approved' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {grantStatusLabels[app.status] || app.status}
+                  </Badge>
+                </div>
+                {app.proposal && (
+                  <MarkdownContent
+                    content={app.proposal}
+                    maxLines={2}
+                    className="mt-1 text-xs text-muted-foreground"
+                  />
+                )}
               </Link>
             ))}
           </CardContent>
