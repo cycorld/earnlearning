@@ -329,6 +329,14 @@ func (uc *OAuthUseCase) ValidateAccessToken(accessToken string) (*oauth.Token, e
 
 // --- User info ---
 
+func (uc *OAuthUseCase) GetUserRoleAndStatus(userID int) (string, string, error) {
+	u, err := uc.userRepo.FindByID(userID)
+	if err != nil {
+		return "", "", err
+	}
+	return string(u.Role), string(u.Status), nil
+}
+
 func (uc *OAuthUseCase) GetUserInfo(userID int) (*OAuthUserInfo, error) {
 	u, err := uc.userRepo.FindByID(userID)
 	if err != nil {
