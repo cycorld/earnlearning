@@ -250,3 +250,21 @@ export interface PaginatedData<T> {
   data: T[]
   pagination: Pagination
 }
+
+export interface DMMessage {
+  id: number
+  sender_id: number
+  receiver_id: number
+  content: string
+  is_read: boolean
+  created_at: string
+}
+
+export interface DMConversation {
+  peer_id: number
+  peer_name: string
+  peer_avatar_url: string
+  last_message: string
+  last_message_at: string
+  unread_count: number
+}

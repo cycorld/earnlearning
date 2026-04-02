@@ -44,6 +44,10 @@ import GrantNewPage from '@/routes/grant/GrantNewPage'
 // Changelog
 import ChangelogPage from '@/routes/changelog/ChangelogPage'
 
+// Messages (DM)
+import MessagesPage from '@/routes/messages/MessagesPage'
+import ConversationPage from '@/routes/messages/ConversationPage'
+
 // Developer / OAuth
 import DeveloperPage from '@/routes/developer/DeveloperPage'
 import OAuthAuthorizePage from '@/routes/oauth/AuthorizePage'
@@ -95,6 +99,8 @@ export default function App() {
               <Route path="/bank/apply" element={<LoanApplyPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/profile/:id" element={<UserProfilePage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/messages/:userId" element={<ConversationPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/changelog" element={<ChangelogPage />} />
               <Route path="/developer" element={<DeveloperPage />} />

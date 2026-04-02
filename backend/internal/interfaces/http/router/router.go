@@ -29,6 +29,7 @@ type Handlers struct {
 	Docs         *handler.DocsHandler
 	OAuth        *handler.OAuthHandler
 	OAuthUC      *application.OAuthUseCase // needed for middleware
+	DM           *handler.DMHandler
 }
 
 // Setup registers all routes on the given Echo instance.
@@ -134,6 +135,13 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.POST("/grants/:id/apply", h.Grant.ApplyToGrant)
 	approved.PUT("/grants/:id/applications/:appId", h.Grant.UpdateApplication)
 	approved.DELETE("/grants/:id/applications/:appId", h.Grant.DeleteApplication)
+
+	// DM (Direct Messages)
+	approved.POST("/dm/messages", h.DM.SendMessage)
+	approved.GET("/dm/conversations", h.DM.GetConversations)
+	approved.GET("/dm/messages/:userId", h.DM.GetMessages)
+	approved.PUT("/dm/messages/:userId/read", h.DM.MarkAsRead)
+	approved.GET("/dm/unread-count", h.DM.GetUnreadCount)
 
 	// Freelance Market
 	approved.GET("/freelance/jobs", h.Freelance.ListJobs)
