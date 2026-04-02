@@ -95,11 +95,11 @@ export default function ConversationPage() {
 
     setSending(true)
     try {
-      const msg = await api.post<DMMessage>('/dm/messages', {
+      await api.post<DMMessage>('/dm/messages', {
         receiver_id: peerID,
         content: text,
       })
-      setMessages((prev) => [...prev, msg])
+      // WS echo will add the message to the list
       setContent('')
       inputRef.current?.focus()
     } catch {
