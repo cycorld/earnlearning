@@ -38,10 +38,15 @@ func OAuthBearerAuth(oauthUC *application.OAuthUseCase) echo.MiddlewareFunc {
 }
 
 // RequireScope checks that the OAuth token has the required scope.
+// JWT users (no oauth_scopes) are always allowed through.
 func RequireScope(scope string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			scopes, _ := c.Get("oauth_scopes").([]string)
+			scopes, ok := c.Get("oauth_scopes").([]string)
+			if !ok {
+				// Not an OAuth request (regular JWT) — allow through
+				return next(c)
+			}
 			for _, s := range scopes {
 				if s == scope {
 					return next(c)
