@@ -115,6 +115,36 @@ func TestOAuthE2E(t *testing.T) {
 		}
 	})
 
+	// 4b. OAuth token으로 기존 API 접근 (JWT fallback)
+	t.Run("OAuth 토큰으로 wallet API 접근", func(t *testing.T) {
+		resp := ts.get("/api/wallet", tokens.AccessToken)
+		if !resp.Success {
+			t.Fatalf("wallet API with OAuth token should succeed: %v", resp.Error)
+		}
+	})
+
+	t.Run("OAuth 토큰으로 posts API 접근", func(t *testing.T) {
+		resp := ts.get("/api/posts?classroom_id=0&page=1&limit=1", tokens.AccessToken)
+		if !resp.Success {
+			t.Fatalf("posts API with OAuth token should succeed: %v", resp.Error)
+		}
+	})
+
+	t.Run("OAuth 토큰으로 dm conversations API 접근", func(t *testing.T) {
+		resp := ts.get("/api/dm/conversations", tokens.AccessToken)
+		if !resp.Success {
+			t.Fatalf("dm API with OAuth token should succeed: %v", resp.Error)
+		}
+	})
+
+	// 4c. 스코프 없는 API는 접근 가능하지만, 데이터는 정상 반환되어야 함
+	t.Run("OAuth 토큰으로 자기 프로필 조회", func(t *testing.T) {
+		resp := ts.get("/api/auth/me", tokens.AccessToken)
+		if !resp.Success {
+			t.Fatalf("auth/me with OAuth token should succeed: %v", resp.Error)
+		}
+	})
+
 	// ============================================================
 	// Step 5: Refresh token
 	// ============================================================
