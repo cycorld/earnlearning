@@ -69,6 +69,43 @@ Host Nginx (port 80)
 - **Frontend 테스트**: `cd frontend && npm test`
 
 
+## 티켓 기반 워크플로우 (훅으로 강제)
+
+### 작업 시작 프로세스 (순서 필수)
+1. **티켓 확인/생성**: `tasks/` 폴더에서 관련 티켓 검색 → 없으면 `tasks/in-progress/NNN-slug.md` 생성
+2. **브랜치 생성**: 티켓의 `branch` 필드에 맞는 브랜치 (`git checkout -b feat/xxx`)
+3. **작업 진행**: 코드 수정 + 테스트 + 커밋
+4. **PR 생성**: changelog 포함 필수
+5. **티켓 완료**: 머지 후 `tasks/in-progress/` → `tasks/done/` 이동
+
+### 티켓 구조
+```
+tasks/
+├── backlog/       # 아이디어, 나중에 할 것
+├── todo/          # 다음에 할 작업
+├── in-progress/   # 진행 중 (브랜치 생성 필수)
+├── done/          # 완료
+└── README.md
+```
+
+### 티켓 형식 (`NNN-slug.md`)
+```yaml
+---
+id: NNN
+title: 작업 제목
+priority: high | medium | low
+type: feat | fix | chore
+branch: feat/xxx
+created: YYYY-MM-DD
+---
+작업 내용 설명
+```
+
+### 훅으로 강제되는 규칙
+- **main 브랜치에서 작업 시작 시**: 티켓 생성 + 브랜치 생성을 먼저 안내 (UserPromptSubmit 훅)
+- **브랜치 생성 시**: `tasks/in-progress/`에 티켓이 있어야 허용 (PreToolUse 훅)
+- **PR 생성 시**: changelog + 활성 티켓이 있어야 허용 (PreToolUse 훅)
+
 ## 개발 워크플로우 (PR 기반)
 > 📋 상세 브랜치 전략은 Claude memory `feedback_pr_workflow.md` 참조
 
