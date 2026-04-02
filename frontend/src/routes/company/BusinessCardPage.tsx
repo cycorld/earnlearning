@@ -27,7 +27,7 @@ function CardTemplate({
   company: Company
 }) {
   const owner = company.owner?.name || '대표'
-  const email = company.owner_email || `contact@${company.name.toLowerCase().replace(/\s+/g, '')}.com`
+  const email = (company.owner as { email?: string } | undefined)?.email || ''
   const name = company.name
   const desc = company.description || ''
   const logo = company.logo_url
