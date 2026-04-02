@@ -171,9 +171,11 @@ func (r *PostRepo) GetPosts(classroomID, channelID int, page, limit int, tag str
 		SELECT p.id, p.channel_id, p.author_id, p.content, p.post_type, p.media, p.tags,
 		       p.like_count, p.comment_count, p.pinned, p.created_at, p.updated_at,
 		       u.name, u.avatar_url, u.student_id, u.department,
-		       CASE WHEN pl.id IS NOT NULL THEN 1 ELSE 0 END as is_liked
+		       CASE WHEN pl.id IS NOT NULL THEN 1 ELSE 0 END as is_liked,
+		       COALESCE(ch.name, '') as channel_name
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
+		LEFT JOIN channels ch ON ch.id = p.channel_id
 		LEFT JOIN post_likes pl ON pl.post_id = p.id AND pl.user_id = ?
 		` + queryWhere
 	args := append([]interface{}{currentUserID}, filterArgs...)
@@ -200,6 +202,7 @@ func (r *PostRepo) GetPosts(classroomID, channelID int, page, limit int, tag str
 			&p.ID, &p.ChannelID, &p.AuthorID, &p.Content, &p.PostType, &p.Media, &p.Tags,
 			&p.LikeCount, &p.CommentCount, &pinned, &p.CreatedAt, &p.UpdatedAt,
 			&p.AuthorName, &p.AuthorAvatar, &p.AuthorStudentID, &p.AuthorDepartment, &isLiked,
+			&p.ChannelName,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan post: %w", err)
 		}
