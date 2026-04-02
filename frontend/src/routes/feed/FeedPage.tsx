@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/use-auth'
 import type { Post, Channel, Comment, PaginatedData } from '@/types'
@@ -31,10 +31,18 @@ import {
   X,
   Hash,
   Pencil,
+  User,
+  MessageSquare,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { MarkdownContent } from '@/components/MarkdownContent'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { displayName } from '@/lib/utils'
 
 interface Classroom {
@@ -56,6 +64,7 @@ function timeAgo(dateStr: string): string {
 
 export default function FeedPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const location = useLocation()
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
   const [selectedClassroom, setSelectedClassroom] = useState<number | null>(null)
@@ -579,17 +588,37 @@ export default function FeedPage() {
             <Card key={post.id} className="transition-colors hover:bg-accent/30">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <Avatar className="h-9 w-9 shrink-0">
-                    <AvatarImage src={post.author?.avatar_url} />
-                    <AvatarFallback>
-                      {post.author?.name?.charAt(0) || '?'}
-                    </AvatarFallback>
-                  </Avatar>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild disabled={!post.author?.id}>
+                      <button className="flex items-center gap-3 text-left">
+                        <Avatar className="h-9 w-9 shrink-0">
+                          <AvatarImage src={post.author?.avatar_url} />
+                          <AvatarFallback>
+                            {post.author?.name?.charAt(0) || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium hover:underline">
+                          {displayName(post.author)}
+                        </span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    {post.author?.id && (
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => navigate(`/profile/${post.author!.id}`)}>
+                          <User className="mr-2 h-4 w-4" />
+                          프로필 보기
+                        </DropdownMenuItem>
+                        {post.author.id !== user?.id && (
+                          <DropdownMenuItem onClick={() => navigate(`/messages/${post.author!.id}`)}>
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            메시지 보내기
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    )}
+                  </DropdownMenu>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {displayName(post.author)}
-                      </span>
                       {post.channel && (
                         <Badge variant="secondary" className="text-xs">
                           {post.channel.name}
@@ -671,17 +700,37 @@ export default function FeedPage() {
                           <>
                             {(comments[post.id] || []).map((c) => (
                               <div key={c.id} className="flex gap-2">
-                                <Avatar className="h-6 w-6 shrink-0">
-                                  <AvatarImage src={c.author?.avatar_url} />
-                                  <AvatarFallback className="text-xs">
-                                    {c.author?.name?.charAt(0) || '?'}
-                                  </AvatarFallback>
-                                </Avatar>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild disabled={!c.author?.id}>
+                                    <button className="flex items-center gap-2 text-left">
+                                      <Avatar className="h-6 w-6 shrink-0">
+                                        <AvatarImage src={c.author?.avatar_url} />
+                                        <AvatarFallback className="text-xs">
+                                          {c.author?.name?.charAt(0) || '?'}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="text-xs font-medium hover:underline">
+                                        {displayName(c.author)}
+                                      </span>
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  {c.author?.id && (
+                                    <DropdownMenuContent align="start">
+                                      <DropdownMenuItem onClick={() => navigate(`/profile/${c.author!.id}`)}>
+                                        <User className="mr-2 h-4 w-4" />
+                                        프로필 보기
+                                      </DropdownMenuItem>
+                                      {c.author.id !== user?.id && (
+                                        <DropdownMenuItem onClick={() => navigate(`/messages/${c.author!.id}`)}>
+                                          <MessageSquare className="mr-2 h-4 w-4" />
+                                          메시지 보내기
+                                        </DropdownMenuItem>
+                                      )}
+                                    </DropdownMenuContent>
+                                  )}
+                                </DropdownMenu>
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1">
-                                    <span className="text-xs font-medium">
-                                      {displayName(c.author)}
-                                    </span>
                                     <span className="text-xs text-muted-foreground">
                                       {timeAgo(c.created_at)}
                                     </span>
