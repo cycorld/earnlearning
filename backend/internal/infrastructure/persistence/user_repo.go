@@ -125,6 +125,11 @@ func (r *UserRepo) UpdateStatus(id int, status user.Status) error {
 	return nil
 }
 
+func (r *UserRepo) UpdateAvatarURL(id int, avatarURL string) error {
+	_, err := r.db.Exec("UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", avatarURL, id)
+	return err
+}
+
 func (r *UserRepo) GetUserActivity(userID int) (*user.UserActivity, error) {
 	activity := &user.UserActivity{}
 

@@ -7,6 +7,7 @@ type Repository interface {
 	FindByStatus(status Status) ([]*User, error)
 	ListAll(page, limit int) ([]*User, int, error)
 	UpdateStatus(id int, status Status) error
+	UpdateAvatarURL(id int, avatarURL string) error
 	GetUserActivity(userID int) (*UserActivity, error)
 }
 
