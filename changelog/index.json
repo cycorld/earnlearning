@@ -234,5 +234,13 @@
     "date": "2026-04-02",
     "tags": ["프로필", "UX", "아바타"],
     "github": "https://github.com/cycorld/earnlearning/pull/41"
+  },
+  {
+    "slug": "034-oauth-scope-bugfix",
+    "title": "OAuth API 접근 버그 수정 + 스코프 기반 권한 제한",
+    "date": "2026-04-03",
+    "tags": ["OAuth", "보안", "버그수정", "버그바운티"],
+    "github": "https://github.com/cycorld/earnlearning/pull/42",
+    "contributor": "Student-#266"
   }
 ]
