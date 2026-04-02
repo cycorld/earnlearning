@@ -106,6 +106,14 @@ func (uc *AuthUseCase) Login(input LoginInput) (*AuthResponse, error) {
 	return &AuthResponse{Token: token, User: u}, nil
 }
 
+func (uc *AuthUseCase) UpdateAvatar(userID int, avatarURL string) error {
+	return uc.userRepo.UpdateAvatarURL(userID, avatarURL)
+}
+
+func (uc *AuthUseCase) GetUserActivity(userID int) (*user.UserActivity, error) {
+	return uc.userRepo.GetUserActivity(userID)
+}
+
 func (uc *AuthUseCase) GetMe(userID int) (*user.User, error) {
 	return uc.userRepo.FindByID(userID)
 }

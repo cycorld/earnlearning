@@ -125,6 +125,64 @@ func (r *UserRepo) UpdateStatus(id int, status user.Status) error {
 	return nil
 }
 
+func (r *UserRepo) UpdateAvatarURL(id int, avatarURL string) error {
+	_, err := r.db.Exec("UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", avatarURL, id)
+	return err
+}
+
+func (r *UserRepo) GetUserActivity(userID int) (*user.UserActivity, error) {
+	activity := &user.UserActivity{}
+
+	// Posts (최근 20개)
+	postRows, err := r.db.Query(`
+		SELECT p.id, p.content, p.post_type, COALESCE(ch.name, ''), p.like_count, p.created_at
+		FROM posts p
+		LEFT JOIN channels ch ON ch.id = p.channel_id
+		WHERE p.author_id = ?
+		ORDER BY p.created_at DESC LIMIT 20`, userID)
+	if err == nil {
+		defer postRows.Close()
+		for postRows.Next() {
+			var p user.ActivityPost
+			postRows.Scan(&p.ID, &p.Content, &p.PostType, &p.Channel, &p.LikeCount, &p.CreatedAt)
+			activity.Posts = append(activity.Posts, p)
+		}
+	}
+
+	// Freelance jobs (등록한 잡)
+	jobRows, err := r.db.Query(`
+		SELECT id, title, budget, status, created_at
+		FROM freelance_jobs
+		WHERE client_id = ?
+		ORDER BY created_at DESC LIMIT 20`, userID)
+	if err == nil {
+		defer jobRows.Close()
+		for jobRows.Next() {
+			var j user.ActivityFreelanceJob
+			jobRows.Scan(&j.ID, &j.Title, &j.Budget, &j.Status, &j.CreatedAt)
+			activity.FreelanceJobs = append(activity.FreelanceJobs, j)
+		}
+	}
+
+	// Grant applications
+	grantRows, err := r.db.Query(`
+		SELECT ga.id, ga.grant_id, g.title, ga.status, ga.proposal, ga.created_at
+		FROM grant_applications ga
+		JOIN grants g ON g.id = ga.grant_id
+		WHERE ga.user_id = ?
+		ORDER BY ga.created_at DESC`, userID)
+	if err == nil {
+		defer grantRows.Close()
+		for grantRows.Next() {
+			var a user.ActivityGrantApp
+			grantRows.Scan(&a.ID, &a.GrantID, &a.GrantTitle, &a.Status, &a.Proposal, &a.CreatedAt)
+			activity.GrantApps = append(activity.GrantApps, a)
+		}
+	}
+
+	return activity, nil
+}
+
 func scanUsers(rows *sql.Rows) ([]*user.User, error) {
 	var users []*user.User
 	for rows.Next() {

@@ -1,11 +1,19 @@
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useWallet } from '@/hooks/use-wallet'
+import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   LogOut,
   Wallet,
@@ -17,15 +25,20 @@ import {
   BellOff,
   Loader2,
   Code2,
+  Camera,
+  Trash2,
 } from 'lucide-react'
 import { usePush } from '@/hooks/use-push'
 import { useEmailPreference } from '@/hooks/use-email-preference'
 import { Mail, MailX } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { toast } from 'sonner'
 
 export default function ProfilePage() {
-  const { user, isLoading, logout } = useAuth()
+  const { user, isLoading, logout, refreshUser } = useAuth()
   const { wallet, loading: walletLoading } = useWallet()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
   const { isSupported: pushSupported, isSubscribed, loading: pushLoading, error: pushError, subscribe, unsubscribe } = usePush()
   const { emailEnabled, loading: emailLoading, updating: emailUpdating, updatePreference } = useEmailPreference()
 
@@ -39,18 +52,86 @@ export default function ProfilePage() {
 
   if (!user) return null
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드 가능합니다.')
+      return
+    }
+    setAvatarUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const result = await api.post<{ url: string }>('/upload', form)
+      await api.put('/auth/avatar', { avatar_url: result.url })
+      await refreshUser()
+      toast.success('아바타가 변경되었습니다.')
+    } catch {
+      toast.error('아바타 변경에 실패했습니다.')
+    } finally {
+      setAvatarUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleAvatarDelete = async () => {
+    setAvatarUploading(true)
+    try {
+      await api.put('/auth/avatar', { avatar_url: '' })
+      await refreshUser()
+      toast.success('아바타가 기본으로 초기화되었습니다.')
+    } catch {
+      toast.error('아바타 삭제에 실패했습니다.')
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-lg space-y-4 p-4">
       {/* User info card */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={user.avatar_url} />
-              <AvatarFallback className="text-lg">
-                {user.name.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="group relative shrink-0" disabled={avatarUploading}>
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={user.avatar_url} />
+                    <AvatarFallback className="text-lg">
+                      {user.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                    {avatarUploading ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    ) : (
+                      <Camera className="h-5 w-5 text-white" />
+                    )}
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                  <Camera className="mr-2 h-4 w-4" />
+                  사진 변경
+                </DropdownMenuItem>
+                {user.avatar_url && (
+                  <DropdownMenuItem onClick={handleAvatarDelete} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    사진 삭제
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold">{user.name}</h2>

@@ -157,6 +157,53 @@ func (h *AuthHandler) GetProfile(c echo.Context) error {
 	return successResponse(c, http.StatusOK, userToResponse(u, viewerRole))
 }
 
+// UpdateAvatar godoc
+//
+//	@Summary		아바타 변경
+//	@Description	본인의 프로필 아바타 URL 변경 (빈 문자열이면 기본 아바타로 초기화)
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Router			/auth/avatar [put]
+func (h *AuthHandler) UpdateAvatar(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	var input struct {
+		AvatarURL string `json:"avatar_url"`
+	}
+	if err := c.Bind(&input); err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "잘못된 입력입니다")
+	}
+	if err := h.authUC.UpdateAvatar(userID, input.AvatarURL); err != nil {
+		return errorResponse(c, http.StatusInternalServerError, "UPDATE_FAILED", err.Error())
+	}
+	return successResponse(c, http.StatusOK, map[string]string{"avatar_url": input.AvatarURL})
+}
+
+// GetUserActivity godoc
+//
+//	@Summary		사용자 활동 조회
+//	@Description	특정 사용자의 포스트, 프리랜서 잡, 정부과제 지원 내역
+//	@Tags			Auth
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"사용자 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/users/{id}/activity [get]
+func (h *AuthHandler) GetUserActivity(c echo.Context) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_ID", "유효하지 않은 ID입니다")
+	}
+
+	activity, err := h.authUC.GetUserActivity(id)
+	if err != nil {
+		return errorResponse(c, http.StatusInternalServerError, "FETCH_FAILED", err.Error())
+	}
+	return successResponse(c, http.StatusOK, activity)
+}
+
 type userResponse struct {
 	ID         int       `json:"id"`
 	Email      string    `json:"email"`
