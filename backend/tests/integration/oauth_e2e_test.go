@@ -23,7 +23,7 @@ func TestOAuthE2E(t *testing.T) {
 		"name":          "E2E테스트앱",
 		"description":   "E2E 테스트용 앱",
 		"redirect_uris": []string{"http://localhost:3000/callback", "http://localhost:8080/callback"},
-		"scopes":        []string{"read:profile", "read:wallet", "write:posts", "read:posts"},
+		"scopes":        []string{"read:profile", "read:wallet", "write:posts", "read:posts", "read:market"},
 	}, appOwnerToken)
 	if !regResp.Success {
 		t.Fatalf("client registration failed: %v", regResp.Error)
@@ -45,7 +45,7 @@ func TestOAuthE2E(t *testing.T) {
 	authResp := ts.post("/api/oauth/authorize", map[string]interface{}{
 		"client_id":              client.ClientID,
 		"redirect_uri":          "http://localhost:3000/callback",
-		"scopes":                []string{"read:profile", "read:wallet", "write:posts", "read:posts"},
+		"scopes":                []string{"read:profile", "read:wallet", "write:posts", "read:posts", "read:market"},
 		"state":                 "e2e-state-abc",
 		"code_challenge":        codeChallenge,
 		"code_challenge_method": "S256",
@@ -88,7 +88,7 @@ func TestOAuthE2E(t *testing.T) {
 	if tokens.TokenType != "Bearer" {
 		t.Errorf("expected Bearer, got %s", tokens.TokenType)
 	}
-	if len(tokens.Scopes) != 4 {
+	if len(tokens.Scopes) != 5 {
 		t.Errorf("expected 4 scopes, got %d", len(tokens.Scopes))
 	}
 
@@ -123,10 +123,10 @@ func TestOAuthE2E(t *testing.T) {
 		}
 	})
 
-	t.Run("OAuth 토큰으로 posts API 접근", func(t *testing.T) {
-		resp := ts.get("/api/posts?classroom_id=0&page=1&limit=1", tokens.AccessToken)
+	t.Run("OAuth 토큰으로 grants API 접근", func(t *testing.T) {
+		resp := ts.get("/api/grants?page=1&limit=1", tokens.AccessToken)
 		if !resp.Success {
-			t.Fatalf("posts API with OAuth token should succeed: %v", resp.Error)
+			t.Fatalf("grants API with OAuth token should succeed: %v", resp.Error)
 		}
 	})
 
@@ -183,10 +183,10 @@ func TestOAuthE2E(t *testing.T) {
 			t.Error("wallet should be forbidden with read:profile only scope")
 		}
 
-		// read:profile → posts 접근 불가 (403)
-		postsR := ts.get("/api/posts?classroom_id=0&page=1&limit=1", lt.AccessToken)
-		if postsR.Success {
-			t.Error("posts should be forbidden with read:profile only scope")
+		// read:profile → grants 접근 불가 (403, requires read:market)
+		grantsR := ts.get("/api/grants?page=1&limit=1", lt.AccessToken)
+		if grantsR.Success {
+			t.Error("grants should be forbidden with read:profile only scope")
 		}
 
 		// read:profile → userinfo 접근 가능
