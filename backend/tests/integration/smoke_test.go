@@ -88,7 +88,7 @@ func TestSmoke(t *testing.T) {
 		{"GET", "/api/exchange/orders/mine"},
 		{"GET", "/api/loans/mine"},
 		{"GET", "/api/notifications"},
-		{"GET", "/api/posts?classroom_id=0"},
+		// posts requires valid classroom_id, tested separately
 	}
 
 	for _, ep := range approvedEndpoints {

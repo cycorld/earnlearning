@@ -78,6 +78,13 @@ func (h *PostHandler) GetPosts(c echo.Context) error {
 	limit, _ := strconv.Atoi(c.QueryParam("limit"))
 	tag := c.QueryParam("tag")
 
+	if classroomID == 0 && channelID == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "MISSING_PARAM", "message": "classroom_id 또는 channel_id 파라미터가 필요합니다"},
+		})
+	}
+
 	if page < 1 {
 		page = 1
 	}
