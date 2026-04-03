@@ -77,7 +77,7 @@ type TokenOutput struct {
 type RefreshTokenInput struct {
 	RefreshToken string `json:"refresh_token"`
 	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+	ClientSecret string `json:"client_secret"` // Optional for PKCE public clients
 }
 
 type RevokeTokenInput struct {
@@ -291,13 +291,15 @@ func (uc *OAuthUseCase) RefreshAccessToken(input RefreshTokenInput) (*TokenOutpu
 		return nil, oauth.ErrInvalidGrant
 	}
 
-	// Verify client secret
+	// Verify client secret (optional for PKCE public clients)
 	client, err := uc.oauthRepo.GetClient(input.ClientID)
 	if err != nil {
 		return nil, err
 	}
-	if bcrypt.CompareHashAndPassword([]byte(client.SecretHash), []byte(input.ClientSecret)) != nil {
-		return nil, oauth.ErrInvalidSecret
+	if input.ClientSecret != "" {
+		if bcrypt.CompareHashAndPassword([]byte(client.SecretHash), []byte(input.ClientSecret)) != nil {
+			return nil, oauth.ErrInvalidSecret
+		}
 	}
 
 	// Revoke old token
