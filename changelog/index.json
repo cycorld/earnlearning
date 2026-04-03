@@ -263,5 +263,13 @@
     "date": "2026-04-03",
     "tags": ["명함", "UX", "디자인"],
     "github": "https://github.com/cycorld/earnlearning/pull/47"
+  },
+  {
+    "slug": "038-oauth-bugfix-2",
+    "title": "OAuth 버그바운티 2차 제보 수정",
+    "date": "2026-04-03",
+    "tags": ["OAuth", "보안", "버그수정", "버그바운티"],
+    "github": "https://github.com/cycorld/earnlearning/pull/49",
+    "contributor": "김나연"
   }
 ]
