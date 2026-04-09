@@ -136,6 +136,28 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// User databases (학생 개인 PG DB 프로비저닝 참조)
+	userDBTables := []string{
+		`CREATE TABLE IF NOT EXISTS user_databases (
+			id           INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id      INTEGER NOT NULL REFERENCES users(id),
+			project_name TEXT NOT NULL,
+			db_name      TEXT NOT NULL UNIQUE,
+			pg_username  TEXT NOT NULL UNIQUE,
+			host         TEXT NOT NULL,
+			port         INTEGER NOT NULL DEFAULT 6432,
+			created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			last_rotated DATETIME,
+			UNIQUE(user_id, project_name)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_databases_user ON user_databases(user_id)`,
+	}
+	for _, stmt := range userDBTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create user_databases tables: %w", err)
+		}
+	}
+
 	// DM tables
 	dmTables := []string{
 		`CREATE TABLE IF NOT EXISTS dm_messages (

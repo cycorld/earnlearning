@@ -33,6 +33,7 @@ import { useEmailPreference } from '@/hooks/use-email-preference'
 import { Mail, MailX } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
 import { toast } from 'sonner'
+import { UserDatabasesSection } from './UserDatabasesSection'
 
 export default function ProfilePage() {
   const { user, isLoading, logout, refreshUser } = useAuth()
@@ -210,6 +211,9 @@ export default function ProfilePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 내 데이터베이스 (학생 PG 프로비저닝) */}
+      <UserDatabasesSection />
 
       {/* Navigation links */}
       <Card>

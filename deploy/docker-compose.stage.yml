@@ -11,6 +11,9 @@ services:
       - UPLOAD_PATH=/data/uploads
       - TASKS_PATH=/data/tasks
     env_file: .env.stage
+    # 호스트의 PG 서버(포트 5432)에 DDL 용 admin 연결을 하기 위해 host-gateway 추가
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - stage
 
