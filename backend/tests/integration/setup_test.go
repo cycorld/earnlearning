@@ -15,6 +15,7 @@ import (
 	"github.com/earnlearning/backend/internal/application"
 	"github.com/earnlearning/backend/internal/infrastructure/persistence"
 	"github.com/earnlearning/backend/internal/infrastructure/push"
+	"github.com/earnlearning/backend/internal/infrastructure/userdbadmin"
 	"github.com/earnlearning/backend/internal/interfaces/http/handler"
 	"github.com/earnlearning/backend/internal/interfaces/http/router"
 	"github.com/earnlearning/backend/internal/interfaces/ws"
@@ -102,6 +103,15 @@ func setupTestServer(t *testing.T) *testServer {
 	oauthRepo := persistence.NewOAuthRepo(db)
 	oauthUC := application.NewOAuthUseCase(oauthRepo, userRepo)
 
+	// User DB (Noop provisioner — 실제 PG 없음)
+	userDBRepo := persistence.NewUserDBRepo(db)
+	userDBUC := application.NewUserDBUseCase(
+		userDBRepo,
+		userdbadmin.NewNoop(),
+		application.NewUserRepoNameResolver(userRepo),
+		3,
+	)
+
 	// Docs directory — resolve relative to backend root
 	docsDir := "../../docs"
 
@@ -123,6 +133,7 @@ func setupTestServer(t *testing.T) *testServer {
 		OAuth:        handler.NewOAuthHandler(oauthUC),
 		OAuthUC:      oauthUC,
 		DM:           handler.NewDMHandler(dmUC),
+		UserDB:       handler.NewUserDBHandler(userDBUC),
 	}
 
 	e := echo.New()

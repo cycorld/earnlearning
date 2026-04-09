@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/earnlearning/backend/internal/infrastructure/persistence"
 	"github.com/earnlearning/backend/internal/infrastructure/email"
 	"github.com/earnlearning/backend/internal/infrastructure/push"
+	"github.com/earnlearning/backend/internal/infrastructure/userdbadmin"
 	"github.com/earnlearning/backend/internal/interfaces/http/handler"
 	"github.com/earnlearning/backend/internal/interfaces/http/router"
 	"github.com/earnlearning/backend/internal/interfaces/ws"
@@ -72,6 +74,7 @@ func main() {
 	loanRepo := persistence.NewLoanRepo(db)
 	notifRepo := persistence.NewNotificationRepo(db)
 	shareholderUpdater := persistence.NewShareholderUpdater(db)
+	userDBRepo := persistence.NewUserDBRepo(db)
 
 	// WebSocket Hub
 	hub := ws.NewHub()
@@ -129,6 +132,23 @@ func main() {
 	oauthRepo := persistence.NewOAuthRepo(db)
 	oauthUC := application.NewOAuthUseCase(oauthRepo, userRepo)
 
+	// 학생 DB 프로비저너 (POSTGRES_ADMIN_URL 이 비면 NoopProvisioner 가 사용됨)
+	userDBProvisioner, err := userdbadmin.New(userdbadmin.Config{
+		AdminDSN:   os.Getenv("POSTGRES_ADMIN_URL"),
+		PublicHost: os.Getenv("POSTGRES_PUBLIC_HOST"),
+		PublicPort: atoiDefault(os.Getenv("POSTGRES_PUBLIC_PORT"), 6432),
+	})
+	if err != nil {
+		log.Printf("userdb provisioner disabled: %v", err)
+		userDBProvisioner = userdbadmin.NewNoop()
+	}
+	userDBUC := application.NewUserDBUseCase(
+		userDBRepo,
+		userDBProvisioner,
+		application.NewUserRepoNameResolver(userRepo),
+		atoiDefault(os.Getenv("USER_DB_MAX_PER_USER"), 3),
+	)
+
 	// Docs directory (swagger.json location)
 	docsDir := os.Getenv("DOCS_DIR")
 	if docsDir == "" {
@@ -155,6 +175,7 @@ func main() {
 		OAuth:        handler.NewOAuthHandler(oauthUC),
 		OAuthUC:      oauthUC,
 		DM:           handler.NewDMHandler(dmUC),
+		UserDB:       handler.NewUserDBHandler(userDBUC),
 	}
 
 	// Echo server
@@ -169,4 +190,16 @@ func main() {
 
 	log.Printf("EarnLearning LMS starting on :%s", cfg.Port)
 	e.Logger.Fatal(e.Start(":" + cfg.Port))
+}
+
+// atoiDefault 는 빈 문자열이나 파싱 실패 시 기본값을 돌려준다.
+func atoiDefault(s string, def int) int {
+	if s == "" {
+		return def
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return def
+	}
+	return n
 }
