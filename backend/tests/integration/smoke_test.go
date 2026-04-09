@@ -88,6 +88,7 @@ func TestSmoke(t *testing.T) {
 		{"GET", "/api/exchange/orders/mine"},
 		{"GET", "/api/loans/mine"},
 		{"GET", "/api/notifications"},
+		{"GET", "/api/users/me/databases"},
 		// posts requires valid classroom_id, tested separately
 	}
 
