@@ -271,5 +271,11 @@
     "tags": ["OAuth", "보안", "버그수정", "버그바운티"],
     "github": "https://github.com/cycorld/earnlearning/pull/49",
     "contributor": "Student-#267"
+  },
+  {
+    "slug": "039-postgres-server-setup",
+    "title": "학생용 PostgreSQL 서버 설치 (PgBouncer 포함)",
+    "date": "2026-04-10",
+    "tags": ["PostgreSQL", "PgBouncer", "인프라", "DB", "학생DB"]
   }
 ]
