@@ -120,7 +120,8 @@ else
   # 새 파일: 전역 최대 번호 + 1
   LAST_NUM=$(ls "$PROMPTS_DIR"/*.md 2>/dev/null | grep -oE '/[0-9]+' | grep -oE '[0-9]+' | sort -n | tail -1 || echo "0")
   [ -z "$LAST_NUM" ] && LAST_NUM=0
-  NEXT_NUM=$(printf "%03d" $((LAST_NUM + 1)))
+  # 10#$LAST_NUM: leading 0 가 있어도 8진수로 파싱되지 않도록 강제 10진수
+  NEXT_NUM=$(printf "%03d" $((10#$LAST_NUM + 1)))
   FILENAME="${PROMPTS_DIR}/${NEXT_NUM}-${SAFE_BRANCH}.md"
 
   cat > "$FILENAME" <<EOF
@@ -135,7 +136,7 @@ fi
 
 # 파일 내 순번 계산
 FILE_LAST=$(grep -oE '^## [0-9]+\.' "$FILENAME" 2>/dev/null | tail -1 | grep -oE '[0-9]+' || echo "0")
-PROMPT_NUM=$((FILE_LAST + 1))
+PROMPT_NUM=$((10#$FILE_LAST + 1))
 
 # 프롬프트 추가
 CLEAN_PROMPT=$(echo "$PROMPT" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
