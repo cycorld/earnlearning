@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/save-prompt.sh",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/save-prompt.sh",
             "timeout": 5
           }
         ]
@@ -18,11 +18,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/check-changelog.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-changelog.sh"
           },
           {
             "type": "command",
-            "command": ".claude/hooks/check-task.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-task.sh"
           }
         ]
       }

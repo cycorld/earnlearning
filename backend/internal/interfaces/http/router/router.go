@@ -30,6 +30,7 @@ type Handlers struct {
 	OAuth        *handler.OAuthHandler
 	OAuthUC      *application.OAuthUseCase // needed for middleware
 	DM           *handler.DMHandler
+	UserDB       *handler.UserDBHandler
 }
 
 // Setup registers all routes on the given Echo instance.
@@ -181,6 +182,14 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.GET("/loans/mine", h.Loan.GetMyLoans, middleware.RequireScope("read:wallet"))
 	approved.GET("/loans/:id/payments", h.Loan.GetLoanPayments, middleware.RequireScope("read:wallet"))
 	approved.POST("/loans/:id/repay", h.Loan.RepayLoan, middleware.RequireScope("write:wallet"))
+
+	// User Databases (학생 개인 PostgreSQL 프로비저닝) - 프로필 섹션에서 사용
+	if h.UserDB != nil {
+		approved.GET("/users/me/databases", h.UserDB.ListMyDatabases)
+		approved.POST("/users/me/databases", h.UserDB.CreateMyDatabase)
+		approved.POST("/users/me/databases/:id/rotate", h.UserDB.RotateMyDatabasePassword)
+		approved.DELETE("/users/me/databases/:id", h.UserDB.DeleteMyDatabase)
+	}
 
 	// Notifications (OAuth: read:notifications)
 	approved.GET("/notifications", h.Notification.GetNotifications, middleware.RequireScope("read:notifications"))
