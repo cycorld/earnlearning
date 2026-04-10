@@ -47,7 +47,7 @@ type UserDatabaseWithCreds = UserDatabase & {
 
 // --- Main section ---
 
-export function UserDatabasesSection() {
+export function UserDatabasesSection({ className = '' }: { className?: string }) {
   const [items, setItems] = useState<UserDatabase[]>([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
@@ -71,7 +71,7 @@ export function UserDatabasesSection() {
   }, [])
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Database className="h-4 w-4" />내 데이터베이스
@@ -189,7 +189,7 @@ function DatabaseCard({
             {db.db_name}
           </p>
         </div>
-        <div className="flex gap-1">
+        <div className="flex shrink-0 gap-1">
           <Button
             variant="ghost"
             size="sm"
@@ -282,18 +282,24 @@ function DatabaseCard({
 function KV({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false)
   return (
-    <div className="flex items-center gap-2">
+    // min-w-0 on the flex container 는 자식 truncate 가 실제로 동작하게 해줌
+    // (flex 자식 기본 min-width 가 auto = 콘텐츠 폭이라 그냥 두면 안 줄어듦)
+    <div className="flex min-w-0 items-center gap-2">
       <span className="w-16 shrink-0 text-muted-foreground">{label}:</span>
-      <code className="flex-1 truncate rounded bg-background px-1 font-mono">
+      <code
+        className="min-w-0 flex-1 truncate select-all rounded bg-background px-1 font-mono"
+        title={value}
+      >
         {value}
       </code>
       <button
-        className="text-muted-foreground hover:text-foreground"
+        className="shrink-0 text-muted-foreground hover:text-foreground"
         onClick={() => {
           navigator.clipboard.writeText(value)
           setCopied(true)
           setTimeout(() => setCopied(false), 1500)
         }}
+        aria-label={`${label} 복사`}
       >
         {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
       </button>
@@ -435,19 +441,22 @@ function CredentialsDialog({
 function CopyBlock({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
   return (
-    <div className="flex items-center gap-1 rounded border bg-background p-2">
-      <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-[10px]">
-        {value}
-      </code>
+    // 다이얼로그 폭을 넘는 긴 값 (DATABASE_URL, psql 명령어) 도 줄바꿈으로 자연스럽게
+    // 표시하고, 복사 버튼은 절대위치로 우상단에 항상 노출 (가로 스크롤 X)
+    <div className="relative rounded border bg-background">
+      <pre className="whitespace-pre-wrap break-all p-2 pr-9 font-mono text-[10px] leading-snug">
+        <code className="select-all">{value}</code>
+      </pre>
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 w-6 shrink-0 p-0"
+        className="absolute top-1 right-1 h-6 w-6 shrink-0 p-0"
         onClick={() => {
           navigator.clipboard.writeText(value)
           setCopied(true)
           setTimeout(() => setCopied(false), 1500)
         }}
+        aria-label="복사"
       >
         {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
       </Button>
