@@ -41,7 +41,11 @@ export interface Transaction {
 
 export interface Company {
   id: number
+  owner_id?: number
   owner?: { id: number; name: string; student_id: string }
+  // GET /companies (전체 목록) 응답에 포함되는 필드들
+  owner_name?: string
+  owner_student_id?: string
   name: string
   description: string
   logo_url: string

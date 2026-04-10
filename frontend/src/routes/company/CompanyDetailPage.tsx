@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { CreditCard, Pencil, Loader2, Plus } from 'lucide-react'
+import { CreditCard, Pencil, Loader2, Plus, Upload } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
 
 export default function CompanyDetailPage() {
@@ -29,8 +29,9 @@ export default function CompanyDetailPage() {
   const [loading, setLoading] = useState(true)
 
   const [editOpen, setEditOpen] = useState(false)
-  const [editForm, setEditForm] = useState({ name: '', description: '' })
+  const [editForm, setEditForm] = useState({ name: '', description: '', logo_url: '' })
   const [editLoading, setEditLoading] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
 
   const [cardLoading, setCardLoading] = useState(false)
 
@@ -53,8 +54,27 @@ export default function CompanyDetailPage() {
 
   function openEditDialog() {
     if (!company) return
-    setEditForm({ name: company.name, description: company.description })
+    setEditForm({
+      name: company.name,
+      description: company.description,
+      logo_url: company.logo_url || '',
+    })
     setEditOpen(true)
+  }
+
+  async function handleLogoUpload(file: File) {
+    setLogoUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const result = await api.post<{ url: string }>('/upload', formData)
+      setEditForm((prev) => ({ ...prev, logo_url: result.url }))
+      toast.success('로고가 업로드되었습니다.')
+    } catch {
+      toast.error('로고 업로드에 실패했습니다.')
+    } finally {
+      setLogoUploading(false)
+    }
   }
 
   async function handleEdit(e: React.FormEvent) {
@@ -66,11 +86,13 @@ export default function CompanyDetailPage() {
 
     setEditLoading(true)
     try {
-      const updated = await api.put<Company>(`/companies/${id}`, {
+      await api.put(`/companies/${id}`, {
         name: editForm.name.trim(),
         description: editForm.description.trim(),
+        logo_url: editForm.logo_url,
       })
-      setCompany(updated)
+      // 백엔드 PUT 응답이 {message: ...} 라 객체 갱신 못함 → 다시 조회
+      await fetchCompany()
       setEditOpen(false)
       toast.success('회사 정보가 수정되었습니다.')
     } catch (err) {
@@ -248,6 +270,66 @@ export default function CompanyDetailPage() {
             <DialogTitle>회사 정보 수정</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEdit} className="space-y-4">
+            {/* 로고 업로드 */}
+            <div className="space-y-2">
+              <Label>회사 로고</Label>
+              <div className="flex items-center gap-4">
+                {editForm.logo_url ? (
+                  <img
+                    src={editForm.logo_url}
+                    alt="로고 미리보기"
+                    className="h-16 w-16 rounded-lg border object-cover"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed bg-muted">
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-1">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={logoUploading}
+                      onClick={() => document.getElementById('edit-logo-input')?.click()}
+                    >
+                      {logoUploading ? (
+                        <>
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                          업로드 중
+                        </>
+                      ) : (
+                        editForm.logo_url ? '로고 변경' : '이미지 선택'
+                      )}
+                    </Button>
+                    {editForm.logo_url && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditForm({ ...editForm, logo_url: '' })}
+                      >
+                        제거
+                      </Button>
+                    )}
+                  </div>
+                  <input
+                    id="edit-logo-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleLogoUpload(file)
+                      e.target.value = ''
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">PNG, JPG (최대 2MB)</p>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="edit-name">회사명</Label>
               <Input
@@ -270,7 +352,7 @@ export default function CompanyDetailPage() {
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
                 취소
               </Button>
-              <Button type="submit" disabled={editLoading}>
+              <Button type="submit" disabled={editLoading || logoUploading}>
                 {editLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 저장
               </Button>

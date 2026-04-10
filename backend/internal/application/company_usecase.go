@@ -181,7 +181,16 @@ func (uc *CompanyUsecase) GetCompany(companyID int) (*CompanyDetail, error) {
 	}, nil
 }
 
-func (uc *CompanyUsecase) UpdateCompany(companyID, userID int, description, logoURL string) error {
+// UpdateCompanyInput 는 기업 정보 부분 업데이트용. 빈 문자열은 "변경 안 함" 의미가
+// 아니라 명시적 값으로 처리한다 (description / logo_url 은 빈 값이 정상). name 만
+// 빈 문자열이면 변경 안 함으로 본다.
+type UpdateCompanyInput struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	LogoURL     string `json:"logo_url"`
+}
+
+func (uc *CompanyUsecase) UpdateCompany(companyID, userID int, input UpdateCompanyInput) error {
 	c, err := uc.companyRepo.FindByID(companyID)
 	if err != nil {
 		return err
@@ -190,8 +199,12 @@ func (uc *CompanyUsecase) UpdateCompany(companyID, userID int, description, logo
 		return company.ErrNotOwner
 	}
 
-	c.Description = description
-	c.LogoURL = logoURL
+	// name 은 빈 문자열이면 기존 값 유지 (호환성 — 기존 클라이언트가 안 보낼 수 있음)
+	if input.Name != "" {
+		c.Name = input.Name
+	}
+	c.Description = input.Description
+	c.LogoURL = input.LogoURL
 	return uc.companyRepo.Update(c)
 }
 
@@ -230,6 +243,45 @@ func (uc *CompanyUsecase) GetMyCompanies(userID int) ([]*MyCompanyItem, error) {
 
 func (uc *CompanyUsecase) GetAllCompanies() ([]*company.Company, error) {
 	return uc.companyRepo.FindAll()
+}
+
+// PublicCompanyItem 은 학생용 전체 기업 목록의 한 항목.
+// owner 정보를 함께 노출 (이름/학번) 해서 카드 UI 에서 바로 표시 가능.
+type PublicCompanyItem struct {
+	*company.Company
+	OwnerName     string `json:"owner_name"`
+	OwnerStudent  string `json:"owner_student_id"`
+	WalletBalance int    `json:"wallet_balance"`
+}
+
+// GetAllCompaniesWithOwners 는 모든 회사 + 소유자 정보를 반환한다.
+// 학생/관리자 누구나 호출 가능.
+func (uc *CompanyUsecase) GetAllCompaniesWithOwners() ([]*PublicCompanyItem, error) {
+	companies, err := uc.companyRepo.FindAll()
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]*PublicCompanyItem, 0, len(companies))
+	for _, c := range companies {
+		item := &PublicCompanyItem{Company: c}
+
+		// 소유자 정보
+		owner, err := uc.userRepo.FindByID(c.OwnerID)
+		if err == nil && owner != nil {
+			item.OwnerName = owner.Name
+			item.OwnerStudent = owner.StudentID
+		}
+
+		// 회사 지갑 잔액
+		cw, err := uc.companyRepo.FindCompanyWallet(c.ID)
+		if err == nil && cw != nil {
+			item.WalletBalance = cw.Balance
+		}
+
+		items = append(items, item)
+	}
+	return items, nil
 }
 
 func (uc *CompanyUsecase) CreateBusinessCard(companyID, userID int, card company.BusinessCard) error {
