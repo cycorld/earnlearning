@@ -36,3 +36,4 @@ frontend/public/changelog
 
 # Backend binary
 backend/server
+.gstack/
