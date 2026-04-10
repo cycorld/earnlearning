@@ -23,6 +23,12 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
+        // 새 SW 가 install 되면 waiting 단계 없이 즉시 activate.
+        // 새 코드가 더 빨리 사용자에게 도달하지만, 활성 탭이 다른 SW 를 쓰는 동안
+        // 일시적인 불일치가 생길 수 있어서 VersionWatcher 가 토스트로 reload 안내.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         importScripts: ['/sw-push.js'],
         navigateFallbackDenylist: [/^\/docs/, /^\/api\//, /^\/uploads\//],
