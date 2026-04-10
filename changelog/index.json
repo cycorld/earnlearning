@@ -289,5 +289,11 @@
     "title": "학생 DB 슬러그 충돌 에러 메시지 개선",
     "date": "2026-04-10",
     "tags": ["fix", "PostgreSQL", "학생DB", "UX"]
+  },
+  {
+    "slug": "042-profile-responsive-dialog-overflow",
+    "title": "프로필 페이지 반응형 + DB 다이얼로그 모바일 오버플로우 수정",
+    "date": "2026-04-10",
+    "tags": ["fix", "반응형", "UI", "프론트엔드", "학생DB"]
   }
 ]
