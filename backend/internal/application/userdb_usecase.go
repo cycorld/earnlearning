@@ -1,6 +1,7 @@
 package application
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -86,6 +87,10 @@ func (uc *UserDBUseCase) Create(userID int, input CreateUserDBInput) (*CreateUse
 	// 프로비저닝 (실제 PG 에 DB/ROLE 생성)
 	created, err := uc.provisioner.Create(username, input.ProjectName)
 	if err != nil {
+		// 도메인 에러는 그대로 전파 (핸들러에서 HTTP 상태 매핑)
+		if errors.Is(err, userdb.ErrSlugConflict) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("%w: %v", userdb.ErrProvisionFailed, err)
 	}
 

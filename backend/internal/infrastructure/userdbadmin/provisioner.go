@@ -10,12 +10,15 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
+
+	"github.com/earnlearning/backend/internal/domain/userdb"
 )
 
 // Provisioner 는 PG 서버에 학생 DB 를 생성/삭제/재발급 하는 인터페이스.
@@ -155,6 +158,10 @@ func (p *PGProvisioner) Create(username, projectName string) (*CreatedDB, error)
 	_, err = p.db.Exec(fmt.Sprintf(`CREATE ROLE %s WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION INHERIT CONNECTION LIMIT 10 PASSWORD '%s'`,
 		qUser, escapeLiteral(password)))
 	if err != nil {
+		if isDuplicateObjectError(err) {
+			// 다른 사용자가 같은 slug 로 이미 이 DB 를 만들었음
+			return nil, userdb.ErrSlugConflict
+		}
 		return nil, fmt.Errorf("create role: %w", err)
 	}
 
@@ -163,6 +170,9 @@ func (p *PGProvisioner) Create(username, projectName string) (*CreatedDB, error)
 		qDB, qUser))
 	if err != nil {
 		_, _ = p.db.Exec(fmt.Sprintf(`DROP ROLE IF EXISTS %s`, qUser))
+		if isDuplicateDatabaseError(err) {
+			return nil, userdb.ErrSlugConflict
+		}
 		return nil, fmt.Errorf("create database: %w", err)
 	}
 
@@ -286,6 +296,25 @@ func (p *PGProvisioner) dropAll(dbName, pgUsername string) error {
 // escapeLiteral 은 SQL 문자열 리터럴용 ' 이스케이프.
 func escapeLiteral(s string) string {
 	return strings.ReplaceAll(s, "'", "''")
+}
+
+// isDuplicateObjectError 는 lib/pq 에러가 PG SQLSTATE 42710 (duplicate_object,
+// 주로 `CREATE ROLE ... already exists` 인지 확인한다.
+func isDuplicateObjectError(err error) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return pqErr.Code == "42710"
+	}
+	return false
+}
+
+// isDuplicateDatabaseError 는 SQLSTATE 42P04 (duplicate_database) 검사.
+func isDuplicateDatabaseError(err error) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return pqErr.Code == "42P04"
+	}
+	return false
 }
 
 // --- NoopProvisioner (로컬 개발 / 테스트 용) ---
