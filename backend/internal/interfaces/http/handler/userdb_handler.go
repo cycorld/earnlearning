@@ -123,6 +123,8 @@ func userdbErrorResponse(c echo.Context, err error) error {
 		return c.JSON(http.StatusBadRequest, errorResp("INVALID_NAME", err.Error()))
 	case errors.Is(err, userdb.ErrDuplicate):
 		return c.JSON(http.StatusConflict, errorResp("DUPLICATE", err.Error()))
+	case errors.Is(err, userdb.ErrSlugConflict):
+		return c.JSON(http.StatusConflict, errorResp("SLUG_CONFLICT", err.Error()))
 	case errors.Is(err, userdb.ErrQuotaExceeded):
 		return c.JSON(http.StatusForbidden, errorResp("QUOTA_EXCEEDED", err.Error()))
 	case errors.Is(err, userdb.ErrProvisionerDown):
