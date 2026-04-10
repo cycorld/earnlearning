@@ -283,5 +283,11 @@
     "title": "LMS 프로필에서 학생 개인 PostgreSQL 프로비저닝",
     "date": "2026-04-10",
     "tags": ["Feature", "PostgreSQL", "프로필", "학생DB", "백엔드", "프론트엔드"]
+  },
+  {
+    "slug": "041-userdb-slug-conflict-error",
+    "title": "학생 DB 슬러그 충돌 에러 메시지 개선",
+    "date": "2026-04-10",
+    "tags": ["fix", "PostgreSQL", "학생DB", "UX"]
   }
 ]
