@@ -107,6 +107,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 
 	// Companies (OAuth: read:company / write:company)
 	approved.POST("/companies", h.Company.CreateCompany, middleware.RequireScope("write:company"))
+	approved.GET("/companies", h.Company.ListCompaniesPublic, middleware.RequireScope("read:company"))
 	approved.GET("/companies/mine", h.Company.GetMyCompanies, middleware.RequireScope("read:company"))
 	approved.GET("/companies/:id", h.Company.GetCompany, middleware.RequireScope("read:company"))
 	approved.PUT("/companies/:id", h.Company.UpdateCompany, middleware.RequireScope("write:company"))

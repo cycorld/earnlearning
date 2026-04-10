@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -46,13 +47,17 @@ func (h *CompanyHandler) CreateCompany(c echo.Context) error {
 	if err != nil {
 		code := http.StatusInternalServerError
 		errCode := "CREATE_FAILED"
-		switch err {
-		case company.ErrMinCapital:
+		// errors.Is 로 wrapped 에러도 잡음 (usecase 가 fmt.Errorf("...: %w", err) 로 감쌈)
+		switch {
+		case errors.Is(err, company.ErrMinCapital):
 			code = http.StatusBadRequest
 			errCode = "MIN_CAPITAL"
-		case company.ErrInsufficientFunds:
+		case errors.Is(err, company.ErrInsufficientFunds):
 			code = http.StatusBadRequest
 			errCode = "INSUFFICIENT_FUNDS"
+		case errors.Is(err, company.ErrDuplicateName):
+			code = http.StatusConflict
+			errCode = "DUPLICATE_NAME"
 		}
 		return c.JSON(code, map[string]interface{}{
 			"success": false, "data": nil,
@@ -127,10 +132,7 @@ func (h *CompanyHandler) UpdateCompany(c echo.Context) error {
 		})
 	}
 
-	var input struct {
-		Description string `json:"description"`
-		LogoURL     string `json:"logo_url"`
-	}
+	var input application.UpdateCompanyInput
 	if err := c.Bind(&input); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"success": false, "data": nil,
@@ -138,7 +140,7 @@ func (h *CompanyHandler) UpdateCompany(c echo.Context) error {
 		})
 	}
 
-	if err := h.uc.UpdateCompany(id, userID, input.Description, input.LogoURL); err != nil {
+	if err := h.uc.UpdateCompany(id, userID, input); err != nil {
 		if err == company.ErrNotOwner {
 			return c.JSON(http.StatusForbidden, map[string]interface{}{
 				"success": false, "data": nil,
@@ -149,6 +151,12 @@ func (h *CompanyHandler) UpdateCompany(c echo.Context) error {
 			return c.JSON(http.StatusNotFound, map[string]interface{}{
 				"success": false, "data": nil,
 				"error": map[string]string{"code": "NOT_FOUND", "message": err.Error()},
+			})
+		}
+		if err == company.ErrDuplicateName {
+			return c.JSON(http.StatusConflict, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "DUPLICATE_NAME", "message": err.Error()},
 			})
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -207,6 +215,33 @@ func (h *CompanyHandler) ListAllCompanies(c echo.Context) error {
 
 	if result == nil {
 		result = []*company.Company{}
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": result, "error": nil,
+	})
+}
+
+// ListCompaniesPublic godoc
+//
+//	@Summary		전체 기업 둘러보기
+//	@Description	모든 학생의 회사 목록 (소유자 정보 포함). 학생 본인 회사 + 타 학생 회사 모두 노출.
+//	@Tags			Company
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Router			/companies [get]
+func (h *CompanyHandler) ListCompaniesPublic(c echo.Context) error {
+	result, err := h.uc.GetAllCompaniesWithOwners()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "FETCH_FAILED", "message": err.Error()},
+		})
+	}
+
+	if result == nil {
+		result = []*application.PublicCompanyItem{}
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
