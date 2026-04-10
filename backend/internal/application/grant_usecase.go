@@ -56,7 +56,7 @@ func (uc *GrantUseCase) CreateGrant(input CreateGrantInput, adminID int) (*grant
 	}
 
 	// Auto-post to 과제 channel
-	content := fmt.Sprintf("## 📋 새 정부과제 공고: %s\n\n%s\n\n**보상:** %s | **모집 인원:** %d명\n\n👉 [지원하러 가기](/grants/%d)",
+	content := fmt.Sprintf("## 📋 새 정부과제 공고: %s\n\n%s\n\n**보상:** %s | **모집 인원:** %d명\n\n👉 [지원하러 가기](/grant/%d)",
 		input.Title, input.Description, formatMoney(input.Reward), input.MaxApplicants, id)
 	uc.autoPoster.PostToChannelAsAdmin("assignment", content, []string{"정부과제", "공고"})
 
