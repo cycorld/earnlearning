@@ -3,6 +3,7 @@ package persistence
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/earnlearning/backend/internal/domain/company"
 )
@@ -28,6 +29,9 @@ func (r *CompanyRepo) Create(c *company.Company) (int, error) {
 		c.Valuation, listed, c.BusinessCard, c.Status,
 	)
 	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed: companies.name") {
+			return 0, company.ErrDuplicateName
+		}
 		return 0, fmt.Errorf("insert company: %w", err)
 	}
 	id, err := res.LastInsertId()
@@ -114,11 +118,16 @@ func (r *CompanyRepo) FindAll() ([]*company.Company, error) {
 
 func (r *CompanyRepo) Update(c *company.Company) error {
 	_, err := r.db.Exec(`
-		UPDATE companies SET description = ?, logo_url = ?, business_card = ?
+		UPDATE companies SET name = ?, description = ?, logo_url = ?, business_card = ?
 		WHERE id = ?`,
-		c.Description, c.LogoURL, c.BusinessCard, c.ID,
+		c.Name, c.Description, c.LogoURL, c.BusinessCard, c.ID,
 	)
 	if err != nil {
+		// SQLite UNIQUE constraint 위반 → ErrDuplicateName 으로 매핑
+		// (companies.name 이 UNIQUE)
+		if strings.Contains(err.Error(), "UNIQUE constraint failed: companies.name") {
+			return company.ErrDuplicateName
+		}
 		return fmt.Errorf("update company: %w", err)
 	}
 	return nil
