@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams as useRouteParams } from 'react-router-dom'
 import { AuthProvider } from '@/hooks/use-auth'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
@@ -62,6 +62,12 @@ import AdminAnnouncePage from '@/routes/admin/AdminAnnouncePage'
 import AdminTasksPage from '@/routes/admin/AdminTasksPage'
 import AdminClassroomDetailPage from '@/routes/admin/AdminClassroomDetailPage'
 
+// /grants/:id → /grant/:id 리다이렉트 (기존 공지 게시글의 잘못된 복수형 링크)
+function GrantRedirect() {
+  const { id } = useRouteParams()
+  return <Navigate to={`/grant/${id}`} replace />
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -95,6 +101,8 @@ export default function App() {
               <Route path="/grant" element={<GrantListPage />} />
               <Route path="/grant/new" element={<GrantNewPage />} />
               <Route path="/grant/:id" element={<GrantDetailPage />} />
+              {/* /grants/:id → /grant/:id 리다이렉트 (기존 공지 게시글의 잘못된 링크 호환) */}
+              <Route path="/grants/:id" element={<GrantRedirect />} />
               <Route path="/bank" element={<BankPage />} />
               <Route path="/bank/apply" element={<LoanApplyPage />} />
               <Route path="/profile" element={<ProfilePage />} />
