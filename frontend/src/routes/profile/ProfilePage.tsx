@@ -90,7 +90,11 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    // 모바일: 단일 컬럼 (기존 동작)
+    // lg+: 2열 그리드 — 좌측은 사용자/자산/네비/로그아웃, 우측은 내 데이터베이스
+    //   minmax(0,*) 는 그리드 자식이 콘텐츠 폭으로 부풀어 가로 스크롤이 생기는 것을 차단
+    <div className="mx-auto max-w-lg p-4 lg:max-w-5xl">
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start lg:gap-4">
       {/* User info card */}
       <Card>
         <CardContent className="p-6">
@@ -212,8 +216,9 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* 내 데이터베이스 (학생 PG 프로비저닝) */}
-      <UserDatabasesSection />
+      {/* 내 데이터베이스 (학생 PG 프로비저닝)
+          데스크톱에서는 우측 컬럼 전체에 배치 (탑부터 4행 span) */}
+      <UserDatabasesSection className="lg:col-start-2 lg:row-start-1 lg:row-span-4" />
 
       {/* Navigation links */}
       <Card>
@@ -326,6 +331,7 @@ export default function ProfilePage() {
         <LogOut className="h-4 w-4" />
         로그아웃
       </Button>
+      </div>
     </div>
   )
 }
