@@ -64,6 +64,22 @@ export interface Company {
   created_at: string
 }
 
+export interface Disclosure {
+  id: number
+  company_id: number
+  author_id: number
+  content: string
+  period_from: string
+  period_to: string
+  status: string
+  reward: number
+  admin_note: string
+  company_name?: string
+  author_name?: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Shareholder {
   user_id: number
   name: string

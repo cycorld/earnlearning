@@ -56,6 +56,24 @@ func RunMigrations(db *sql.DB) error {
 		db.Exec(stmt) // ignore "duplicate column" errors
 	}
 
+	// Create company_disclosures table (idempotent)
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS company_disclosures (
+		id          INTEGER PRIMARY KEY AUTOINCREMENT,
+		company_id  INTEGER NOT NULL REFERENCES companies(id),
+		author_id   INTEGER NOT NULL REFERENCES users(id),
+		content     TEXT NOT NULL,
+		period_from DATE NOT NULL,
+		period_to   DATE NOT NULL,
+		status      TEXT NOT NULL DEFAULT 'pending',
+		reward      INTEGER DEFAULT 0,
+		admin_note  TEXT DEFAULT '',
+		created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`)
+	if err != nil {
+		return fmt.Errorf("create company_disclosures: %w", err)
+	}
+
 	// Create email_preferences table (idempotent)
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS email_preferences (
 		user_id INTEGER PRIMARY KEY REFERENCES users(id),

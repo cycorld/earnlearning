@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner'
 import { CreditCard, ExternalLink, Pencil, Loader2, Plus, Upload } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
+import { DisclosureSection } from './DisclosureSection'
 
 export default function CompanyDetailPage() {
   const { id } = useParams()
@@ -245,6 +246,9 @@ export default function CompanyDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Disclosures */}
+      <DisclosureSection companyId={Number(id)} isOwner={isOwner} />
 
       <Separator />
 

@@ -357,3 +357,150 @@ func (h *CompanyHandler) DownloadBusinessCard(c echo.Context) error {
 	c.Response().Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
 	return c.Blob(http.StatusOK, "text/plain; charset=utf-8", content)
 }
+
+// Disclosure handlers
+
+func (h *CompanyHandler) CreateDisclosure(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	companyID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 ID입니다"},
+		})
+	}
+
+	var input application.CreateDisclosureInput
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_INPUT", "message": "잘못된 입력입니다"},
+		})
+	}
+
+	d, err := h.uc.CreateDisclosure(companyID, userID, input)
+	if err != nil {
+		if errors.Is(err, company.ErrNotOwner) {
+			return c.JSON(http.StatusForbidden, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_OWNER", "message": err.Error()},
+			})
+		}
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "CREATE_FAILED", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"success": true, "data": d, "error": nil,
+	})
+}
+
+func (h *CompanyHandler) GetDisclosures(c echo.Context) error {
+	companyID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 ID입니다"},
+		})
+	}
+
+	disclosures, err := h.uc.GetDisclosuresByCompanyID(companyID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "FETCH_FAILED", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": disclosures, "error": nil,
+	})
+}
+
+func (h *CompanyHandler) GetAllDisclosures(c echo.Context) error {
+	disclosures, err := h.uc.GetAllDisclosures()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "FETCH_FAILED", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": disclosures, "error": nil,
+	})
+}
+
+func (h *CompanyHandler) ApproveDisclosure(c echo.Context) error {
+	did, err := strconv.Atoi(c.Param("did"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 ID입니다"},
+		})
+	}
+
+	var input application.ApproveDisclosureInput
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_INPUT", "message": "잘못된 입력입니다"},
+		})
+	}
+
+	if err := h.uc.ApproveDisclosure(did, input); err != nil {
+		if errors.Is(err, company.ErrDisclosureNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_FOUND", "message": err.Error()},
+			})
+		}
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "APPROVE_FAILED", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": map[string]string{"message": "공시가 승인되었습니다"}, "error": nil,
+	})
+}
+
+func (h *CompanyHandler) RejectDisclosure(c echo.Context) error {
+	did, err := strconv.Atoi(c.Param("did"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 ID입니다"},
+		})
+	}
+
+	var body struct {
+		AdminNote string `json:"admin_note"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_INPUT", "message": "잘못된 입력입니다"},
+		})
+	}
+
+	if err := h.uc.RejectDisclosure(did, body.AdminNote); err != nil {
+		if errors.Is(err, company.ErrDisclosureNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_FOUND", "message": err.Error()},
+			})
+		}
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "REJECT_FAILED", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": map[string]string{"message": "공시가 거절되었습니다"}, "error": nil,
+	})
+}

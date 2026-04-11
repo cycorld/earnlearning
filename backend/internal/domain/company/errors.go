@@ -10,4 +10,5 @@ var (
 	ErrDuplicateName      = errors.New("이미 사용 중인 회사명입니다")
 	ErrAlreadyShareholder = errors.New("이미 주주입니다")
 	ErrWalletNotFound     = errors.New("회사 지갑을 찾을 수 없습니다")
+	ErrDisclosureNotFound = errors.New("공시를 찾을 수 없습니다")
 )
