@@ -60,6 +60,7 @@ import AdminLoansPage from '@/routes/admin/AdminLoansPage'
 import AdminKpiPage from '@/routes/admin/AdminKpiPage'
 import AdminAnnouncePage from '@/routes/admin/AdminAnnouncePage'
 import AdminTasksPage from '@/routes/admin/AdminTasksPage'
+import AdminDisclosuresPage from '@/routes/admin/AdminDisclosuresPage'
 import AdminClassroomDetailPage from '@/routes/admin/AdminClassroomDetailPage'
 
 // /grants/:id → /grant/:id 리다이렉트 (기존 공지 게시글의 잘못된 복수형 링크)
@@ -123,6 +124,7 @@ export default function App() {
                 <Route path="/admin/kpi" element={<AdminKpiPage />} />
                 <Route path="/admin/announce" element={<AdminAnnouncePage />} />
                 <Route path="/admin/tasks" element={<AdminTasksPage />} />
+                <Route path="/admin/disclosures" element={<AdminDisclosuresPage />} />
               </Route>
             </Route>
           </Route>

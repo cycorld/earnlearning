@@ -154,6 +154,34 @@ func TestListAllCompanies_ReturnsAll(t *testing.T) {
 	}
 }
 
+func TestCompanyUpdate_ServiceURL_Success(t *testing.T) {
+	ts := setupTestServer(t)
+	token, cid := createUserWithCompany(t, ts, "svcurl@test.com", "svcurl", "20240020", "svcurl_co")
+
+	// service_url 설정
+	r := ts.put("/api/companies/"+itoaUD(cid), map[string]string{
+		"name":        "svcurl_co",
+		"description": "서비스 URL 테스트",
+		"service_url": "https://my-app.example.com",
+	}, token)
+	if !r.Success {
+		t.Fatalf("update service_url: %v", r.Error)
+	}
+
+	// 다시 조회 → service_url 반영 확인
+	g := ts.get("/api/companies/"+itoaUD(cid), token)
+	if !g.Success {
+		t.Fatalf("get after update: %v", g.Error)
+	}
+	var got struct {
+		ServiceURL string `json:"service_url"`
+	}
+	_ = json.Unmarshal(g.Data, &got)
+	if got.ServiceURL != "https://my-app.example.com" {
+		t.Errorf("service_url not updated: got %q want %q", got.ServiceURL, "https://my-app.example.com")
+	}
+}
+
 func TestListAllCompanies_NoAuth(t *testing.T) {
 	ts := setupTestServer(t)
 	r := ts.get("/api/companies", "")

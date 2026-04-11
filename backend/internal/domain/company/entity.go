@@ -14,6 +14,7 @@ type Company struct {
 	Valuation      int       `json:"valuation"`
 	Listed         bool      `json:"listed"`
 	BusinessCard   string    `json:"business_card"`
+	ServiceURL     string    `json:"service_url"`
 	Status         string    `json:"status"`
 	CreatedAt      time.Time `json:"created_at"`
 }
@@ -51,6 +52,20 @@ type BusinessCard struct {
 	Address     string `json:"address"`
 	Website     string `json:"website"`
 	LogoURL     string `json:"logo_url"`
+}
+
+type Disclosure struct {
+	ID         int       `json:"id"`
+	CompanyID  int       `json:"company_id"`
+	AuthorID   int       `json:"author_id"`
+	Content    string    `json:"content"`
+	PeriodFrom string    `json:"period_from"`
+	PeriodTo   string    `json:"period_to"`
+	Status     string    `json:"status"`
+	Reward     int       `json:"reward"`
+	AdminNote  string    `json:"admin_note"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type CompanyWallet struct {
