@@ -113,6 +113,8 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.PUT("/companies/:id", h.Company.UpdateCompany, middleware.RequireScope("write:company"))
 	approved.POST("/companies/:id/business-card", h.Company.CreateBusinessCard, middleware.RequireScope("write:company"))
 	approved.GET("/companies/:id/business-card", h.Company.GetBusinessCard, middleware.RequireScope("read:company"))
+	approved.POST("/companies/:id/disclosures", h.Company.CreateDisclosure, middleware.RequireScope("write:company"))
+	approved.GET("/companies/:id/disclosures", h.Company.GetDisclosures, middleware.RequireScope("read:company"))
 
 	// Feed / Posts (OAuth: read:posts / write:posts)
 	approved.GET("/classrooms/:classroomId/channels", h.Post.GetChannels, middleware.RequireScope("read:posts"))
@@ -229,6 +231,9 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.POST("/grants/:id/approve/:appId", h.Grant.ApproveApplication)
 	admin.POST("/grants/:id/revoke/:appId", h.Grant.RevokeApplication)
 	admin.POST("/grants/:id/close", h.Grant.CloseGrant)
+	admin.GET("/disclosures", h.Company.GetAllDisclosures)
+	admin.POST("/disclosures/:did/approve", h.Company.ApproveDisclosure)
+	admin.POST("/disclosures/:did/reject", h.Company.RejectDisclosure)
 
 	// ================================================================
 	// OAuth routes

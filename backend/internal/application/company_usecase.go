@@ -188,6 +188,7 @@ type UpdateCompanyInput struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	LogoURL     string `json:"logo_url"`
+	ServiceURL  string `json:"service_url"`
 }
 
 func (uc *CompanyUsecase) UpdateCompany(companyID, userID int, input UpdateCompanyInput) error {
@@ -205,6 +206,7 @@ func (uc *CompanyUsecase) UpdateCompany(companyID, userID int, input UpdateCompa
 	}
 	c.Description = input.Description
 	c.LogoURL = input.LogoURL
+	c.ServiceURL = input.ServiceURL
 	return uc.companyRepo.Update(c)
 }
 
@@ -386,4 +388,146 @@ func (uc *CompanyUsecase) DownloadBusinessCard(companyID int) ([]byte, string, e
 		card.Email, card.Phone, card.Address, card.Website)
 
 	return []byte(content), c.Name + "_명함.txt", nil
+}
+
+// Disclosure (공시) operations
+
+type CreateDisclosureInput struct {
+	Content    string `json:"content"`
+	PeriodFrom string `json:"period_from"`
+	PeriodTo   string `json:"period_to"`
+}
+
+type DisclosureDetail struct {
+	*company.Disclosure
+	CompanyName string `json:"company_name"`
+	AuthorName  string `json:"author_name"`
+}
+
+func (uc *CompanyUsecase) CreateDisclosure(companyID, userID int, input CreateDisclosureInput) (*company.Disclosure, error) {
+	c, err := uc.companyRepo.FindByID(companyID)
+	if err != nil {
+		return nil, err
+	}
+	if c.OwnerID != userID {
+		return nil, company.ErrNotOwner
+	}
+	if input.Content == "" || input.PeriodFrom == "" || input.PeriodTo == "" {
+		return nil, fmt.Errorf("공시 내용, 기간 시작/종료일을 모두 입력해주세요")
+	}
+
+	d := &company.Disclosure{
+		CompanyID:  companyID,
+		AuthorID:   userID,
+		Content:    input.Content,
+		PeriodFrom: input.PeriodFrom,
+		PeriodTo:   input.PeriodTo,
+		Status:     "pending",
+	}
+	id, err := uc.companyRepo.CreateDisclosure(d)
+	if err != nil {
+		return nil, fmt.Errorf("공시 생성 실패: %w", err)
+	}
+	d.ID = id
+	return d, nil
+}
+
+func (uc *CompanyUsecase) GetDisclosuresByCompanyID(companyID int) ([]*DisclosureDetail, error) {
+	disclosures, err := uc.companyRepo.FindDisclosuresByCompanyID(companyID)
+	if err != nil {
+		return nil, err
+	}
+	c, err := uc.companyRepo.FindByID(companyID)
+	if err != nil {
+		return nil, err
+	}
+
+	details := make([]*DisclosureDetail, 0, len(disclosures))
+	for _, d := range disclosures {
+		authorName := "알 수 없음"
+		if u, err := uc.userRepo.FindByID(d.AuthorID); err == nil {
+			authorName = u.Name
+		}
+		details = append(details, &DisclosureDetail{
+			Disclosure:  d,
+			CompanyName: c.Name,
+			AuthorName:  authorName,
+		})
+	}
+	return details, nil
+}
+
+func (uc *CompanyUsecase) GetAllDisclosures() ([]*DisclosureDetail, error) {
+	disclosures, err := uc.companyRepo.FindAllDisclosures()
+	if err != nil {
+		return nil, err
+	}
+
+	details := make([]*DisclosureDetail, 0, len(disclosures))
+	for _, d := range disclosures {
+		companyName := "알 수 없음"
+		if c, err := uc.companyRepo.FindByID(d.CompanyID); err == nil {
+			companyName = c.Name
+		}
+		authorName := "알 수 없음"
+		if u, err := uc.userRepo.FindByID(d.AuthorID); err == nil {
+			authorName = u.Name
+		}
+		details = append(details, &DisclosureDetail{
+			Disclosure:  d,
+			CompanyName: companyName,
+			AuthorName:  authorName,
+		})
+	}
+	return details, nil
+}
+
+type ApproveDisclosureInput struct {
+	Reward    int    `json:"reward"`
+	AdminNote string `json:"admin_note"`
+}
+
+func (uc *CompanyUsecase) ApproveDisclosure(disclosureID int, input ApproveDisclosureInput) error {
+	d, err := uc.companyRepo.FindDisclosureByID(disclosureID)
+	if err != nil {
+		return err
+	}
+	if d.Status != "pending" {
+		return fmt.Errorf("이미 처리된 공시입니다 (상태: %s)", d.Status)
+	}
+
+	// Update status
+	if err := uc.companyRepo.UpdateDisclosureStatus(disclosureID, "approved", input.Reward, input.AdminNote); err != nil {
+		return fmt.Errorf("공시 상태 업데이트 실패: %w", err)
+	}
+
+	// Credit company wallet if reward > 0
+	if input.Reward > 0 {
+		cw, err := uc.companyRepo.FindCompanyWallet(d.CompanyID)
+		if err != nil {
+			return fmt.Errorf("회사 지갑 조회 실패: %w", err)
+		}
+		err = uc.companyRepo.CreditCompanyWallet(cw.ID, input.Reward,
+			"disclosure_reward",
+			fmt.Sprintf("공시 승인 수익금 (%s ~ %s)", d.PeriodFrom, d.PeriodTo),
+			"disclosure", disclosureID,
+		)
+		if err != nil {
+			return fmt.Errorf("수익금 입금 실패: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (uc *CompanyUsecase) RejectDisclosure(disclosureID int, adminNote string) error {
+	d, err := uc.companyRepo.FindDisclosureByID(disclosureID)
+	if err != nil {
+		return err
+	}
+	if d.Status != "pending" {
+		return fmt.Errorf("이미 처리된 공시입니다 (상태: %s)", d.Status)
+	}
+
+	return uc.companyRepo.UpdateDisclosureStatus(disclosureID, "rejected", 0, adminNote)
 }

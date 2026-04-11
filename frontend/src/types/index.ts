@@ -59,8 +59,25 @@ export interface Company {
   my_shares?: number
   my_percentage?: number
   business_card?: string
+  service_url?: string
   status: string
   created_at: string
+}
+
+export interface Disclosure {
+  id: number
+  company_id: number
+  author_id: number
+  content: string
+  period_from: string
+  period_to: string
+  status: string
+  reward: number
+  admin_note: string
+  company_name?: string
+  author_name?: string
+  created_at: string
+  updated_at: string
 }
 
 export interface Shareholder {

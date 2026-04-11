@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Megaphone,
   KanbanSquare,
+  FileText,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
@@ -90,6 +91,14 @@ export default function AdminPage() {
       icon: Megaphone,
       href: '/admin/announce',
       color: 'bg-red-100 text-red-600',
+      badge: null,
+    },
+    {
+      title: '공시 관리',
+      description: '회사 공시 리뷰 및 수익금 입금',
+      icon: FileText,
+      href: '/admin/disclosures',
+      color: 'bg-teal-100 text-teal-600',
       badge: null,
     },
     {

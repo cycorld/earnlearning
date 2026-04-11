@@ -46,11 +46,11 @@ func (r *CompanyRepo) FindByID(id int) (*company.Company, error) {
 	var listed int
 	err := r.db.QueryRow(`
 		SELECT id, owner_id, name, description, logo_url, initial_capital,
-		       total_capital, total_shares, valuation, listed, business_card, status, created_at
+		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at
 		FROM companies WHERE id = ?`, id).Scan(
 		&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.LogoURL,
 		&c.InitialCapital, &c.TotalCapital, &c.TotalShares,
-		&c.Valuation, &listed, &c.BusinessCard, &c.Status, &c.CreatedAt,
+		&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, company.ErrNotFound
@@ -65,7 +65,7 @@ func (r *CompanyRepo) FindByID(id int) (*company.Company, error) {
 func (r *CompanyRepo) FindByOwnerID(ownerID int) ([]*company.Company, error) {
 	rows, err := r.db.Query(`
 		SELECT id, owner_id, name, description, logo_url, initial_capital,
-		       total_capital, total_shares, valuation, listed, business_card, status, created_at
+		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at
 		FROM companies WHERE owner_id = ? ORDER BY created_at DESC`, ownerID)
 	if err != nil {
 		return nil, fmt.Errorf("query companies: %w", err)
@@ -79,7 +79,7 @@ func (r *CompanyRepo) FindByOwnerID(ownerID int) ([]*company.Company, error) {
 		if err := rows.Scan(
 			&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.LogoURL,
 			&c.InitialCapital, &c.TotalCapital, &c.TotalShares,
-			&c.Valuation, &listed, &c.BusinessCard, &c.Status, &c.CreatedAt,
+			&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan company: %w", err)
 		}
@@ -92,7 +92,7 @@ func (r *CompanyRepo) FindByOwnerID(ownerID int) ([]*company.Company, error) {
 func (r *CompanyRepo) FindAll() ([]*company.Company, error) {
 	rows, err := r.db.Query(`
 		SELECT id, owner_id, name, description, logo_url, initial_capital,
-		       total_capital, total_shares, valuation, listed, business_card, status, created_at
+		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at
 		FROM companies ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("query all companies: %w", err)
@@ -106,7 +106,7 @@ func (r *CompanyRepo) FindAll() ([]*company.Company, error) {
 		if err := rows.Scan(
 			&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.LogoURL,
 			&c.InitialCapital, &c.TotalCapital, &c.TotalShares,
-			&c.Valuation, &listed, &c.BusinessCard, &c.Status, &c.CreatedAt,
+			&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan company: %w", err)
 		}
@@ -118,9 +118,9 @@ func (r *CompanyRepo) FindAll() ([]*company.Company, error) {
 
 func (r *CompanyRepo) Update(c *company.Company) error {
 	_, err := r.db.Exec(`
-		UPDATE companies SET name = ?, description = ?, logo_url = ?, business_card = ?
+		UPDATE companies SET name = ?, description = ?, logo_url = ?, business_card = ?, service_url = ?
 		WHERE id = ?`,
-		c.Name, c.Description, c.LogoURL, c.BusinessCard, c.ID,
+		c.Name, c.Description, c.LogoURL, c.BusinessCard, c.ServiceURL, c.ID,
 	)
 	if err != nil {
 		// SQLite UNIQUE constraint 위반 → ErrDuplicateName 으로 매핑
@@ -285,6 +285,102 @@ func (r *CompanyRepo) CreditCompanyWallet(walletID int, amount int, txType strin
 	}
 
 	return tx.Commit()
+}
+
+// Disclosure operations
+
+func (r *CompanyRepo) CreateDisclosure(d *company.Disclosure) (int, error) {
+	res, err := r.db.Exec(`
+		INSERT INTO company_disclosures (company_id, author_id, content, period_from, period_to, status)
+		VALUES (?, ?, ?, ?, ?, 'pending')`,
+		d.CompanyID, d.AuthorID, d.Content, d.PeriodFrom, d.PeriodTo,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("insert disclosure: %w", err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("last insert id: %w", err)
+	}
+	return int(id), nil
+}
+
+func (r *CompanyRepo) FindDisclosureByID(id int) (*company.Disclosure, error) {
+	d := &company.Disclosure{}
+	err := r.db.QueryRow(`
+		SELECT id, company_id, author_id, content, period_from, period_to,
+		       status, reward, admin_note, created_at, updated_at
+		FROM company_disclosures WHERE id = ?`, id).Scan(
+		&d.ID, &d.CompanyID, &d.AuthorID, &d.Content, &d.PeriodFrom, &d.PeriodTo,
+		&d.Status, &d.Reward, &d.AdminNote, &d.CreatedAt, &d.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, company.ErrDisclosureNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query disclosure: %w", err)
+	}
+	return d, nil
+}
+
+func (r *CompanyRepo) FindDisclosuresByCompanyID(companyID int) ([]*company.Disclosure, error) {
+	rows, err := r.db.Query(`
+		SELECT id, company_id, author_id, content, period_from, period_to,
+		       status, reward, admin_note, created_at, updated_at
+		FROM company_disclosures WHERE company_id = ? ORDER BY created_at DESC`, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("query disclosures: %w", err)
+	}
+	defer rows.Close()
+
+	var disclosures []*company.Disclosure
+	for rows.Next() {
+		d := &company.Disclosure{}
+		if err := rows.Scan(
+			&d.ID, &d.CompanyID, &d.AuthorID, &d.Content, &d.PeriodFrom, &d.PeriodTo,
+			&d.Status, &d.Reward, &d.AdminNote, &d.CreatedAt, &d.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan disclosure: %w", err)
+		}
+		disclosures = append(disclosures, d)
+	}
+	return disclosures, nil
+}
+
+func (r *CompanyRepo) FindAllDisclosures() ([]*company.Disclosure, error) {
+	rows, err := r.db.Query(`
+		SELECT id, company_id, author_id, content, period_from, period_to,
+		       status, reward, admin_note, created_at, updated_at
+		FROM company_disclosures ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("query all disclosures: %w", err)
+	}
+	defer rows.Close()
+
+	var disclosures []*company.Disclosure
+	for rows.Next() {
+		d := &company.Disclosure{}
+		if err := rows.Scan(
+			&d.ID, &d.CompanyID, &d.AuthorID, &d.Content, &d.PeriodFrom, &d.PeriodTo,
+			&d.Status, &d.Reward, &d.AdminNote, &d.CreatedAt, &d.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan disclosure: %w", err)
+		}
+		disclosures = append(disclosures, d)
+	}
+	return disclosures, nil
+}
+
+func (r *CompanyRepo) UpdateDisclosureStatus(id int, status string, reward int, adminNote string) error {
+	_, err := r.db.Exec(`
+		UPDATE company_disclosures SET status = ?, reward = ?, admin_note = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?`,
+		status, reward, adminNote, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update disclosure status: %w", err)
+	}
+	return nil
 }
 
 func (r *CompanyRepo) DebitCompanyWallet(walletID int, amount int, txType string, desc string, refType string, refID int) error {
