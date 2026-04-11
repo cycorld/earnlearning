@@ -23,7 +23,10 @@ type PostRepository interface {
 	// Comment operations
 	CreateComment(c *Comment) (int, error)
 	GetComments(postID int) ([]*Comment, error)
+	FindCommentByID(commentID int) (*Comment, error)
+	DeleteComment(commentID int) error
 	IncrementCommentCount(postID int) error
+	DecrementCommentCount(postID int) error
 
 	// Assignment operations
 	CreateAssignment(a *Assignment) (int, error)

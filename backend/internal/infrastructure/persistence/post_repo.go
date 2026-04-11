@@ -291,8 +291,41 @@ func (r *PostRepo) GetComments(postID int) ([]*post.Comment, error) {
 	return comments, nil
 }
 
+func (r *PostRepo) FindCommentByID(commentID int) (*post.Comment, error) {
+	c := &post.Comment{}
+	err := r.db.QueryRow(`
+		SELECT c.id, c.post_id, c.author_id, c.content, c.media, c.created_at,
+		       u.name, u.avatar_url, u.student_id, u.department
+		FROM comments c
+		JOIN users u ON u.id = c.author_id
+		WHERE c.id = ?`, commentID).Scan(
+		&c.ID, &c.PostID, &c.AuthorID, &c.Content, &c.Media, &c.CreatedAt,
+		&c.AuthorName, &c.AuthorAvatar, &c.AuthorStudentID, &c.AuthorDepartment,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("댓글을 찾을 수 없습니다")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query comment: %w", err)
+	}
+	return c, nil
+}
+
+func (r *PostRepo) DeleteComment(commentID int) error {
+	_, err := r.db.Exec("DELETE FROM comments WHERE id = ?", commentID)
+	if err != nil {
+		return fmt.Errorf("delete comment: %w", err)
+	}
+	return nil
+}
+
 func (r *PostRepo) IncrementCommentCount(postID int) error {
 	_, err := r.db.Exec("UPDATE posts SET comment_count = comment_count + 1 WHERE id = ?", postID)
+	return err
+}
+
+func (r *PostRepo) DecrementCommentCount(postID int) error {
+	_, err := r.db.Exec("UPDATE posts SET comment_count = CASE WHEN comment_count > 0 THEN comment_count - 1 ELSE 0 END WHERE id = ?", postID)
 	return err
 }
 
