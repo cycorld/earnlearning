@@ -248,7 +248,7 @@ export default function CompanyDetailPage() {
       )}
 
       {/* Disclosures */}
-      <DisclosureSection companyId={Number(id)} isOwner={isOwner} />
+      <DisclosureSection companyId={Number(id)} isOwner={!!isOwner} />
 
       <Separator />
 
