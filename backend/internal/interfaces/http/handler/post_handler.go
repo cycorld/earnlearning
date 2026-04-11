@@ -265,7 +265,7 @@ func (h *PostHandler) LikePost(c echo.Context) error {
 		})
 	}
 
-	liked, err := h.uc.LikePost(postID, userID)
+	result, err := h.uc.LikePost(postID, userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"success": false, "data": nil,
@@ -274,7 +274,7 @@ func (h *PostHandler) LikePost(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"success": true, "data": map[string]interface{}{"liked": liked}, "error": nil,
+		"success": true, "data": map[string]interface{}{"liked": result.Liked, "reward": result.Reward}, "error": nil,
 	})
 }
 
@@ -362,6 +362,47 @@ func (h *PostHandler) CreateComment(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"success": true, "data": result, "error": nil,
+	})
+}
+
+// DeleteComment godoc
+//
+//	@Summary		댓글 삭제
+//	@Description	본인 또는 관리자가 댓글 삭제 (보상 회수 포함)
+//	@Tags			Feed
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id			path		int	true	"게시물 ID"
+//	@Param			commentId	path		int	true	"댓글 ID"
+//	@Success		200			{object}	APIResponse
+//	@Router			/posts/{id}/comments/{commentId} [delete]
+func (h *PostHandler) DeleteComment(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+
+	commentID, err := strconv.Atoi(c.Param("commentId"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 댓글 ID입니다"},
+		})
+	}
+
+	if err := h.uc.DeleteComment(commentID, userID, role); err != nil {
+		status := http.StatusBadRequest
+		if err.Error() == "댓글을 찾을 수 없습니다" {
+			status = http.StatusNotFound
+		} else if err.Error() == "본인이 작성한 댓글만 삭제할 수 있습니다" {
+			status = http.StatusForbidden
+		}
+		return c.JSON(status, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "DELETE_FAILED", "message": err.Error()},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": map[string]string{"message": "댓글이 삭제되었습니다"}, "error": nil,
 	})
 }
 

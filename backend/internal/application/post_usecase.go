@@ -215,36 +215,89 @@ func (uc *PostUsecase) DeletePost(postID, userID int, role string) error {
 	return uc.postRepo.DeletePost(postID)
 }
 
-func (uc *PostUsecase) LikePost(postID, userID int) (bool, error) {
+const (
+	LikeRewardAmount   = 10
+	CommentRewardAmount = 100
+)
+
+// LikePostResult contains the like toggle result and reward info.
+type LikePostResult struct {
+	Liked  bool `json:"liked"`
+	Reward int  `json:"reward"`
+}
+
+func (uc *PostUsecase) LikePost(postID, userID int) (*LikePostResult, error) {
 	// Check if post exists
-	_, err := uc.postRepo.FindPostByID(postID)
+	p, err := uc.postRepo.FindPostByID(postID)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// Toggle like
 	liked, err := uc.postRepo.IsLiked(postID, userID)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
+
+	result := &LikePostResult{}
 
 	if liked {
 		if err := uc.postRepo.UnlikePost(postID, userID); err != nil {
-			return false, err
+			return nil, err
 		}
 		if err := uc.postRepo.DecrementLikeCount(postID); err != nil {
-			return false, err
+			return nil, err
 		}
-		return false, nil
+		result.Liked = false
+
+		// Debit reward from post author (skip if self-like)
+		if p.AuthorID != userID {
+			if err := uc.creditOrDebitUser(p.AuthorID, LikeRewardAmount, false,
+				wallet.TxLikeReward, "좋아요 취소 보상 회수", "post", postID); err == nil {
+				result.Reward = -LikeRewardAmount
+			}
+		}
+		return result, nil
 	}
 
 	if err := uc.postRepo.LikePost(postID, userID); err != nil {
-		return false, err
+		return nil, err
 	}
 	if err := uc.postRepo.IncrementLikeCount(postID); err != nil {
-		return false, err
+		return nil, err
 	}
-	return true, nil
+	result.Liked = true
+
+	// Credit reward to post author (skip if self-like)
+	if p.AuthorID != userID {
+		if err := uc.creditOrDebitUser(p.AuthorID, LikeRewardAmount, true,
+			wallet.TxLikeReward, "좋아요 보상", "post", postID); err == nil {
+			result.Reward = LikeRewardAmount
+		}
+	}
+
+	return result, nil
+}
+
+// creditOrDebitUser credits or debits a user's wallet, creating one if needed.
+func (uc *PostUsecase) creditOrDebitUser(userID, amount int, isCredit bool,
+	txType wallet.TxType, desc, refType string, refID int) error {
+	w, err := uc.walletRepo.FindByUserID(userID)
+	if err != nil {
+		// Try to create wallet
+		walletID, createErr := uc.walletRepo.CreateWallet(userID)
+		if createErr != nil {
+			return createErr
+		}
+		if isCredit {
+			return uc.walletRepo.Credit(walletID, amount, txType, desc, refType, refID)
+		}
+		return uc.walletRepo.Debit(walletID, amount, txType, desc, refType, refID)
+	}
+	if isCredit {
+		return uc.walletRepo.Credit(w.ID, amount, txType, desc, refType, refID)
+	}
+	return uc.walletRepo.Debit(w.ID, amount, txType, desc, refType, refID)
 }
 
 type CreateCommentInput struct {
@@ -289,13 +342,19 @@ func (uc *PostUsecase) CreateComment(userID int, input CreateCommentInput) (*pos
 	_ = uc.postRepo.IncrementCommentCount(input.PostID)
 
 	// Notify post author about the new comment (skip if self-comment)
-	if uc.notifUC != nil && p.AuthorID != userID {
-		preview := input.Content
-		if len(preview) > 50 {
-			preview = preview[:50] + "..."
+	if p.AuthorID != userID {
+		// Credit comment reward to post author
+		_ = uc.creditOrDebitUser(p.AuthorID, CommentRewardAmount, true,
+			wallet.TxCommentReward, "댓글 보상", "post", input.PostID)
+
+		if uc.notifUC != nil {
+			preview := input.Content
+			if len(preview) > 50 {
+				preview = preview[:50] + "..."
+			}
+			_ = uc.notifUC.CreateNotification(p.AuthorID, notification.NotifNewComment,
+				"새 댓글이 달렸습니다", preview, "post", input.PostID)
 		}
-		_ = uc.notifUC.CreateNotification(p.AuthorID, notification.NotifNewComment,
-			"새 댓글이 달렸습니다", preview, "post", input.PostID)
 	}
 
 	// If this is an assignment post, auto-create submission
@@ -499,6 +558,36 @@ func (uc *PostUsecase) GradeAssignment(input GradeAssignmentInput) error {
 
 func (uc *PostUsecase) GetComments(postID int) ([]*post.Comment, error) {
 	return uc.postRepo.GetComments(postID)
+}
+
+func (uc *PostUsecase) DeleteComment(commentID, userID int, role string) error {
+	c, err := uc.postRepo.FindCommentByID(commentID)
+	if err != nil {
+		return err
+	}
+
+	if c.AuthorID != userID && role != "admin" {
+		return fmt.Errorf("본인이 작성한 댓글만 삭제할 수 있습니다")
+	}
+
+	// Find post to check if reward should be reclaimed
+	p, err := uc.postRepo.FindPostByID(c.PostID)
+	if err != nil {
+		return err
+	}
+
+	if err := uc.postRepo.DeleteComment(commentID); err != nil {
+		return err
+	}
+	_ = uc.postRepo.DecrementCommentCount(c.PostID)
+
+	// Reclaim comment reward from post author (only if commenter != post author)
+	if p.AuthorID != c.AuthorID {
+		_ = uc.creditOrDebitUser(p.AuthorID, CommentRewardAmount, false,
+			wallet.TxCommentReward, "댓글 삭제 보상 회수", "post", c.PostID)
+	}
+
+	return nil
 }
 
 func (uc *PostUsecase) GetSubmissions(assignmentID int) ([]*post.Submission, error) {

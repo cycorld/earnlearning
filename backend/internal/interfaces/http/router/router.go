@@ -124,6 +124,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.POST("/posts/:id/like", h.Post.LikePost, middleware.RequireScope("write:posts"))
 	approved.GET("/posts/:id/comments", h.Post.GetComments, middleware.RequireScope("read:posts"))
 	approved.POST("/posts/:id/comments", h.Post.CreateComment, middleware.RequireScope("write:posts"))
+	approved.DELETE("/posts/:id/comments/:commentId", h.Post.DeleteComment, middleware.RequireScope("write:posts"))
 
 	// Assignments (write:posts scope)
 	approved.POST("/channels/:channelId/assignments", h.Post.CreateAssignment, middleware.RequireScope("write:posts"))

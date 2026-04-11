@@ -22,6 +22,8 @@ const (
 	TxKpiRevenue      TxType = "kpi_revenue"
 	TxCompanyFunding  TxType = "company_funding"
 	TxTransfer        TxType = "transfer"
+	TxLikeReward      TxType = "like_reward"
+	TxCommentReward   TxType = "comment_reward"
 )
 
 type Wallet struct {
