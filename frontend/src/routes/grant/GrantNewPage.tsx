@@ -41,7 +41,7 @@ export default function GrantNewPage() {
 
   return (
     <div className="mx-auto max-w-lg p-4">
-      <div className="mb-4">
+      <div className="sticky top-14 z-40 -mx-4 mb-4 bg-background px-4 py-1">
         <Button variant="ghost" size="sm" asChild>
           <Link to="/grant">
             <ArrowLeft className="mr-1 h-4 w-4" />
