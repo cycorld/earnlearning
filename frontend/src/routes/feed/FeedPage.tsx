@@ -191,24 +191,25 @@ export default function FeedPage() {
   }, [fetchPosts])
 
   // Like toggle
-  const handleLike = async (postId: number, isLiked: boolean) => {
+  const handleLike = async (postId: number, _isLiked: boolean) => {
     try {
-      if (isLiked) {
-        await api.del(`/posts/${postId}/like`)
-      } else {
-        await api.post(`/posts/${postId}/like`)
-      }
+      const result = await api.post<{ liked: boolean; reward: number }>(
+        `/posts/${postId}/like`,
+      )
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId
             ? {
                 ...p,
-                is_liked: !isLiked,
-                like_count: p.like_count + (isLiked ? -1 : 1),
+                is_liked: result.liked,
+                like_count: p.like_count + (result.liked ? 1 : -1),
               }
             : p,
         ),
       )
+      if (result.reward > 0) {
+        toast.success(`좋아요 보상 +${result.reward}원이 글쓴이에게 지급되었습니다`)
+      }
     } catch {
       // ignore
     }
@@ -356,6 +357,11 @@ export default function FeedPage() {
         [postId]: [...(prev[postId] || []), newComment],
       }))
       setCommentInput((prev) => ({ ...prev, [postId]: '' }))
+      // Check if comment is on someone else's post → reward toast
+      const post = posts.find((p) => p.id === postId)
+      if (post && post.author?.id !== user?.id) {
+        toast.success('댓글 보상 +100원이 글쓴이에게 지급되었습니다')
+      }
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId ? { ...p, comment_count: p.comment_count + 1 } : p,
@@ -364,6 +370,29 @@ export default function FeedPage() {
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : '댓글 작성에 실패했습니다.'
+      toast.error(message)
+    }
+  }
+
+  // Delete comment
+  const handleDeleteComment = async (postId: number, commentId: number) => {
+    try {
+      await api.del(`/posts/${postId}/comments/${commentId}`)
+      setComments((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || []).filter((c) => c.id !== commentId),
+      }))
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? { ...p, comment_count: Math.max(0, p.comment_count - 1) }
+            : p,
+        ),
+      )
+      toast.success('댓글이 삭제되었습니다')
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : '댓글 삭제에 실패했습니다.'
       toast.error(message)
     }
   }
@@ -762,7 +791,7 @@ export default function FeedPage() {
                                     </DropdownMenuContent>
                                   )}
                                 </DropdownMenu>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-1">
                                     <span className="text-xs font-medium">
                                       {displayName(c.author)}
@@ -770,6 +799,15 @@ export default function FeedPage() {
                                     <span className="text-xs text-muted-foreground">
                                       {timeAgo(c.created_at)}
                                     </span>
+                                    {(c.author?.id === user?.id || user?.role === 'admin') && (
+                                      <button
+                                        onClick={() => handleDeleteComment(post.id, c.id)}
+                                        className="ml-auto rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                                        title="댓글 삭제"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    )}
                                   </div>
                                   <MarkdownContent
                                     content={c.content}
