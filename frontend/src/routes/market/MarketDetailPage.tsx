@@ -170,12 +170,14 @@ export default function MarketDetailPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4 p-4">
-      <Button variant="ghost" size="sm" asChild>
-        <Link to="/market">
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          마켓으로 돌아가기
-        </Link>
-      </Button>
+      <div className="sticky top-14 z-40 -mx-4 bg-background px-4 py-1">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/market">
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            마켓으로 돌아가기
+          </Link>
+        </Button>
+      </div>
 
       {/* Job Detail */}
       <Card>
