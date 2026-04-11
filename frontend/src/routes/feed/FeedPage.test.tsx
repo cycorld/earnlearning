@@ -55,8 +55,8 @@ function setupDefaultApiMocks() {
     return Promise.resolve([])
   })
 
-  mockApiPost.mockImplementation(() => Promise.resolve({ liked: true }))
-  mockApiDel.mockImplementation(() => Promise.resolve({ liked: false }))
+  mockApiPost.mockImplementation(() => Promise.resolve({ liked: true, reward: 0 }))
+  mockApiDel.mockImplementation(() => Promise.resolve({}))
 }
 
 beforeEach(() => {
@@ -234,7 +234,10 @@ describe('FeedPage 좋아요', () => {
       if (path.includes('/posts?')) return Promise.resolve(postsData)
       return Promise.resolve([])
     })
-    mockApiPost.mockResolvedValue({ liked: true })
+    mockApiPost.mockImplementation((path: string) => {
+      if (path === `/posts/${post.id}/like`) return Promise.resolve({ liked: true, reward: 10 })
+      return Promise.resolve({})
+    })
 
     renderWithProviders(<FeedPage />)
 
@@ -512,7 +515,10 @@ describe('FeedPage 좋아요 취소', () => {
       if (path.includes('/posts?')) return Promise.resolve(postsData)
       return Promise.resolve([])
     })
-    mockApiDel.mockResolvedValue({ liked: false })
+    mockApiPost.mockImplementation((path: string) => {
+      if (path === `/posts/${post.id}/like`) return Promise.resolve({ liked: false, reward: 0 })
+      return Promise.resolve({})
+    })
 
     renderWithProviders(<FeedPage />)
 
@@ -524,7 +530,7 @@ describe('FeedPage 좋아요 취소', () => {
     await user.click(likeButton)
 
     await waitFor(() => {
-      expect(mockApiDel).toHaveBeenCalledWith(`/posts/${post.id}/like`)
+      expect(mockApiPost).toHaveBeenCalledWith(`/posts/${post.id}/like`)
       expect(screen.getByText('9')).toBeInTheDocument()
     })
   })
