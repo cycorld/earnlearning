@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { CreditCard, Pencil, Loader2, Plus, Upload } from 'lucide-react'
+import { CreditCard, ExternalLink, Pencil, Loader2, Plus, Upload } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
 
 export default function CompanyDetailPage() {
@@ -29,7 +29,7 @@ export default function CompanyDetailPage() {
   const [loading, setLoading] = useState(true)
 
   const [editOpen, setEditOpen] = useState(false)
-  const [editForm, setEditForm] = useState({ name: '', description: '', logo_url: '' })
+  const [editForm, setEditForm] = useState({ name: '', description: '', logo_url: '', service_url: '' })
   const [editLoading, setEditLoading] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
 
@@ -58,6 +58,7 @@ export default function CompanyDetailPage() {
       name: company.name,
       description: company.description,
       logo_url: company.logo_url || '',
+      service_url: company.service_url || '',
     })
     setEditOpen(true)
   }
@@ -90,6 +91,7 @@ export default function CompanyDetailPage() {
         name: editForm.name.trim(),
         description: editForm.description.trim(),
         logo_url: editForm.logo_url,
+        service_url: editForm.service_url.trim(),
       })
       // 백엔드 PUT 응답이 {message: ...} 라 객체 갱신 못함 → 다시 조회
       await fetchCompany()
@@ -152,6 +154,17 @@ export default function CompanyDetailPage() {
             <p className="text-sm text-muted-foreground">
               대표: {displayName(company.owner) || '-'}
             </p>
+            {company.service_url && (
+              <a
+                href={company.service_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" />
+                {company.service_url.replace(/^https?:\/\//, '')}
+              </a>
+            )}
           </div>
           {isOwner && (
             <Button variant="ghost" size="icon" onClick={openEditDialog}>
@@ -337,6 +350,16 @@ export default function CompanyDetailPage() {
                 value={editForm.name}
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-service-url">서비스 URL</Label>
+              <Input
+                id="edit-service-url"
+                value={editForm.service_url}
+                onChange={(e) => setEditForm({ ...editForm, service_url: e.target.value })}
+                placeholder="https://my-app.example.com"
+                type="url"
               />
             </div>
             <div className="space-y-2">

@@ -14,6 +14,7 @@ type Company struct {
 	Valuation      int       `json:"valuation"`
 	Listed         bool      `json:"listed"`
 	BusinessCard   string    `json:"business_card"`
+	ServiceURL     string    `json:"service_url"`
 	Status         string    `json:"status"`
 	CreatedAt      time.Time `json:"created_at"`
 }

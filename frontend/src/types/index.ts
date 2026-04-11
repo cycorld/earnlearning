@@ -59,6 +59,7 @@ export interface Company {
   my_shares?: number
   my_percentage?: number
   business_card?: string
+  service_url?: string
   status: string
   created_at: string
 }

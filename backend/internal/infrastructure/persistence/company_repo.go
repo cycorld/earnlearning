@@ -46,11 +46,11 @@ func (r *CompanyRepo) FindByID(id int) (*company.Company, error) {
 	var listed int
 	err := r.db.QueryRow(`
 		SELECT id, owner_id, name, description, logo_url, initial_capital,
-		       total_capital, total_shares, valuation, listed, business_card, status, created_at
+		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at
 		FROM companies WHERE id = ?`, id).Scan(
 		&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.LogoURL,
 		&c.InitialCapital, &c.TotalCapital, &c.TotalShares,
-		&c.Valuation, &listed, &c.BusinessCard, &c.Status, &c.CreatedAt,
+		&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, company.ErrNotFound
@@ -65,7 +65,7 @@ func (r *CompanyRepo) FindByID(id int) (*company.Company, error) {
 func (r *CompanyRepo) FindByOwnerID(ownerID int) ([]*company.Company, error) {
 	rows, err := r.db.Query(`
 		SELECT id, owner_id, name, description, logo_url, initial_capital,
-		       total_capital, total_shares, valuation, listed, business_card, status, created_at
+		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at
 		FROM companies WHERE owner_id = ? ORDER BY created_at DESC`, ownerID)
 	if err != nil {
 		return nil, fmt.Errorf("query companies: %w", err)
@@ -79,7 +79,7 @@ func (r *CompanyRepo) FindByOwnerID(ownerID int) ([]*company.Company, error) {
 		if err := rows.Scan(
 			&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.LogoURL,
 			&c.InitialCapital, &c.TotalCapital, &c.TotalShares,
-			&c.Valuation, &listed, &c.BusinessCard, &c.Status, &c.CreatedAt,
+			&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan company: %w", err)
 		}
@@ -92,7 +92,7 @@ func (r *CompanyRepo) FindByOwnerID(ownerID int) ([]*company.Company, error) {
 func (r *CompanyRepo) FindAll() ([]*company.Company, error) {
 	rows, err := r.db.Query(`
 		SELECT id, owner_id, name, description, logo_url, initial_capital,
-		       total_capital, total_shares, valuation, listed, business_card, status, created_at
+		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at
 		FROM companies ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("query all companies: %w", err)
@@ -106,7 +106,7 @@ func (r *CompanyRepo) FindAll() ([]*company.Company, error) {
 		if err := rows.Scan(
 			&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.LogoURL,
 			&c.InitialCapital, &c.TotalCapital, &c.TotalShares,
-			&c.Valuation, &listed, &c.BusinessCard, &c.Status, &c.CreatedAt,
+			&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan company: %w", err)
 		}
@@ -118,9 +118,9 @@ func (r *CompanyRepo) FindAll() ([]*company.Company, error) {
 
 func (r *CompanyRepo) Update(c *company.Company) error {
 	_, err := r.db.Exec(`
-		UPDATE companies SET name = ?, description = ?, logo_url = ?, business_card = ?
+		UPDATE companies SET name = ?, description = ?, logo_url = ?, business_card = ?, service_url = ?
 		WHERE id = ?`,
-		c.Name, c.Description, c.LogoURL, c.BusinessCard, c.ID,
+		c.Name, c.Description, c.LogoURL, c.BusinessCard, c.ServiceURL, c.ID,
 	)
 	if err != nil {
 		// SQLite UNIQUE constraint 위반 → ErrDuplicateName 으로 매핑

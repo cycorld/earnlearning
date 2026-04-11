@@ -188,6 +188,7 @@ type UpdateCompanyInput struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	LogoURL     string `json:"logo_url"`
+	ServiceURL  string `json:"service_url"`
 }
 
 func (uc *CompanyUsecase) UpdateCompany(companyID, userID int, input UpdateCompanyInput) error {
@@ -205,6 +206,7 @@ func (uc *CompanyUsecase) UpdateCompany(companyID, userID int, input UpdateCompa
 	}
 	c.Description = input.Description
 	c.LogoURL = input.LogoURL
+	c.ServiceURL = input.ServiceURL
 	return uc.companyRepo.Update(c)
 }
 
