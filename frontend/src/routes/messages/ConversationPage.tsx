@@ -120,7 +120,7 @@ export default function ConversationPage() {
   return (
     <div className="mx-auto flex h-[calc(100dvh-7rem)] max-w-lg flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b p-3">
+      <div className="sticky top-14 z-40 flex items-center gap-3 border-b bg-background p-3">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/messages">
             <ArrowLeft className="h-4 w-4" />
