@@ -1,5 +1,7 @@
 package company
 
+import "time"
+
 // CompanyRepository defines the persistence interface for the company domain.
 type CompanyRepository interface {
 	Create(c *Company) (int, error)
@@ -29,4 +31,16 @@ type CompanyRepository interface {
 	FindDisclosuresByCompanyID(companyID int) ([]*Disclosure, error)
 	FindAllDisclosures() ([]*Disclosure, error)
 	UpdateDisclosureStatus(id int, status string, reward int, adminNote string) error
+
+	// Proposal (주주총회) operations
+	CreateProposal(p *Proposal) (int, error)
+	FindProposalByID(id int) (*Proposal, error)
+	FindProposalsByCompanyID(companyID int) ([]*Proposal, error)
+	FindActiveProposalByCompanyAndType(companyID int, proposalType string) (*Proposal, error)
+	UpdateProposalStatus(id int, status string, resultNote string, closedAt *time.Time) error
+
+	// Vote operations
+	CreateVote(v *Vote) (int, error)
+	FindVote(proposalID, userID int) (*Vote, error)
+	FindVotesByProposalID(proposalID int) ([]*Vote, error)
 }

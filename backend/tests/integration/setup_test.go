@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,8 +30,10 @@ const (
 )
 
 type testServer struct {
-	server *httptest.Server
-	t      *testing.T
+	server      *httptest.Server
+	t           *testing.T
+	db          *sql.DB
+	companyRepo *persistence.CompanyRepo
 }
 
 // setupTestServer creates a fresh test server with an in-memory-like temp DB.
@@ -144,7 +147,7 @@ func setupTestServer(t *testing.T) *testServer {
 	ts := httptest.NewServer(e)
 	t.Cleanup(func() { ts.Close() })
 
-	return &testServer{server: ts, t: t}
+	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo}
 }
 
 // request helpers
