@@ -62,6 +62,9 @@ function getNotifIcon(type: string) {
     case 'job_cancelled':
     case 'job_disputed':
       return <Building2 className="h-5 w-5 text-indigo-500" />
+    case 'disclosure_approved':
+    case 'disclosure_rejected':
+      return <Building2 className="h-5 w-5 text-teal-500" />
     default:
       return <Bell className="h-5 w-5 text-muted-foreground" />
   }

@@ -33,6 +33,10 @@ const (
 	NotifGrantApplied      NotifType = "grant_applied"
 	NotifGrantClosed       NotifType = "grant_closed"
 
+	// Disclosure
+	NotifDisclosureApproved NotifType = "disclosure_approved"
+	NotifDisclosureRejected NotifType = "disclosure_rejected"
+
 	// DM
 	NotifNewDM             NotifType = "new_dm"
 )
@@ -61,6 +65,8 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifGrantApplied:      true,
 	NotifGrantClosed:       true,
 	NotifNewDM:             true,
+	NotifDisclosureApproved: true,
+	NotifDisclosureRejected: true,
 }
 
 type Notification struct {
