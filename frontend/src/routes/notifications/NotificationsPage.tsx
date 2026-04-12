@@ -65,6 +65,9 @@ function getNotifIcon(type: string) {
     case 'disclosure_approved':
     case 'disclosure_rejected':
       return <Building2 className="h-5 w-5 text-teal-500" />
+    case 'proposal_started':
+    case 'proposal_closed':
+      return <Building2 className="h-5 w-5 text-fuchsia-500" />
     default:
       return <Bell className="h-5 w-5 text-muted-foreground" />
   }
@@ -94,6 +97,8 @@ function getReferencePath(refType: string, refId: number): string | null {
       return `/market/${refId}`
     case 'grant':
       return `/grant/${refId}`
+    case 'proposal':
+      return `/proposal/${refId}`
     case 'dm':
       return `/messages/${refId}`
     case 'user':
