@@ -37,6 +37,10 @@ const (
 	NotifDisclosureApproved NotifType = "disclosure_approved"
 	NotifDisclosureRejected NotifType = "disclosure_rejected"
 
+	// Shareholder proposal (주주총회)
+	NotifProposalStarted NotifType = "proposal_started"
+	NotifProposalClosed  NotifType = "proposal_closed"
+
 	// DM
 	NotifNewDM             NotifType = "new_dm"
 )
@@ -67,6 +71,8 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifNewDM:             true,
 	NotifDisclosureApproved: true,
 	NotifDisclosureRejected: true,
+	NotifProposalStarted:    true,
+	NotifProposalClosed:     true,
 }
 
 type Notification struct {

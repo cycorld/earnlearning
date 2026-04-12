@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/earnlearning/backend/internal/domain/company"
 )
@@ -381,6 +382,180 @@ func (r *CompanyRepo) UpdateDisclosureStatus(id int, status string, reward int, 
 		return fmt.Errorf("update disclosure status: %w", err)
 	}
 	return nil
+}
+
+// =============================================================================
+// Proposal (주주총회 안건) operations
+// =============================================================================
+
+func (r *CompanyRepo) CreateProposal(p *company.Proposal) (int, error) {
+	res, err := r.db.Exec(`
+		INSERT INTO shareholder_proposals
+			(company_id, proposer_id, proposal_type, title, description,
+			 pass_threshold, status, start_date, end_date, result_note)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		p.CompanyID, p.ProposerID, p.ProposalType, p.Title, p.Description,
+		p.PassThreshold, p.Status, p.StartDate, p.EndDate, p.ResultNote,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("insert proposal: %w", err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("last insert id: %w", err)
+	}
+	return int(id), nil
+}
+
+func (r *CompanyRepo) FindProposalByID(id int) (*company.Proposal, error) {
+	p := &company.Proposal{}
+	var closedAt sql.NullTime
+	err := r.db.QueryRow(`
+		SELECT id, company_id, proposer_id, proposal_type, title, description,
+		       pass_threshold, status, start_date, end_date, result_note, created_at, closed_at
+		FROM shareholder_proposals WHERE id = ?`, id).Scan(
+		&p.ID, &p.CompanyID, &p.ProposerID, &p.ProposalType, &p.Title, &p.Description,
+		&p.PassThreshold, &p.Status, &p.StartDate, &p.EndDate, &p.ResultNote, &p.CreatedAt, &closedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, company.ErrProposalNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query proposal: %w", err)
+	}
+	if closedAt.Valid {
+		t := closedAt.Time
+		p.ClosedAt = &t
+	}
+	return p, nil
+}
+
+func (r *CompanyRepo) FindProposalsByCompanyID(companyID int) ([]*company.Proposal, error) {
+	rows, err := r.db.Query(`
+		SELECT id, company_id, proposer_id, proposal_type, title, description,
+		       pass_threshold, status, start_date, end_date, result_note, created_at, closed_at
+		FROM shareholder_proposals WHERE company_id = ? ORDER BY created_at DESC`, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("query proposals: %w", err)
+	}
+	defer rows.Close()
+
+	var proposals []*company.Proposal
+	for rows.Next() {
+		p := &company.Proposal{}
+		var closedAt sql.NullTime
+		if err := rows.Scan(
+			&p.ID, &p.CompanyID, &p.ProposerID, &p.ProposalType, &p.Title, &p.Description,
+			&p.PassThreshold, &p.Status, &p.StartDate, &p.EndDate, &p.ResultNote, &p.CreatedAt, &closedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan proposal: %w", err)
+		}
+		if closedAt.Valid {
+			t := closedAt.Time
+			p.ClosedAt = &t
+		}
+		proposals = append(proposals, p)
+	}
+	return proposals, nil
+}
+
+func (r *CompanyRepo) FindActiveProposalByCompanyAndType(companyID int, proposalType string) (*company.Proposal, error) {
+	p := &company.Proposal{}
+	var closedAt sql.NullTime
+	err := r.db.QueryRow(`
+		SELECT id, company_id, proposer_id, proposal_type, title, description,
+		       pass_threshold, status, start_date, end_date, result_note, created_at, closed_at
+		FROM shareholder_proposals
+		WHERE company_id = ? AND proposal_type = ? AND status = 'active'
+		ORDER BY created_at DESC LIMIT 1`, companyID, proposalType).Scan(
+		&p.ID, &p.CompanyID, &p.ProposerID, &p.ProposalType, &p.Title, &p.Description,
+		&p.PassThreshold, &p.Status, &p.StartDate, &p.EndDate, &p.ResultNote, &p.CreatedAt, &closedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, company.ErrProposalNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query active proposal: %w", err)
+	}
+	if closedAt.Valid {
+		t := closedAt.Time
+		p.ClosedAt = &t
+	}
+	return p, nil
+}
+
+func (r *CompanyRepo) UpdateProposalStatus(id int, status string, resultNote string, closedAt *time.Time) error {
+	var ca interface{}
+	if closedAt != nil {
+		ca = *closedAt
+	}
+	_, err := r.db.Exec(`
+		UPDATE shareholder_proposals
+		SET status = ?, result_note = ?, closed_at = ?
+		WHERE id = ?`, status, resultNote, ca, id)
+	if err != nil {
+		return fmt.Errorf("update proposal status: %w", err)
+	}
+	return nil
+}
+
+// =============================================================================
+// Vote operations
+// =============================================================================
+
+func (r *CompanyRepo) CreateVote(v *company.Vote) (int, error) {
+	res, err := r.db.Exec(`
+		INSERT INTO shareholder_votes (proposal_id, user_id, choice, shares_at_vote)
+		VALUES (?, ?, ?, ?)`,
+		v.ProposalID, v.UserID, v.Choice, v.SharesAtVote,
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint") {
+			return 0, company.ErrAlreadyVoted
+		}
+		return 0, fmt.Errorf("insert vote: %w", err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("last insert id: %w", err)
+	}
+	return int(id), nil
+}
+
+func (r *CompanyRepo) FindVote(proposalID, userID int) (*company.Vote, error) {
+	v := &company.Vote{}
+	err := r.db.QueryRow(`
+		SELECT id, proposal_id, user_id, choice, shares_at_vote, created_at
+		FROM shareholder_votes WHERE proposal_id = ? AND user_id = ?`, proposalID, userID).Scan(
+		&v.ID, &v.ProposalID, &v.UserID, &v.Choice, &v.SharesAtVote, &v.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query vote: %w", err)
+	}
+	return v, nil
+}
+
+func (r *CompanyRepo) FindVotesByProposalID(proposalID int) ([]*company.Vote, error) {
+	rows, err := r.db.Query(`
+		SELECT id, proposal_id, user_id, choice, shares_at_vote, created_at
+		FROM shareholder_votes WHERE proposal_id = ? ORDER BY created_at ASC`, proposalID)
+	if err != nil {
+		return nil, fmt.Errorf("query votes: %w", err)
+	}
+	defer rows.Close()
+
+	var votes []*company.Vote
+	for rows.Next() {
+		v := &company.Vote{}
+		if err := rows.Scan(&v.ID, &v.ProposalID, &v.UserID, &v.Choice, &v.SharesAtVote, &v.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan vote: %w", err)
+		}
+		votes = append(votes, v)
+	}
+	return votes, nil
 }
 
 func (r *CompanyRepo) DebitCompanyWallet(walletID int, amount int, txType string, desc string, refType string, refID int) error {

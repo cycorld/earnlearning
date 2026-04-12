@@ -22,6 +22,7 @@ import { toast } from 'sonner'
 import { CreditCard, ExternalLink, Pencil, Loader2, Plus, Upload } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
 import { DisclosureSection } from './DisclosureSection'
+import { ProposalSection } from './ProposalSection'
 
 export default function CompanyDetailPage() {
   const { id } = useParams()
@@ -37,6 +38,11 @@ export default function CompanyDetailPage() {
   const [cardLoading, setCardLoading] = useState(false)
 
   const isOwner = user && company?.owner?.id === user.id
+  const isShareholder =
+    !!user &&
+    !!company?.shareholders?.some(
+      (sh) => sh.user_id === user.id && sh.shares > 0,
+    )
 
   const fetchCompany = useCallback(async () => {
     try {
@@ -249,6 +255,9 @@ export default function CompanyDetailPage() {
 
       {/* Disclosures */}
       <DisclosureSection companyId={Number(id)} isOwner={!!isOwner} />
+
+      {/* Shareholder proposals (주주총회) */}
+      <ProposalSection companyId={Number(id)} isShareholder={isShareholder} />
 
       <Separator />
 
