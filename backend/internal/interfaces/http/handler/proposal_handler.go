@@ -165,6 +165,45 @@ func (h *CompanyHandler) CastVote(c echo.Context) error {
 	})
 }
 
+// ExecuteLiquidation — POST /api/proposals/:pid/execute
+// Executes a passed liquidation proposal: 20% tax + remaining 80% distributed
+// to shareholders by ownership percentage.
+func (h *CompanyHandler) ExecuteLiquidation(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	pid, err := strconv.Atoi(c.Param("pid"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 ID입니다"},
+		})
+	}
+
+	result, err := h.uc.ExecuteLiquidation(pid, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, company.ErrProposalNotFound):
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_FOUND", "message": err.Error()},
+			})
+		case errors.Is(err, company.ErrNotShareholder):
+			return c.JSON(http.StatusForbidden, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_SHAREHOLDER", "message": err.Error()},
+			})
+		default:
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "EXECUTE_FAILED", "message": err.Error()},
+			})
+		}
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": result, "error": nil,
+	})
+}
+
 // CancelProposal — POST /api/proposals/:pid/cancel
 func (h *CompanyHandler) CancelProposal(c echo.Context) error {
 	userID := middleware.GetUserID(c)

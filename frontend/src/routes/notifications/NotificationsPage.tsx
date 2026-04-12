@@ -68,6 +68,8 @@ function getNotifIcon(type: string) {
     case 'proposal_started':
     case 'proposal_closed':
       return <Building2 className="h-5 w-5 text-fuchsia-500" />
+    case 'liquidation_payout':
+      return <Wallet className="h-5 w-5 text-amber-500" />
     default:
       return <Bell className="h-5 w-5 text-muted-foreground" />
   }
