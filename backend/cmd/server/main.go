@@ -109,6 +109,7 @@ func main() {
 	exchangeUC.SetDB(db)
 	exchangeUC.SetNotificationUseCase(notifUC)
 	postUC.SetNotificationUseCase(notifUC)
+	companyUC.SetNotificationUseCase(notifUC)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
 
 	// Task repo (reads tasks/ markdown files)

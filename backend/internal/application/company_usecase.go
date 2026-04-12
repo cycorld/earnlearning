@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/earnlearning/backend/internal/domain/company"
+	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/user"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
@@ -13,6 +14,11 @@ type CompanyUsecase struct {
 	companyRepo company.CompanyRepository
 	userRepo    user.Repository
 	walletRepo  wallet.Repository
+	notifUC     *NotificationUseCase
+}
+
+func (uc *CompanyUsecase) SetNotificationUseCase(n *NotificationUseCase) {
+	uc.notifUC = n
 }
 
 func NewCompanyUsecase(cr company.CompanyRepository, ur user.Repository, wr wallet.Repository) *CompanyUsecase {
@@ -517,6 +523,22 @@ func (uc *CompanyUsecase) ApproveDisclosure(disclosureID int, input ApproveDiscl
 		}
 	}
 
+	// Send notification to company owner
+	if uc.notifUC != nil {
+		c, _ := uc.companyRepo.FindByID(d.CompanyID)
+		if c != nil {
+			title := fmt.Sprintf("[%s] 공시가 승인되었습니다", c.Name)
+			body := fmt.Sprintf("공시(%s ~ %s)가 승인되었습니다.", d.PeriodFrom, d.PeriodTo)
+			if input.Reward > 0 {
+				body += fmt.Sprintf(" 수익금 %d원이 법인 계좌에 입금되었습니다.", input.Reward)
+			}
+			if input.AdminNote != "" {
+				body += " 코멘트: " + input.AdminNote
+			}
+			_ = uc.notifUC.CreateNotification(c.OwnerID, notification.NotifDisclosureApproved, title, body, "company", c.ID)
+		}
+	}
+
 	return nil
 }
 
@@ -529,5 +551,22 @@ func (uc *CompanyUsecase) RejectDisclosure(disclosureID int, adminNote string) e
 		return fmt.Errorf("이미 처리된 공시입니다 (상태: %s)", d.Status)
 	}
 
-	return uc.companyRepo.UpdateDisclosureStatus(disclosureID, "rejected", 0, adminNote)
+	if err := uc.companyRepo.UpdateDisclosureStatus(disclosureID, "rejected", 0, adminNote); err != nil {
+		return err
+	}
+
+	// Send notification to company owner
+	if uc.notifUC != nil {
+		c, _ := uc.companyRepo.FindByID(d.CompanyID)
+		if c != nil {
+			title := fmt.Sprintf("[%s] 공시가 거절되었습니다", c.Name)
+			body := fmt.Sprintf("공시(%s ~ %s)가 거절되었습니다.", d.PeriodFrom, d.PeriodTo)
+			if adminNote != "" {
+				body += " 사유: " + adminNote
+			}
+			_ = uc.notifUC.CreateNotification(c.OwnerID, notification.NotifDisclosureRejected, title, body, "company", c.ID)
+		}
+	}
+
+	return nil
 }
