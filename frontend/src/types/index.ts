@@ -80,6 +80,60 @@ export interface Disclosure {
   updated_at: string
 }
 
+// =============================================================================
+// 주주총회 안건 (Shareholder proposals)
+// =============================================================================
+
+export type ProposalType = 'general' | 'liquidation'
+export type ProposalStatus =
+  | 'active'
+  | 'passed'
+  | 'rejected'
+  | 'cancelled'
+  | 'executed'
+export type VoteChoice = 'yes' | 'no'
+
+export interface ProposalTally {
+  yes_shares: number
+  no_shares: number
+  total_shares: number
+  yes_percent: number
+  no_percent: number
+  projected_status: 'pending' | 'passed' | 'rejected'
+}
+
+export interface ProposalVote {
+  id: number
+  proposal_id: number
+  user_id: number
+  choice: VoteChoice
+  shares_at_vote: number
+  created_at: string
+  user_name?: string
+}
+
+export interface Proposal {
+  id: number
+  company_id: number
+  proposer_id: number
+  proposal_type: ProposalType
+  title: string
+  description: string
+  pass_threshold: number
+  status: ProposalStatus
+  start_date: string
+  end_date: string
+  result_note: string
+  created_at: string
+  closed_at?: string | null
+  // enriched
+  company_name?: string
+  proposer_name?: string
+  tally?: ProposalTally
+  my_vote?: ProposalVote | null
+  votes?: ProposalVote[]
+}
+
 export interface Shareholder {
   user_id: number
   name: string

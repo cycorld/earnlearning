@@ -116,6 +116,13 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.POST("/companies/:id/disclosures", h.Company.CreateDisclosure, middleware.RequireScope("write:company"))
 	approved.GET("/companies/:id/disclosures", h.Company.GetDisclosures, middleware.RequireScope("read:company"))
 
+	// Shareholder proposals (주주총회 투표) — #022
+	approved.POST("/companies/:id/proposals", h.Company.CreateProposal, middleware.RequireScope("write:company"))
+	approved.GET("/companies/:id/proposals", h.Company.GetProposals, middleware.RequireScope("read:company"))
+	approved.GET("/proposals/:pid", h.Company.GetProposal, middleware.RequireScope("read:company"))
+	approved.POST("/proposals/:pid/vote", h.Company.CastVote, middleware.RequireScope("write:company"))
+	approved.POST("/proposals/:pid/cancel", h.Company.CancelProposal, middleware.RequireScope("write:company"))
+
 	// Feed / Posts (OAuth: read:posts / write:posts)
 	approved.GET("/classrooms/:classroomId/channels", h.Post.GetChannels, middleware.RequireScope("read:posts"))
 	approved.GET("/posts", h.Post.GetPosts, middleware.RequireScope("read:posts"))

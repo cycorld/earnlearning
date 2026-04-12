@@ -177,6 +177,43 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// Shareholder proposals & votes (#022 주주총회 투표 시스템)
+	proposalTables := []string{
+		`CREATE TABLE IF NOT EXISTS shareholder_proposals (
+			id             INTEGER PRIMARY KEY AUTOINCREMENT,
+			company_id     INTEGER NOT NULL REFERENCES companies(id),
+			proposer_id    INTEGER NOT NULL REFERENCES users(id),
+			proposal_type  TEXT NOT NULL DEFAULT 'general'
+			               CHECK (proposal_type IN ('general', 'liquidation')),
+			title          TEXT NOT NULL,
+			description    TEXT NOT NULL DEFAULT '',
+			pass_threshold INTEGER NOT NULL DEFAULT 50,
+			status         TEXT NOT NULL DEFAULT 'active'
+			               CHECK (status IN ('active', 'passed', 'rejected', 'cancelled', 'executed')),
+			start_date     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			end_date       DATETIME NOT NULL,
+			result_note    TEXT NOT NULL DEFAULT '',
+			created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			closed_at      DATETIME
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_shareholder_proposals_company ON shareholder_proposals(company_id, status)`,
+		`CREATE TABLE IF NOT EXISTS shareholder_votes (
+			id             INTEGER PRIMARY KEY AUTOINCREMENT,
+			proposal_id    INTEGER NOT NULL REFERENCES shareholder_proposals(id),
+			user_id        INTEGER NOT NULL REFERENCES users(id),
+			choice         TEXT NOT NULL CHECK (choice IN ('yes', 'no')),
+			shares_at_vote INTEGER NOT NULL,
+			created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(proposal_id, user_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_shareholder_votes_proposal ON shareholder_votes(proposal_id)`,
+	}
+	for _, stmt := range proposalTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create proposal tables: %w", err)
+		}
+	}
+
 	// DM tables
 	dmTables := []string{
 		`CREATE TABLE IF NOT EXISTS dm_messages (
