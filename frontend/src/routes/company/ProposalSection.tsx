@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Vote, Loader2, Plus, CheckCircle2, XCircle } from 'lucide-react'
+import { Vote, Loader2, Plus, CheckCircle2, XCircle, Hammer } from 'lucide-react'
 
 const statusLabels: Record<string, string> = {
   active: '진행 중',
@@ -51,14 +51,20 @@ const typeLabels: Record<ProposalType, string> = {
 interface Props {
   companyId: number
   isShareholder: boolean
+  onCompanyChanged?: () => void
 }
 
-export function ProposalSection({ companyId, isShareholder }: Props) {
+export function ProposalSection({
+  companyId,
+  isShareholder,
+  onCompanyChanged,
+}: Props) {
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
   const [voteLoading, setVoteLoading] = useState<number | null>(null)
+  const [executeLoading, setExecuteLoading] = useState<number | null>(null)
   const [form, setForm] = useState<{
     proposal_type: ProposalType
     title: string
@@ -142,6 +148,34 @@ export function ProposalSection({ companyId, isShareholder }: Props) {
     }
   }
 
+  const handleExecuteLiquidation = async (proposalId: number) => {
+    if (
+      !window.confirm(
+        '정말 청산을 집행하시겠어요?\n세금 20%를 제외한 잔액이 주주별 지분율에 따라 분배되고, 회사는 영구 정지됩니다.',
+      )
+    ) {
+      return
+    }
+    setExecuteLoading(proposalId)
+    try {
+      const result = await api.post<{
+        total_balance: number
+        tax: number
+        distributable: number
+        payouts: { user_name: string; amount: number }[]
+      }>(`/proposals/${proposalId}/execute`, {})
+      toast.success(
+        `청산 완료! 세금 ${result.tax.toLocaleString()}원, 분배 ${result.distributable.toLocaleString()}원`,
+      )
+      await fetchProposals()
+      onCompanyChanged?.()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : '청산 집행 실패')
+    } finally {
+      setExecuteLoading(null)
+    }
+  }
+
   if (loading) {
     return (
       <Card>
@@ -188,7 +222,9 @@ export function ProposalSection({ companyId, isShareholder }: Props) {
               proposal={p}
               isShareholder={isShareholder}
               voteLoading={voteLoading === p.id}
+              executeLoading={executeLoading === p.id}
               onVote={(choice) => handleVote(p.id, choice)}
+              onExecute={() => handleExecuteLiquidation(p.id)}
             />
           ))
         )}
@@ -295,12 +331,16 @@ function ProposalCard({
   proposal,
   isShareholder,
   voteLoading,
+  executeLoading,
   onVote,
+  onExecute,
 }: {
   proposal: Proposal
   isShareholder: boolean
   voteLoading: boolean
+  executeLoading: boolean
   onVote: (choice: VoteChoice) => void
+  onExecute: () => void
 }) {
   const tally = proposal.tally
   const yesPct = tally?.yes_percent ?? 0
@@ -308,6 +348,10 @@ function ProposalCard({
   const remainPct = Math.max(0, 100 - yesPct - noPct)
   const canVote =
     isShareholder && proposal.status === 'active' && !proposal.my_vote
+  const canExecuteLiquidation =
+    isShareholder &&
+    proposal.proposal_type === 'liquidation' &&
+    proposal.status === 'passed'
 
   return (
     <div className="rounded-md border p-3">
@@ -417,6 +461,23 @@ function ProposalCard({
             )}
           </Button>
         </div>
+      )}
+
+      {canExecuteLiquidation && (
+        <Button
+          size="sm"
+          variant="destructive"
+          className="w-full"
+          disabled={executeLoading}
+          onClick={onExecute}
+        >
+          {executeLoading ? (
+            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+          ) : (
+            <Hammer className="mr-1 h-3 w-3" />
+          )}
+          청산 집행 (세금 20% + 주주 분배)
+        </Button>
       )}
 
       <p className="mt-2 text-[10px] text-muted-foreground">

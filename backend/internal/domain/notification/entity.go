@@ -38,8 +38,9 @@ const (
 	NotifDisclosureRejected NotifType = "disclosure_rejected"
 
 	// Shareholder proposal (주주총회)
-	NotifProposalStarted NotifType = "proposal_started"
-	NotifProposalClosed  NotifType = "proposal_closed"
+	NotifProposalStarted  NotifType = "proposal_started"
+	NotifProposalClosed   NotifType = "proposal_closed"
+	NotifLiquidationPayout NotifType = "liquidation_payout"
 
 	// DM
 	NotifNewDM             NotifType = "new_dm"
@@ -73,6 +74,7 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifDisclosureRejected: true,
 	NotifProposalStarted:    true,
 	NotifProposalClosed:     true,
+	NotifLiquidationPayout:  true,
 }
 
 type Notification struct {

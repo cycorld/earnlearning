@@ -24,6 +24,9 @@ const (
 	TxTransfer        TxType = "transfer"
 	TxLikeReward      TxType = "like_reward"
 	TxCommentReward   TxType = "comment_reward"
+	// Company liquidation (#023)
+	TxLiquidationPayout TxType = "liquidation_payout"
+	TxLiquidationTax    TxType = "liquidation_tax"
 )
 
 type Wallet struct {
