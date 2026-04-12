@@ -122,6 +122,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.GET("/proposals/:pid", h.Company.GetProposal, middleware.RequireScope("read:company"))
 	approved.POST("/proposals/:pid/vote", h.Company.CastVote, middleware.RequireScope("write:company"))
 	approved.POST("/proposals/:pid/cancel", h.Company.CancelProposal, middleware.RequireScope("write:company"))
+	approved.POST("/proposals/:pid/execute", h.Company.ExecuteLiquidation, middleware.RequireScope("write:company"))
 
 	// Feed / Posts (OAuth: read:posts / write:posts)
 	approved.GET("/classrooms/:classroomId/channels", h.Post.GetChannels, middleware.RequireScope("read:posts"))

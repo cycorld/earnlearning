@@ -152,7 +152,9 @@ export default function CompanyDetailPage() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold">{company.name}</h1>
-              {company.listed ? (
+              {company.status === 'dissolved' ? (
+                <Badge variant="destructive">청산됨</Badge>
+              ) : company.listed ? (
                 <Badge>상장</Badge>
               ) : (
                 <Badge variant="secondary">비상장</Badge>
@@ -257,7 +259,11 @@ export default function CompanyDetailPage() {
       <DisclosureSection companyId={Number(id)} isOwner={!!isOwner} />
 
       {/* Shareholder proposals (주주총회) */}
-      <ProposalSection companyId={Number(id)} isShareholder={isShareholder} />
+      <ProposalSection
+        companyId={Number(id)}
+        isShareholder={isShareholder}
+        onCompanyChanged={fetchCompany}
+      />
 
       <Separator />
 
