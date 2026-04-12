@@ -420,6 +420,7 @@ function CredentialsDialog({
             <CopyBlock value={psqlCmd} />
           </div>
         </div>
+        <DbSetupPromptSection cred={cred} />
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <input
             type="checkbox"
@@ -435,6 +436,57 @@ function CredentialsDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// --- DB Setup Prompt section ---
+
+function buildDbSetupPrompt(cred: UserDatabaseWithCreds): string {
+  return `내 프로젝트에 PostgreSQL 데이터베이스를 연동해줘.
+
+## 접속 정보
+- Host: ${cred.host}
+- Port: ${cred.port}
+- Database: ${cred.db_name}
+- Username: ${cred.pg_username}
+- Password: ${cred.password}
+- Connection URL: ${cred.url}
+
+## 요구사항
+1. 위 접속 정보로 PostgreSQL에 연결하는 코드를 작성해줘
+2. .env 파일에 DATABASE_URL을 저장하고, 코드에서는 환경변수로 읽어와줘
+3. 연결 테스트 코드도 포함해줘 (서버 시작 시 DB 연결 확인)
+
+## 참고
+- 이 DB는 PostgreSQL 호환이고, 포트 ${cred.port}은 PgBouncer(커넥션 풀러)야
+- ORM이나 쿼리빌더를 사용해도 되고, 직접 SQL을 써도 돼
+- 테이블 생성(CREATE TABLE)도 자유롭게 해줘`
+}
+
+function DbSetupPromptSection({ cred }: { cred: UserDatabaseWithCreds }) {
+  const [open, setOpen] = useState(false)
+  const prompt = buildDbSetupPrompt(cred)
+
+  return (
+    <div className="space-y-1.5">
+      <button
+        type="button"
+        className="flex w-full items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+        onClick={() => setOpen(v => !v)}
+      >
+        <Database className="h-3.5 w-3.5" />
+        {open ? 'DB 연동 프롬프트 접기 ▲' : 'DB 연동 프롬프트 보기 ▼'}
+      </button>
+      {open && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] leading-snug text-muted-foreground">
+            아래 프롬프트를 복사해서 바이브코딩 도구(Cursor, Bolt, Claude 등)에
+            붙여넣으면 DB 연동이 자동으로 설정돼요.
+          </p>
+          <CopyBlock value={prompt} />
+        </div>
+      )}
+    </div>
   )
 }
 

@@ -337,5 +337,11 @@
     "title": "공시 승인/거절 시 학생 알림 연동",
     "date": "2026-04-12",
     "tags": ["feat", "알림", "공시"]
+  },
+  {
+    "slug": "050-db-setup-prompt",
+    "title": "DB 생성 시 바이브코딩용 연동 프롬프트 제공",
+    "date": "2026-04-12",
+    "tags": ["feat", "PostgreSQL", "학생DB", "UX"]
   }
 ]
