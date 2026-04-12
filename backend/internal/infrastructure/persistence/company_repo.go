@@ -134,6 +134,14 @@ func (r *CompanyRepo) Update(c *company.Company) error {
 	return nil
 }
 
+func (r *CompanyRepo) UpdateStatus(companyID int, status string) error {
+	_, err := r.db.Exec("UPDATE companies SET status = ? WHERE id = ?", status, companyID)
+	if err != nil {
+		return fmt.Errorf("update company status: %w", err)
+	}
+	return nil
+}
+
 func (r *CompanyRepo) UpdateListed(companyID int, listed bool) error {
 	listedInt := 0
 	if listed {

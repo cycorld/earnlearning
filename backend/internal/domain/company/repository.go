@@ -10,6 +10,7 @@ type CompanyRepository interface {
 	FindAll() ([]*Company, error)
 	Update(c *Company) error
 	UpdateListed(companyID int, listed bool) error
+	UpdateStatus(companyID int, status string) error
 
 	// Shareholder operations
 	CreateShareholder(s *Shareholder) (int, error)

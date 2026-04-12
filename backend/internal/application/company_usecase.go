@@ -418,6 +418,9 @@ func (uc *CompanyUsecase) CreateDisclosure(companyID, userID int, input CreateDi
 	if c.OwnerID != userID {
 		return nil, company.ErrNotOwner
 	}
+	if c.Status == "dissolved" {
+		return nil, fmt.Errorf("청산된 회사에는 공시를 작성할 수 없습니다")
+	}
 	if input.Content == "" || input.PeriodFrom == "" || input.PeriodTo == "" {
 		return nil, fmt.Errorf("공시 내용, 기간 시작/종료일을 모두 입력해주세요")
 	}

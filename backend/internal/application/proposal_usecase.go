@@ -6,7 +6,12 @@ import (
 
 	"github.com/earnlearning/backend/internal/domain/company"
 	"github.com/earnlearning/backend/internal/domain/notification"
+	"github.com/earnlearning/backend/internal/domain/wallet"
 )
+
+// LiquidationTaxPercent is the portion of company assets consumed as tax during
+// liquidation (#023). The remaining 80% is distributed to shareholders.
+const LiquidationTaxPercent = 20
 
 // =============================================================================
 // Shareholder proposal (주주총회 안건) & voting usecase
@@ -399,4 +404,208 @@ func (uc *CompanyUsecase) closeProposal(p *company.Proposal) (*company.Proposal,
 	}
 
 	return p, nil
+}
+
+// =============================================================================
+// Company liquidation execution (#023)
+// =============================================================================
+
+// LiquidationPayout describes what each shareholder received during liquidation.
+type LiquidationPayout struct {
+	UserID   int    `json:"user_id"`
+	UserName string `json:"user_name"`
+	Shares   int    `json:"shares"`
+	Amount   int    `json:"amount"`
+}
+
+// LiquidationResult summarizes the distribution of a dissolved company's assets.
+type LiquidationResult struct {
+	CompanyID      int                 `json:"company_id"`
+	CompanyName    string              `json:"company_name"`
+	TotalBalance   int                 `json:"total_balance"`
+	Tax            int                 `json:"tax"`
+	Distributable  int                 `json:"distributable"`
+	Payouts        []LiquidationPayout `json:"payouts"`
+	ResidualTax    int                 `json:"residual_tax"` // extra tax from rounding
+	ExecutedAt     time.Time           `json:"executed_at"`
+}
+
+// ExecuteLiquidation consumes a passed liquidation proposal and distributes
+// the company's assets. Any user can trigger execution once a proposal passes,
+// but typically the company owner is the one to call it.
+//
+// Steps:
+//  1. Validate proposal: type=liquidation, status=passed
+//  2. Compute tax (20% of wallet balance) and per-shareholder payouts
+//  3. Debit full balance from company wallet
+//  4. Credit each shareholder's personal wallet with their share
+//  5. Mark company as 'dissolved'
+//  6. Mark proposal as 'executed'
+//  7. Create disclosure summarizing the liquidation
+//  8. Notify all shareholders with their individual payout amounts
+func (uc *CompanyUsecase) ExecuteLiquidation(proposalID, userID int) (*LiquidationResult, error) {
+	p, err := uc.companyRepo.FindProposalByID(proposalID)
+	if err != nil {
+		return nil, err
+	}
+	if p.ProposalType != company.ProposalTypeLiquidation {
+		return nil, fmt.Errorf("청산 안건이 아닙니다")
+	}
+	if p.Status != company.ProposalStatusPassed {
+		return nil, fmt.Errorf("가결된 청산 안건만 집행할 수 있습니다 (현재 상태: %s)", p.Status)
+	}
+
+	c, err := uc.companyRepo.FindByID(p.CompanyID)
+	if err != nil {
+		return nil, err
+	}
+	if c.Status == "dissolved" {
+		return nil, fmt.Errorf("이미 청산된 회사입니다")
+	}
+
+	// Only a shareholder (typically owner) can trigger execution to avoid drive-by calls.
+	trigger, err := uc.companyRepo.FindShareholder(c.ID, userID)
+	if err != nil || trigger == nil || trigger.Shares <= 0 {
+		return nil, company.ErrNotShareholder
+	}
+
+	// Wallet balance
+	cw, err := uc.companyRepo.FindCompanyWallet(c.ID)
+	if err != nil {
+		return nil, fmt.Errorf("회사 지갑 조회 실패: %w", err)
+	}
+	balance := cw.Balance
+
+	// Tax (integer division rounds down, remainder is burned as residual tax)
+	tax := balance * LiquidationTaxPercent / 100
+	distributable := balance - tax
+
+	// Compute per-shareholder payouts
+	shareholders, err := uc.companyRepo.FindShareholdersByCompanyID(c.ID)
+	if err != nil {
+		return nil, fmt.Errorf("주주 조회 실패: %w", err)
+	}
+
+	totalShares := c.TotalShares
+	if totalShares <= 0 {
+		// Fallback: sum of shares
+		for _, s := range shareholders {
+			totalShares += s.Shares
+		}
+	}
+
+	payouts := make([]LiquidationPayout, 0, len(shareholders))
+	totalPaid := 0
+	for _, s := range shareholders {
+		if s.Shares <= 0 {
+			continue
+		}
+		amount := distributable * s.Shares / totalShares
+		if amount <= 0 {
+			continue
+		}
+		name := "알 수 없음"
+		if u, err := uc.userRepo.FindByID(s.UserID); err == nil {
+			name = u.Name
+		}
+		payouts = append(payouts, LiquidationPayout{
+			UserID:   s.UserID,
+			UserName: name,
+			Shares:   s.Shares,
+			Amount:   amount,
+		})
+		totalPaid += amount
+	}
+
+	// Rounding residual goes to tax
+	residualTax := distributable - totalPaid
+	if residualTax < 0 {
+		residualTax = 0
+	}
+	tax += residualTax
+
+	// Debit full balance from company wallet (this will also log a tx)
+	if balance > 0 {
+		if err := uc.companyRepo.DebitCompanyWallet(
+			cw.ID, balance,
+			string(wallet.TxLiquidationTax),
+			fmt.Sprintf("청산 집행 (세금 %d원 + 주주 분배 %d원)", tax, totalPaid),
+			"proposal", p.ID,
+		); err != nil {
+			return nil, fmt.Errorf("회사 잔액 차감 실패: %w", err)
+		}
+	}
+
+	// Credit each shareholder's personal wallet
+	for _, payout := range payouts {
+		w, err := uc.walletRepo.FindByUserID(payout.UserID)
+		if err != nil {
+			// This shouldn't happen for approved users but we log + continue
+			continue
+		}
+		desc := fmt.Sprintf("[%s] 청산 분배금 (지분 %d주)", c.Name, payout.Shares)
+		if err := uc.walletRepo.Credit(w.ID, payout.Amount, wallet.TxLiquidationPayout, desc, "proposal", p.ID); err != nil {
+			return nil, fmt.Errorf("주주 %d 분배금 지급 실패: %w", payout.UserID, err)
+		}
+	}
+
+	// Mark company as dissolved
+	if err := uc.companyRepo.UpdateStatus(c.ID, "dissolved"); err != nil {
+		return nil, fmt.Errorf("회사 상태 업데이트 실패: %w", err)
+	}
+
+	// Mark proposal as executed
+	now := time.Now()
+	if err := uc.companyRepo.UpdateProposalStatus(p.ID, company.ProposalStatusExecuted,
+		fmt.Sprintf("청산 집행 완료 (세금 %d원, 분배 %d원)", tax, totalPaid),
+		&now,
+	); err != nil {
+		return nil, fmt.Errorf("안건 상태 업데이트 실패: %w", err)
+	}
+
+	// Create a disclosure for the public record
+	disclosureContent := fmt.Sprintf(
+		"## 회사 청산 공시\n\n"+
+			"**회사명**: %s\n"+
+			"**총 자산**: %d원\n"+
+			"**세금 (20%%)**: %d원\n"+
+			"**주주 분배 총액**: %d원\n\n"+
+			"### 주주별 분배 내역\n\n",
+		c.Name, balance, tax, totalPaid,
+	)
+	for _, payout := range payouts {
+		disclosureContent += fmt.Sprintf("- %s: %d주 → %d원\n", payout.UserName, payout.Shares, payout.Amount)
+	}
+	_, _ = uc.companyRepo.CreateDisclosure(&company.Disclosure{
+		CompanyID:  c.ID,
+		AuthorID:   userID,
+		Content:    disclosureContent,
+		PeriodFrom: now.Format("2006-01-02"),
+		PeriodTo:   now.Format("2006-01-02"),
+		Status:     "approved", // auto-approved, system-generated
+	})
+
+	// Notify each shareholder with their payout
+	if uc.notifUC != nil {
+		for _, payout := range payouts {
+			title := fmt.Sprintf("[%s] 청산 분배금 입금", c.Name)
+			body := fmt.Sprintf("청산 분배금 %d원이 지갑에 입금되었습니다. (지분 %d주)", payout.Amount, payout.Shares)
+			_ = uc.notifUC.CreateNotification(
+				payout.UserID,
+				notification.NotifLiquidationPayout,
+				title, body, "wallet", 0,
+			)
+		}
+	}
+
+	return &LiquidationResult{
+		CompanyID:     c.ID,
+		CompanyName:   c.Name,
+		TotalBalance:  balance,
+		Tax:           tax,
+		Distributable: distributable,
+		Payouts:       payouts,
+		ResidualTax:   residualTax,
+		ExecutedAt:    now,
+	}, nil
 }
