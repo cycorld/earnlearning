@@ -355,5 +355,11 @@
     "title": "회사 청산 기능 (세금 20% + 주주별 분배)",
     "date": "2026-04-12",
     "tags": ["feat", "회사", "청산", "세금", "주주총회"]
+  },
+  {
+    "slug": "053-pwa-no-cache-headers",
+    "title": "PWA 업데이트 확실하게 만들기 — Cache-Control 강화",
+    "date": "2026-04-16",
+    "tags": ["fix", "PWA", "nginx", "인프라"]
   }
 ]
