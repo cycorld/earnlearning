@@ -224,10 +224,11 @@ func (uc *WalletUseCase) SearchRecipients(senderID int, query string) ([]*Recipi
 					continue
 				}
 				results = append(results, &Recipient{
-					ID:         c.ID,
-					Name:       CompanyAccountName(c.Name, ownerName),
-					StudentID:  "", // 법인은 학번 없음
-					Department: "법인",
+					ID:   c.ID,
+					Name: CompanyAccountName(c.Name, ownerName),
+					// 법인은 학번/학과 없음 — displayName 이 suffix 를 덧붙이지 않도록 빈 값 유지
+					StudentID:  "",
+					Department: "",
 					AvatarURL:  c.LogoURL,
 					Type:       "company",
 				})
