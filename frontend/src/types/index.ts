@@ -259,16 +259,22 @@ export interface GrantApplication {
 
 export interface InvestmentRound {
   id: number
+  company_id: number
   company?: { id: number; name: string; valuation: number; logo_url: string }
   owner?: { id: number; name: string }
+  company_name?: string // legacy flat field kept for backward compat
+  owner_name?: string
   target_amount: number
-  offered_percent: number
+  offered_percent: number // stored as 0..1 (e.g. 0.2 means 20%)
   current_amount: number
   price_per_share: number
   new_shares: number
-  status: string
-  expires_at?: string
+  sold_shares?: number
+  remaining_shares?: number
+  status: 'open' | 'funded' | 'failed' | 'cancelled'
+  expires_at?: string | null
   created_at: string
+  funded_at?: string | null
 }
 
 export interface Investment {

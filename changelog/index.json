@@ -361,5 +361,11 @@
     "title": "PWA 업데이트 확실하게 만들기 — Cache-Control 강화",
     "date": "2026-04-16",
     "tags": ["fix", "PWA", "nginx", "인프라"]
+  },
+  {
+    "slug": "054-investment-overhaul",
+    "title": "투자유치 기능 전면 개선 — 분할 투자 + 버그 수정 + 교육용 도움말",
+    "date": "2026-04-16",
+    "tags": ["fix", "feat", "투자", "교육", "백엔드", "프론트엔드"]
   }
 ]

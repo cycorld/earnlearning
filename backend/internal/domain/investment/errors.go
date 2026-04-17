@@ -13,4 +13,7 @@ var (
 	ErrInvalidPercent      = errors.New("제안 지분율이 유효하지 않습니다")
 	ErrInvalidAmount       = errors.New("유효하지 않은 금액입니다")
 	ErrCompanyWalletNotFound = errors.New("회사 지갑을 찾을 수 없습니다")
+	ErrInvalidShares         = errors.New("유효하지 않은 주식 수량입니다")
+	ErrOverSubscribed        = errors.New("남은 주식 수를 초과했습니다")
+	ErrRoundExpired          = errors.New("투자 기간이 만료된 라운드입니다")
 )
