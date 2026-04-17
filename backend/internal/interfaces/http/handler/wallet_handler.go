@@ -129,7 +129,8 @@ func (h *WalletHandler) Transfer(c echo.Context) error {
 		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "잘못된 입력입니다")
 	}
 
-	if input.TargetUserID == userID {
+	// 자기 자신에게 송금 방지는 user 대상 때만 의미 있음 (company 는 별도 엔티티)
+	if input.TargetType != "company" && input.TargetUserID == userID {
 		return errorResponse(c, http.StatusBadRequest, "SELF_TRANSFER", "자기 자신에게 송금할 수 없습니다")
 	}
 

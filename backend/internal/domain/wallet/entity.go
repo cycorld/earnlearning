@@ -22,6 +22,7 @@ const (
 	TxKpiRevenue      TxType = "kpi_revenue"
 	TxCompanyFunding  TxType = "company_funding"
 	TxTransfer        TxType = "transfer"
+	TxCompanyTransfer TxType = "company_transfer"
 	TxLikeReward      TxType = "like_reward"
 	TxCommentReward   TxType = "comment_reward"
 	// Company liquidation (#023)

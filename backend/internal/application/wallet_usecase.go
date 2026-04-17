@@ -5,17 +5,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/earnlearning/backend/internal/domain/company"
 	"github.com/earnlearning/backend/internal/domain/user"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
 
 type WalletUseCase struct {
-	walletRepo wallet.Repository
-	userRepo   user.Repository
+	walletRepo  wallet.Repository
+	userRepo    user.Repository
+	companyRepo company.CompanyRepository
 }
 
-func NewWalletUseCase(wr wallet.Repository, ur user.Repository) *WalletUseCase {
-	return &WalletUseCase{walletRepo: wr, userRepo: ur}
+func NewWalletUseCase(wr wallet.Repository, ur user.Repository, cr company.CompanyRepository) *WalletUseCase {
+	return &WalletUseCase{walletRepo: wr, userRepo: ur, companyRepo: cr}
 }
 
 type WalletResponse struct {
@@ -205,11 +207,49 @@ func (uc *WalletUseCase) SearchRecipients(senderID int, query string) ([]*Recipi
 			Type:       "user",
 		})
 	}
+
+	if uc.companyRepo != nil {
+		companies, err := uc.companyRepo.FindAll()
+		if err == nil {
+			for _, c := range companies {
+				if c.Status == "dissolved" {
+					continue
+				}
+				ownerName := ""
+				if owner, oerr := uc.userRepo.FindByID(c.OwnerID); oerr == nil && owner != nil {
+					ownerName = owner.Name
+				}
+				// 검색은 회사명 + 대표자명 둘 다 매칭 가능하게 (예: "홍길동" 으로도 회사 찾기)
+				if q != "" && !contains(c.Name, q) && !contains(ownerName, q) {
+					continue
+				}
+				results = append(results, &Recipient{
+					ID:   c.ID,
+					Name: CompanyAccountName(c.Name, ownerName),
+					// 법인은 학번/학과 없음 — displayName 이 suffix 를 덧붙이지 않도록 빈 값 유지
+					StudentID:  "",
+					Department: "",
+					AvatarURL:  c.LogoURL,
+					Type:       "company",
+				})
+			}
+		}
+	}
+
 	return results, nil
 }
 
 func contains(s, substr string) bool {
 	return len(substr) > 0 && len(s) > 0 && strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+// CompanyAccountName formats a company wallet/account label as "회사명(대표자명)"
+// — 개인사업자 표기 컨벤션. ownerName 이 비어있으면 회사명만 반환.
+func CompanyAccountName(companyName, ownerName string) string {
+	if ownerName == "" {
+		return companyName
+	}
+	return fmt.Sprintf("%s(%s)", companyName, ownerName)
 }
 
 type TransferInput struct {
@@ -234,36 +274,69 @@ func (uc *WalletUseCase) Transfer(senderID int, input TransferInput) error {
 		return wallet.ErrInsufficientFunds
 	}
 
-	// Determine receiver
-	receiverUserID := input.TargetUserID
-	if input.TargetType == "company" {
-		// For company transfer, we need to find the company owner
-		// TargetUserID here is actually companyID
-		return fmt.Errorf("회사 송금은 회사 ID가 아닌 대표의 user_id로 전달해야 합니다")
-	}
-
-	// Find or create receiver wallet
-	receiverWallet, err := uc.walletRepo.FindByUserID(receiverUserID)
-	if err != nil {
-		return fmt.Errorf("받는 사람의 지갑을 찾을 수 없습니다")
-	}
-
-	// Get sender & receiver names for description
 	sender, _ := uc.userRepo.FindByID(senderID)
-	receiver, _ := uc.userRepo.FindByID(receiverUserID)
-
 	senderName := "알 수 없음"
-	receiverName := "알 수 없음"
 	if sender != nil {
 		senderName = sender.Name
-	}
-	if receiver != nil {
-		receiverName = receiver.Name
 	}
 
 	desc := input.Description
 	if desc == "" {
 		desc = "개인 송금"
+	}
+
+	if input.TargetType == "company" {
+		if uc.companyRepo == nil {
+			return fmt.Errorf("법인 송금이 지원되지 않습니다")
+		}
+		// TargetUserID 는 여기서는 companyID 로 해석
+		companyID := input.TargetUserID
+		c, err := uc.companyRepo.FindByID(companyID)
+		if err != nil {
+			return fmt.Errorf("법인을 찾을 수 없습니다")
+		}
+		if c.Status == "dissolved" {
+			return fmt.Errorf("청산된 법인에는 송금할 수 없습니다")
+		}
+		cw, err := uc.companyRepo.FindCompanyWallet(companyID)
+		if err != nil {
+			return fmt.Errorf("법인 지갑을 찾을 수 없습니다")
+		}
+
+		ownerName := ""
+		if owner, oerr := uc.userRepo.FindByID(c.OwnerID); oerr == nil && owner != nil {
+			ownerName = owner.Name
+		}
+		companyLabel := CompanyAccountName(c.Name, ownerName)
+
+		// Debit sender (개인 잔액 차감)
+		if err := uc.walletRepo.Debit(senderWallet.ID, input.Amount, wallet.TxCompanyTransfer,
+			fmt.Sprintf("[%s] 법인 송금: %s", companyLabel, desc), "company", companyID); err != nil {
+			return err
+		}
+
+		// Credit company wallet
+		if err := uc.companyRepo.CreditCompanyWallet(cw.ID, input.Amount, string(wallet.TxCompanyTransfer),
+			fmt.Sprintf("%s 개인 송금 입금: %s", senderName, desc), "user", senderID); err != nil {
+			// Roll back the personal debit so funds are not lost.
+			_ = uc.walletRepo.Credit(senderWallet.ID, input.Amount, wallet.TxCompanyTransfer,
+				fmt.Sprintf("[%s] 법인 송금 실패 환불", companyLabel), "company", companyID)
+			return fmt.Errorf("법인 지갑 입금 실패: %w", err)
+		}
+		return nil
+	}
+
+	// Default: user → user
+	receiverUserID := input.TargetUserID
+	receiverWallet, err := uc.walletRepo.FindByUserID(receiverUserID)
+	if err != nil {
+		return fmt.Errorf("받는 사람의 지갑을 찾을 수 없습니다")
+	}
+
+	receiver, _ := uc.userRepo.FindByID(receiverUserID)
+	receiverName := "알 수 없음"
+	if receiver != nil {
+		receiverName = receiver.Name
 	}
 
 	// Debit sender
