@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
+import { useAuth } from '@/hooks/use-auth'
 import type { InvestmentRound } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -77,11 +78,15 @@ function HelpBox({
 
 export default function InvestDetailPage() {
   const { id } = useParams()
+  const { user } = useAuth()
   const [round, setRound] = useState<InvestmentRound | null>(null)
   const [loading, setLoading] = useState(true)
   const [shares, setShares] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [ownerActionLoading, setOwnerActionLoading] = useState<
+    'close' | 'cancel' | null
+  >(null)
 
   const fetchRound = async () => {
     setLoading(true)
@@ -161,6 +166,55 @@ export default function InvestDetailPage() {
     sharesNum > 0 && existingShares + sharesNum > 0
       ? (sharesNum / (existingShares + sharesNum)) * 100
       : 0
+
+  const isOwner = !!user && !!round.owner && user.id === round.owner.id
+  const sharesSold = round.sold_shares ?? round.new_shares - remainingShares
+
+  const handleCloseEarly = async () => {
+    if (
+      !window.confirm(
+        `라운드를 조기 마감하시겠습니까?\n\n` +
+          `지금까지 유치한 ${formatMoney(round.current_amount)}으로 확정됩니다. ` +
+          `남은 주식(${remainingShares.toLocaleString('ko-KR')}주)은 발행되지 않습니다.\n\n` +
+          `회사 가치는 주당 가격 기준으로 재평가돼요.`,
+      )
+    ) {
+      return
+    }
+    setOwnerActionLoading('close')
+    try {
+      await api.post(`/investment/rounds/${id}/close`, {})
+      toast.success('라운드를 조기 마감했습니다.')
+      await fetchRound()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : '조기 마감 실패')
+    } finally {
+      setOwnerActionLoading(null)
+    }
+  }
+
+  const handleCancelRound = async () => {
+    if (
+      !window.confirm(
+        `정말 라운드를 취소하시겠습니까?\n\n` +
+          `투자자 전원에게 ${formatMoney(round.current_amount)}이 환불되고 ` +
+          `발행된 주식 ${sharesSold.toLocaleString('ko-KR')}주가 모두 회수됩니다.\n\n` +
+          `되돌릴 수 없습니다.`,
+      )
+    ) {
+      return
+    }
+    setOwnerActionLoading('cancel')
+    try {
+      await api.post(`/investment/rounds/${id}/cancel`, {})
+      toast.success('라운드를 취소했습니다. 환불이 완료됐어요.')
+      await fetchRound()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : '라운드 취소 실패')
+    } finally {
+      setOwnerActionLoading(null)
+    }
+  }
 
   const handleInvest = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -330,8 +384,63 @@ export default function InvestDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Owner-only controls */}
+      {isActive && isOwner && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">대표자 도구</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <HelpBox title="조기 마감 vs 취소 — 언제 뭘 써야 할까?">
+              <p>
+                <strong>조기 마감</strong>: 투자자가 일부만 참여했지만 그 금액을{' '}
+                <em>받아들이고</em> 라운드를 확정하고 싶을 때. 투자자들은 지분을
+                유지하고 회사 가치는 주당 가격에 맞춰 재평가됩니다.
+              </p>
+              <p>
+                <strong>취소</strong>: 라운드 자체를 <em>없던 일</em>로 되돌리고
+                싶을 때. 모든 투자자에게 환불되고 지분이 회수됩니다. 회사 지갑
+                잔액이 부족하면 취소할 수 없어요.
+              </p>
+              <p className="text-muted-foreground">
+                둘 다 되돌릴 수 없으니 신중하게 선택하세요.
+              </p>
+            </HelpBox>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                disabled={
+                  ownerActionLoading !== null || sharesSold <= 0
+                }
+                onClick={handleCloseEarly}
+                title={
+                  sharesSold <= 0
+                    ? '투자자가 1명 이상 있어야 조기 마감 가능합니다'
+                    : undefined
+                }
+              >
+                {ownerActionLoading === 'close' ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : null}
+                조기 마감
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={ownerActionLoading !== null}
+                onClick={handleCancelRound}
+              >
+                {ownerActionLoading === 'cancel' ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : null}
+                라운드 취소 (환불)
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Invest form */}
-      {isActive && (
+      {isActive && !isOwner && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">투자하기</CardTitle>

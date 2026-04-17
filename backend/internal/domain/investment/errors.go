@@ -16,4 +16,6 @@ var (
 	ErrInvalidShares         = errors.New("유효하지 않은 주식 수량입니다")
 	ErrOverSubscribed        = errors.New("남은 주식 수를 초과했습니다")
 	ErrRoundExpired          = errors.New("투자 기간이 만료된 라운드입니다")
+	ErrNoInvestors           = errors.New("아직 투자자가 없어 조기 마감할 수 없습니다 (취소를 사용하세요)")
+	ErrCompanyFundsInsufficient = errors.New("회사 지갑 잔액이 부족하여 환불할 수 없습니다")
 )
