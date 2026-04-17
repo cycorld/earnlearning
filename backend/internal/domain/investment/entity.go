@@ -25,9 +25,32 @@ type InvestmentRound struct {
 	CreatedAt       time.Time   `json:"created_at"`
 	FundedAt        *time.Time  `json:"funded_at"`
 
-	// Joined fields
+	// Joined fields (flat — kept for backward compat with OAuth clients).
 	CompanyName string `json:"company_name,omitempty"`
 	OwnerName   string `json:"owner_name,omitempty"`
+
+	// Nested shape consumed by the InvestPage / InvestDetailPage UI.
+	Company *RoundCompany `json:"company,omitempty"`
+	Owner   *RoundOwner   `json:"owner,omitempty"`
+
+	// Derived: shares remaining = new_shares - sum(investments.shares).
+	// Only populated by GetRound / single-fetch endpoints.
+	SoldShares      int `json:"sold_shares"`
+	RemainingShares int `json:"remaining_shares"`
+}
+
+// RoundCompany is the company slice attached to an InvestmentRound response.
+type RoundCompany struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Valuation int    `json:"valuation"`
+	LogoURL   string `json:"logo_url"`
+}
+
+// RoundOwner is the company owner slice attached to an InvestmentRound response.
+type RoundOwner struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 type Investment struct {
@@ -87,13 +110,25 @@ type KpiRevenue struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// PortfolioItem represents a user's investment in a specific company.
+// PortfolioItem represents a user's investment position in a company.
+// Shape is tailored to what InvestPage.tsx expects: nested company object and
+// derived fields like profit / dividends_received so the UI can render without
+// further client-side math.
 type PortfolioItem struct {
-	CompanyID    int     `json:"company_id"`
-	CompanyName  string  `json:"company_name"`
-	TotalShares  int     `json:"total_shares"`
-	UserShares   int     `json:"user_shares"`
-	Invested     int     `json:"invested"`
-	CurrentValue int     `json:"current_value"`
-	Percentage   float64 `json:"percentage"`
+	Company           PortfolioCompany `json:"company"`
+	TotalShares       int              `json:"total_shares"`
+	Shares            int              `json:"shares"`           // user's shares (was user_shares)
+	InvestedAmount    int              `json:"invested_amount"`  // capital put in
+	CurrentValue      int              `json:"current_value"`    // mark-to-market
+	Profit            int              `json:"profit"`           // current_value - invested_amount
+	DividendsReceived int              `json:"dividends_received"` // total dividends received from this company
+	Percentage        float64          `json:"percentage"`
+}
+
+// PortfolioCompany is the embedded company reference inside a PortfolioItem.
+type PortfolioCompany struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Valuation int    `json:"valuation"`
+	LogoURL   string `json:"logo_url"`
 }
