@@ -26,6 +26,7 @@ import CompanyListPage from '@/routes/company/CompanyListPage'
 import CompanyNewPage from '@/routes/company/CompanyNewPage'
 import CompanyDetailPage from '@/routes/company/CompanyDetailPage'
 import BusinessCardPage from '@/routes/company/BusinessCardPage'
+import CompanyWalletPage from '@/routes/company/CompanyWalletPage'
 import InvestPage from '@/routes/invest/InvestPage'
 import InvestDetailPage from '@/routes/invest/InvestDetailPage'
 import ExchangePage from '@/routes/exchange/ExchangePage'
@@ -95,6 +96,7 @@ export default function App() {
               <Route path="/company/new" element={<CompanyNewPage />} />
               <Route path="/company/:id" element={<CompanyDetailPage />} />
               <Route path="/company/:id/card" element={<BusinessCardPage />} />
+              <Route path="/company/:id/wallet" element={<CompanyWalletPage />} />
               <Route path="/invest" element={<InvestPage />} />
               <Route path="/invest/:id" element={<InvestDetailPage />} />
               <Route path="/exchange" element={<ExchangePage />} />

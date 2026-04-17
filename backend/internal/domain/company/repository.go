@@ -28,6 +28,7 @@ type CompanyRepository interface {
 	FindCompanyWallet(companyID int) (*CompanyWallet, error)
 	CreditCompanyWallet(walletID int, amount int, txType string, desc string, refType string, refID int) error
 	DebitCompanyWallet(walletID int, amount int, txType string, desc string, refType string, refID int) error
+	GetCompanyTransactions(walletID int, page, limit int) ([]*CompanyTransaction, int, error)
 
 	// Disclosure operations
 	CreateDisclosure(d *Disclosure) (int, error)
