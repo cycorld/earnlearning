@@ -241,6 +241,33 @@ func (r *InvestmentRepo) CreateInvestment(inv *investment.Investment) (int, erro
 	return int(id), err
 }
 
+func (r *InvestmentRepo) ListByRound(roundID int) ([]*investment.Investment, error) {
+	rows, err := r.db.Query(`
+		SELECT i.id, i.round_id, i.user_id, i.amount, i.shares, i.created_at,
+		       u.name AS user_name
+		FROM investments i
+		JOIN users u ON u.id = i.user_id
+		WHERE i.round_id = ?
+		ORDER BY i.created_at ASC`, roundID)
+	if err != nil {
+		return nil, fmt.Errorf("list investments by round: %w", err)
+	}
+	defer rows.Close()
+
+	var invs []*investment.Investment
+	for rows.Next() {
+		inv := &investment.Investment{}
+		if err := rows.Scan(
+			&inv.ID, &inv.RoundID, &inv.UserID, &inv.Amount, &inv.Shares, &inv.CreatedAt,
+			&inv.UserName,
+		); err != nil {
+			return nil, fmt.Errorf("scan investment: %w", err)
+		}
+		invs = append(invs, inv)
+	}
+	return invs, nil
+}
+
 func (r *InvestmentRepo) ListByUser(userID int) ([]*investment.Investment, error) {
 	rows, err := r.db.Query(`
 		SELECT i.id, i.round_id, i.user_id, i.amount, i.shares, i.created_at,

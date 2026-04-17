@@ -20,6 +20,9 @@ type Repository interface {
 	// Investments
 	CreateInvestment(inv *Investment) (int, error)
 	ListByUser(userID int) ([]*Investment, error)
+	// ListByRound returns all investments made into a round. Used by the
+	// cancel flow to iterate refunds.
+	ListByRound(roundID int) ([]*Investment, error)
 	// SumSharesByRound returns total shares already issued through investments
 	// for a given round. Used to compute remaining shares for partial invest.
 	SumSharesByRound(roundID int) (int, error)

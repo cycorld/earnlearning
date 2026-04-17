@@ -208,6 +208,38 @@ func (r *CompanyRepo) FindShareholder(companyID, userID int) (*company.Sharehold
 	return s, nil
 }
 
+// SubtractShareholderShares decrements a shareholder's shares by `shares`.
+// When the resulting balance is <= 0, the row is deleted entirely so stale
+// "0 share" ghost rows don't pollute the shareholder list.
+func (r *CompanyRepo) SubtractShareholderShares(companyID, userID, shares int) error {
+	var current int
+	err := r.db.QueryRow(
+		"SELECT shares FROM shareholders WHERE company_id = ? AND user_id = ?",
+		companyID, userID,
+	).Scan(&current)
+	if err == sql.ErrNoRows {
+		return nil // nothing to do
+	}
+	if err != nil {
+		return fmt.Errorf("find shareholder for decrement: %w", err)
+	}
+	if current-shares <= 0 {
+		_, err = r.db.Exec(
+			"DELETE FROM shareholders WHERE company_id = ? AND user_id = ?",
+			companyID, userID,
+		)
+	} else {
+		_, err = r.db.Exec(
+			"UPDATE shareholders SET shares = shares - ? WHERE company_id = ? AND user_id = ?",
+			shares, companyID, userID,
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("decrement shareholder: %w", err)
+	}
+	return nil
+}
+
 func (r *CompanyRepo) UpsertShareholder(companyID, userID, shares int, acquisitionType string) error {
 	_, err := r.db.Exec(`
 		INSERT INTO shareholders (company_id, user_id, shares, acquisition_type)

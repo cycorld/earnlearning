@@ -70,6 +70,52 @@ func (h *InvestmentHandler) Invest(c echo.Context) error {
 	return c.JSON(http.StatusCreated, successResp(inv))
 }
 
+// CloseRoundEarly godoc — owner closes a partially-funded round.
+//
+//	@Summary		라운드 조기 마감 (owner)
+//	@Description	목표 미달 상태에서 현재까지 유치된 금액으로 라운드 확정
+//	@Tags			Investment
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"라운드 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/investment/rounds/{id}/close [post]
+func (h *InvestmentHandler) CloseRoundEarly(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	roundID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 라운드 ID입니다"))
+	}
+	round, err := h.uc.CloseRoundEarly(roundID, userID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
+	}
+	return c.JSON(http.StatusOK, successResp(round))
+}
+
+// CancelRound godoc — owner cancels a round and refunds all investors.
+//
+//	@Summary		라운드 취소 + 환불 (owner)
+//	@Description	진행 중인 라운드를 취소하고 모든 투자자에게 환불
+//	@Tags			Investment
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"라운드 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/investment/rounds/{id}/cancel [post]
+func (h *InvestmentHandler) CancelRound(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	roundID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 라운드 ID입니다"))
+	}
+	round, err := h.uc.CancelRoundAndRefund(roundID, userID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
+	}
+	return c.JSON(http.StatusOK, successResp(round))
+}
+
 // GetRound godoc — single round detail used by /invest/:id.
 //
 //	@Summary		투자 라운드 상세
