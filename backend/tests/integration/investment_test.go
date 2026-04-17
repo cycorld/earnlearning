@@ -2,6 +2,8 @@ package integration
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -609,5 +611,61 @@ func TestInvestment_DividendsRolledIntoPortfolio(t *testing.T) {
 	_ = json.Unmarshal(pr.Data, &portfolio)
 	if len(portfolio) != 1 || portfolio[0].DividendsReceived != 20_000 {
 		t.Errorf("expected dividends_received=20000, got %v", portfolio)
+	}
+}
+
+// #032 회귀: 투자 라운드 오픈 시 자동 생성되는 공지 포스트 링크가 /invest/<round_id> 여야 한다.
+// 이전에는 /investment 하드코딩으로 404가 떴다.
+func TestInvestment_OpenRound_AutoPost_LinkPointsToDetail(t *testing.T) {
+	ts := setupTestServer(t)
+
+	// Admin creates classroom (seeds default "invest" channel)
+	adminToken := ts.login(testAdminEmail, testAdminPass)
+	crResp := ts.post("/api/classrooms", map[string]interface{}{
+		"name": "투자링크 회귀반", "initial_capital": 500000,
+	}, adminToken)
+	var cr struct {
+		ID   int    `json:"id"`
+		Code string `json:"code"`
+	}
+	_ = json.Unmarshal(crResp.Data, &cr)
+
+	// Owner joins classroom, creates company, opens round
+	ownerToken, cid := createUserWithCompany(t, ts, "link-own@test.com", "linkown", "20240500", "linkco")
+	if jr := ts.post("/api/classrooms/join", map[string]string{"code": cr.Code}, ownerToken); !jr.Success {
+		t.Fatalf("join classroom: %v", jr.Error)
+	}
+
+	r := ts.post("/api/investment/rounds", map[string]interface{}{
+		"company_id":      cid,
+		"target_amount":   500_000,
+		"offered_percent": 0.2,
+	}, ownerToken)
+	if !r.Success {
+		t.Fatalf("create round: %v", r.Error)
+	}
+	var round struct {
+		ID int `json:"id"`
+	}
+	_ = json.Unmarshal(r.Data, &round)
+
+	// Read the auto-generated post content from the invest channel
+	var content string
+	err := ts.db.QueryRow(`
+		SELECT p.content FROM posts p
+		JOIN channels c ON c.id = p.channel_id
+		WHERE c.slug = 'invest'
+		ORDER BY p.id DESC LIMIT 1`).Scan(&content)
+	if err != nil {
+		t.Fatalf("fetch auto-post: %v", err)
+	}
+
+	expectedLink := fmt.Sprintf("/invest/%d", round.ID)
+	if !strings.Contains(content, expectedLink) {
+		t.Errorf("auto-post content missing %q\ncontent: %s", expectedLink, content)
+	}
+	// Guard against regression to old broken path
+	if strings.Contains(content, "(/investment)") {
+		t.Errorf("auto-post should not contain legacy /investment link\ncontent: %s", content)
 	}
 }

@@ -116,8 +116,8 @@ func (uc *InvestmentUseCase) CreateRound(input CreateRoundInput, userID int) (*i
 	}
 
 	// Auto-post to 투자라운지 channel
-	content := fmt.Sprintf("## 📈 투자 라운드 오픈: %s\n\n**목표 금액:** %s\n**지분 제공:** %.1f%%\n**주당 가격:** %s\n\n👉 [투자하러 가기](/investment)",
-		c.Name, formatMoney(input.TargetAmount), input.OfferedPercent*100, formatMoney(int(pricePerShare)))
+	content := fmt.Sprintf("## 📈 투자 라운드 오픈: %s\n\n**목표 금액:** %s\n**지분 제공:** %.1f%%\n**주당 가격:** %s\n\n👉 [투자하러 가기](/invest/%d)",
+		c.Name, formatMoney(input.TargetAmount), input.OfferedPercent*100, formatMoney(int(pricePerShare)), id)
 	uc.autoPoster.PostToChannel("invest", userID, content, []string{"투자라운드", c.Name})
 
 	return uc.repo.FindRoundByID(id)
