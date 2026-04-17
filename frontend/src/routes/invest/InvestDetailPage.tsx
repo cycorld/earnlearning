@@ -16,24 +16,63 @@ import {
   Clock,
   Loader2,
   TrendingUp,
+  Lightbulb,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
 
 const statusLabels: Record<string, string> = {
-  active: '모집 중',
   open: '모집 중',
-  closed: '마감',
-  completed: '완료',
+  funded: '모집 완료',
+  failed: '실패',
+  cancelled: '취소',
 }
 
 const statusVariant: Record<
   string,
   'default' | 'secondary' | 'destructive' | 'outline'
 > = {
-  active: 'default',
   open: 'default',
-  closed: 'secondary',
-  completed: 'outline',
+  funded: 'secondary',
+  failed: 'destructive',
+  cancelled: 'outline',
+}
+
+function HelpBox({
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  title: string
+  children: React.ReactNode
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <Card className="border-primary/30 bg-primary/5">
+      <CardContent className="p-3">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center gap-2 text-sm font-medium text-primary"
+        >
+          <Lightbulb className="h-4 w-4 shrink-0" />
+          <span className="flex-1 text-left">{title}</span>
+          {open ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </button>
+        {open && (
+          <div className="mt-2 space-y-2 text-xs leading-relaxed text-muted-foreground">
+            {children}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function InvestDetailPage() {
@@ -45,6 +84,7 @@ export default function InvestDetailPage() {
   const [error, setError] = useState('')
 
   const fetchRound = async () => {
+    setLoading(true)
     try {
       const data = await api.get<InvestmentRound>(
         `/investment/rounds/${id}`,
@@ -60,41 +100,6 @@ export default function InvestDetailPage() {
   useEffect(() => {
     fetchRound()
   }, [id])
-
-  const computedCost =
-    shares && round ? Number(shares) * round.price_per_share : 0
-  const remainingShares = round
-    ? round.new_shares -
-      (round.target_amount > 0
-        ? Math.floor(round.current_amount / round.price_per_share)
-        : 0)
-    : 0
-
-  const handleInvest = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    if (!shares || Number(shares) <= 0) {
-      setError('1주 이상 입력해 주세요.')
-      return
-    }
-    setSubmitting(true)
-    try {
-      await api.post(`/investment/rounds/${id}/invest`, {
-        shares: Number(shares),
-      })
-      toast.success(
-        `${shares}주 투자 완료! (${formatMoney(computedCost)})`,
-      )
-      setShares('')
-      await fetchRound()
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : '투자에 실패했습니다.',
-      )
-    } finally {
-      setSubmitting(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -112,14 +117,78 @@ export default function InvestDetailPage() {
     )
   }
 
+  // Derived values ---------------------------------------------------------
+  const companyName = round.company?.name ?? round.company_name ?? '회사'
+  const currentValuation = round.company?.valuation ?? 0
+  // Post-money valuation that this round will set when fully funded.
+  const postMoneyValuation =
+    round.offered_percent > 0
+      ? Math.round(round.target_amount / round.offered_percent)
+      : 0
+  const preMoneyValuation = postMoneyValuation - round.target_amount
+
+  const remainingShares =
+    round.remaining_shares ??
+    Math.max(0, round.new_shares - (round.sold_shares ?? 0))
   const progress =
     round.target_amount > 0
-      ? Math.min(
-          (round.current_amount / round.target_amount) * 100,
-          100,
-        )
+      ? Math.min((round.current_amount / round.target_amount) * 100, 100)
       : 0
-  const isActive = round.status === 'active' || round.status === 'open'
+  const isActive = round.status === 'open'
+
+  const sharesNum = Number(shares) || 0
+  const isLastBuy =
+    sharesNum > 0 && sharesNum === remainingShares && remainingShares > 0
+  // Approximate cost preview. Backend collapses rounding for the last buy
+  // so it pays exactly target - current. We mimic that in the UI.
+  const computedCost = isLastBuy
+    ? round.target_amount - round.current_amount
+    : Math.round(sharesNum * round.price_per_share)
+
+  // "If I buy N shares, what % of the company will I own?"
+  //    = N / (company.total_shares + N)    (assuming no other partial buys)
+  // We don't know company.total_shares directly here, but we know:
+  //   post-funded total_shares = company.total_shares + round.new_shares
+  // So: pre-funded total_shares ≈ postTotal - new_shares
+  //   new_shares * price = target, valuation = target / offered_pct
+  //   post total = new_shares / offered_pct  (pure math)
+  const postTotalShares =
+    round.offered_percent > 0
+      ? Math.round(round.new_shares / round.offered_percent)
+      : 0
+  const existingShares = Math.max(0, postTotalShares - round.new_shares)
+  const myEventualOwnership =
+    sharesNum > 0 && existingShares + sharesNum > 0
+      ? (sharesNum / (existingShares + sharesNum)) * 100
+      : 0
+
+  const handleInvest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    if (!sharesNum || sharesNum <= 0) {
+      setError('1주 이상 입력해 주세요.')
+      return
+    }
+    if (sharesNum > remainingShares) {
+      setError(`남은 주식(${remainingShares}주)을 초과할 수 없습니다.`)
+      return
+    }
+    setSubmitting(true)
+    try {
+      await api.post(`/investment/rounds/${id}/invest`, { shares: sharesNum })
+      toast.success(
+        `${sharesNum}주 매수 완료! (${formatMoney(computedCost)})`,
+      )
+      setShares('')
+      await fetchRound()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '투자에 실패했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const pctLabel = (round.offered_percent * 100).toFixed(1)
 
   return (
     <div className="mx-auto max-w-lg space-y-4 p-4">
@@ -144,12 +213,8 @@ export default function InvestDetailPage() {
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">
-                  {round.company?.name}
-                </CardTitle>
-                <Badge
-                  variant={statusVariant[round.status] || 'secondary'}
-                >
+                <CardTitle className="text-lg">{companyName}</CardTitle>
+                <Badge variant={statusVariant[round.status] || 'secondary'}>
                   {statusLabels[round.status] || round.status}
                 </Badge>
               </div>
@@ -165,38 +230,72 @@ export default function InvestDetailPage() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">목표 금액</p>
-              <p className="font-semibold">
-                {formatMoney(round.target_amount)}
-              </p>
+              <p className="font-semibold">{formatMoney(round.target_amount)}</p>
             </div>
             <div>
               <p className="text-muted-foreground">제공 지분</p>
-              <p className="font-semibold">{round.offered_percent}%</p>
+              <p className="font-semibold">{pctLabel}%</p>
             </div>
             <div>
               <p className="text-muted-foreground">주당 가격</p>
               <p className="font-semibold">
-                {formatMoney(round.price_per_share)}
+                {formatMoney(Math.round(round.price_per_share))}
               </p>
             </div>
             <div>
               <p className="text-muted-foreground">발행 주식</p>
-              <p className="font-semibold">{round.new_shares}주</p>
+              <p className="font-semibold">
+                {round.new_shares.toLocaleString('ko-KR')}주
+              </p>
             </div>
           </div>
 
-          {round.company?.valuation != null && (
-            <>
-              <Separator />
-              <div className="flex items-center gap-2 text-sm">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <span className="text-muted-foreground">기업가치</span>
-                <span className="font-semibold">
-                  {formatMoney(round.company.valuation)}
-                </span>
+          <Separator />
+
+          {/* Valuation breakdown */}
+          <HelpBox title="가치평가 계산 보기" defaultOpen>
+            <div className="grid grid-cols-2 gap-2 rounded-md bg-background/60 p-2 text-xs">
+              <div>
+                <p className="text-muted-foreground">현재 기업가치</p>
+                <p className="font-semibold text-foreground">
+                  {formatMoney(currentValuation)}
+                </p>
               </div>
-            </>
-          )}
+              <div>
+                <p className="text-muted-foreground">프리머니 가치</p>
+                <p className="font-semibold text-foreground">
+                  {formatMoney(preMoneyValuation)}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">모집 금액(+)</p>
+                <p className="font-semibold text-foreground">
+                  +{formatMoney(round.target_amount)}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">포스트머니 가치</p>
+                <p className="font-semibold text-primary">
+                  {formatMoney(postMoneyValuation)}
+                </p>
+              </div>
+            </div>
+            <p>
+              <strong>포스트머니</strong> = 목표금액 ÷ 제공 지분 ={' '}
+              {formatMoney(round.target_amount)} ÷ {pctLabel}% ={' '}
+              {formatMoney(postMoneyValuation)}
+            </p>
+            <p>
+              <strong>프리머니</strong> = 포스트머니 − 모집 금액. "투자 들어오기
+              전"의 회사 가치예요.
+            </p>
+            <p>
+              주당 가격 = 목표금액 ÷ 발행 주식 ={' '}
+              {formatMoney(round.target_amount)} ÷{' '}
+              {round.new_shares.toLocaleString('ko-KR')}주 ≈{' '}
+              {formatMoney(Math.round(round.price_per_share))}
+            </p>
+          </HelpBox>
 
           <Separator />
 
@@ -216,19 +315,22 @@ export default function InvestDetailPage() {
                 style={{ width: `${progress}%` }}
               />
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              남은 주식: {remainingShares.toLocaleString('ko-KR')}주 /{' '}
+              {round.new_shares.toLocaleString('ko-KR')}주
+            </p>
           </div>
 
           {round.expires_at && (
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <Clock className="h-4 w-4" />
-              마감:{' '}
-              {new Date(round.expires_at).toLocaleDateString('ko-KR')}
+              마감: {new Date(round.expires_at).toLocaleDateString('ko-KR')}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Invest Form */}
+      {/* Invest form */}
       {isActive && (
         <Card>
           <CardHeader>
@@ -236,11 +338,29 @@ export default function InvestDetailPage() {
           </CardHeader>
           <form onSubmit={handleInvest}>
             <CardContent className="space-y-4">
+              <HelpBox title="투자 전에 알아두세요">
+                <p>
+                  투자는 <strong>원금 손실 가능한</strong> 활동입니다. 회사가
+                  잘 되면 주가(기업가치)가 오르고, 배당금도 받습니다. 반대면
+                  손실이 납니다.
+                </p>
+                <p>
+                  한 라운드는 여러 명이 나눠서 살 수 있어요. 내가 사고 싶은
+                  만큼 주식 수를 입력하고, 마지막 한 주까지 다 팔리면 라운드가
+                  마감됩니다.
+                </p>
+                <p>
+                  매수 버튼을 누르는 순간 입력한 금액이 바로 내 지갑에서 빠지고
+                  회사 법인 계좌로 들어갑니다.
+                </p>
+              </HelpBox>
+
               {error && (
                 <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
                   {error}
                 </div>
               )}
+
               <div className="space-y-2">
                 <Label htmlFor="shares">매수 주식 수</Label>
                 <Input
@@ -253,42 +373,59 @@ export default function InvestDetailPage() {
                   min={1}
                   max={remainingShares > 0 ? remainingShares : undefined}
                 />
-                {remainingShares > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    잔여 주식: {remainingShares}주
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  잔여 주식: {remainingShares.toLocaleString('ko-KR')}주
+                </p>
               </div>
+
+              {sharesNum > 0 && (
+                <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">매수 금액</span>
+                    <span className="font-semibold">
+                      {formatMoney(computedCost)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">취득 지분(예상)</span>
+                    <span className="font-semibold">
+                      {myEventualOwnership.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">투자 후 총 주식 수</span>
+                    <span className="font-semibold">
+                      {(existingShares + sharesNum).toLocaleString('ko-KR')}주
+                    </span>
+                  </div>
+                  {isLastBuy && (
+                    <p className="rounded bg-primary/10 p-2 text-primary">
+                      🎯 마지막 주식까지 매수하는 거예요. 라운드가 바로
+                      마감되고, 회사 가치가{' '}
+                      <strong>{formatMoney(postMoneyValuation)}</strong>으로
+                      재평가됩니다.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <Separator />
-
-              <div className="rounded-lg bg-muted p-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">주당 가격</span>
-                  <span>{formatMoney(round.price_per_share)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">매수 수량</span>
-                  <span>{shares || 0}주</span>
-                </div>
-                <Separator className="my-2" />
-                <div className="flex justify-between font-bold">
-                  <span>총 투자 금액</span>
-                  <span className="text-primary">
-                    {formatMoney(computedCost)}
-                  </span>
-                </div>
-              </div>
-
               <Button
                 type="submit"
                 className="w-full"
-                disabled={submitting || !shares || Number(shares) <= 0}
+                disabled={submitting || remainingShares <= 0}
               >
-                {submitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    처리 중...
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp className="mr-2 h-4 w-4" />
+                    매수하기
+                  </>
                 )}
-                투자하기
               </Button>
             </CardContent>
           </form>
