@@ -38,12 +38,15 @@ func (r *InvestmentRepo) FindRoundByID(id int) (*investment.InvestmentRound, err
 	var postID sql.NullInt64
 	var expiresAt sql.NullTime
 	var fundedAt sql.NullTime
+	var companyValuation int
+	var companyLogoURL string
+	var ownerID int
 
 	err := r.db.QueryRow(`
 		SELECT ir.id, ir.company_id, ir.post_id, ir.target_amount, ir.offered_percent,
 			   ir.current_amount, ir.price_per_share, ir.new_shares, ir.status,
 			   ir.expires_at, ir.created_at, ir.funded_at,
-			   c.name AS company_name, u.name AS owner_name
+			   c.name, c.valuation, COALESCE(c.logo_url, ''), u.id, u.name
 		FROM investment_rounds ir
 		JOIN companies c ON c.id = ir.company_id
 		JOIN users u ON u.id = c.owner_id
@@ -51,7 +54,7 @@ func (r *InvestmentRepo) FindRoundByID(id int) (*investment.InvestmentRound, err
 		&round.ID, &round.CompanyID, &postID, &round.TargetAmount, &round.OfferedPercent,
 		&round.CurrentAmount, &round.PricePerShare, &round.NewShares, &round.Status,
 		&expiresAt, &round.CreatedAt, &fundedAt,
-		&round.CompanyName, &round.OwnerName,
+		&round.CompanyName, &companyValuation, &companyLogoURL, &ownerID, &round.OwnerName,
 	)
 	if err == sql.ErrNoRows {
 		return nil, investment.ErrRoundNotFound
@@ -68,6 +71,20 @@ func (r *InvestmentRepo) FindRoundByID(id int) (*investment.InvestmentRound, err
 	}
 	if fundedAt.Valid {
 		round.FundedAt = &fundedAt.Time
+	}
+	round.Company = &investment.RoundCompany{
+		ID: round.CompanyID, Name: round.CompanyName,
+		Valuation: companyValuation, LogoURL: companyLogoURL,
+	}
+	round.Owner = &investment.RoundOwner{ID: ownerID, Name: round.OwnerName}
+
+	// Sold/remaining shares (derived). FindRoundByID is the hot path for the
+	// detail page which absolutely needs this.
+	sold, _ := r.SumSharesByRound(round.ID)
+	round.SoldShares = sold
+	round.RemainingShares = round.NewShares - sold
+	if round.RemainingShares < 0 {
+		round.RemainingShares = 0
 	}
 	return round, nil
 }
@@ -100,7 +117,7 @@ func (r *InvestmentRepo) ListRounds(filter investment.RoundFilter, page, limit i
 		SELECT ir.id, ir.company_id, ir.post_id, ir.target_amount, ir.offered_percent,
 			   ir.current_amount, ir.price_per_share, ir.new_shares, ir.status,
 			   ir.expires_at, ir.created_at, ir.funded_at,
-			   c.name AS company_name, u.name AS owner_name
+			   c.name, c.valuation, COALESCE(c.logo_url, ''), u.id, u.name
 		FROM investment_rounds ir
 		JOIN companies c ON c.id = ir.company_id
 		JOIN users u ON u.id = c.owner_id
@@ -118,12 +135,15 @@ func (r *InvestmentRepo) ListRounds(filter investment.RoundFilter, page, limit i
 		var postID sql.NullInt64
 		var expiresAt sql.NullTime
 		var fundedAt sql.NullTime
+		var companyValuation int
+		var companyLogoURL string
+		var ownerID int
 
 		if err := rows.Scan(
 			&round.ID, &round.CompanyID, &postID, &round.TargetAmount, &round.OfferedPercent,
 			&round.CurrentAmount, &round.PricePerShare, &round.NewShares, &round.Status,
 			&expiresAt, &round.CreatedAt, &fundedAt,
-			&round.CompanyName, &round.OwnerName,
+			&round.CompanyName, &companyValuation, &companyLogoURL, &ownerID, &round.OwnerName,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan round: %w", err)
 		}
@@ -137,6 +157,11 @@ func (r *InvestmentRepo) ListRounds(filter investment.RoundFilter, page, limit i
 		if fundedAt.Valid {
 			round.FundedAt = &fundedAt.Time
 		}
+		round.Company = &investment.RoundCompany{
+			ID: round.CompanyID, Name: round.CompanyName,
+			Valuation: companyValuation, LogoURL: companyLogoURL,
+		}
+		round.Owner = &investment.RoundOwner{ID: ownerID, Name: round.OwnerName}
 		rounds = append(rounds, round)
 	}
 	return rounds, total, nil
@@ -153,6 +178,43 @@ func (r *InvestmentRepo) UpdateRoundFunded(id int, amount int) error {
 		amount, id,
 	)
 	return err
+}
+
+func (r *InvestmentRepo) UpdateRoundCurrentAmount(id int, currentAmount int) error {
+	_, err := r.db.Exec(
+		"UPDATE investment_rounds SET current_amount = ? WHERE id = ?",
+		currentAmount, id,
+	)
+	return err
+}
+
+func (r *InvestmentRepo) SumSharesByRound(roundID int) (int, error) {
+	var total sql.NullInt64
+	err := r.db.QueryRow(
+		"SELECT COALESCE(SUM(shares), 0) FROM investments WHERE round_id = ?",
+		roundID,
+	).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+	return int(total.Int64), nil
+}
+
+// SumDividendsByUserAndCompany joins dividend_payments → dividends on
+// dividend_id to scope by company_id.
+func (r *InvestmentRepo) SumDividendsByUserAndCompany(userID, companyID int) (int, error) {
+	var total sql.NullInt64
+	err := r.db.QueryRow(`
+		SELECT COALESCE(SUM(dp.amount), 0)
+		FROM dividend_payments dp
+		JOIN dividends d ON d.id = dp.dividend_id
+		WHERE dp.user_id = ? AND d.company_id = ?`,
+		userID, companyID,
+	).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+	return int(total.Int64), nil
 }
 
 func (r *InvestmentRepo) HasOpenRound(companyID int) (bool, error) {

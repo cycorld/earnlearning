@@ -23,6 +23,7 @@ import { CreditCard, ExternalLink, Pencil, Loader2, Plus, Upload } from 'lucide-
 import { formatMoney, displayName } from '@/lib/utils'
 import { DisclosureSection } from './DisclosureSection'
 import { ProposalSection } from './ProposalSection'
+import { InvestmentRoundSection } from './InvestmentRoundSection'
 
 export default function CompanyDetailPage() {
   const { id } = useParams()
@@ -263,6 +264,14 @@ export default function CompanyDetailPage() {
         companyId={Number(id)}
         isShareholder={isShareholder}
         onCompanyChanged={fetchCompany}
+      />
+
+      {/* Investment rounds (투자 유치) */}
+      <InvestmentRoundSection
+        companyId={Number(id)}
+        companyValuation={company.valuation}
+        isOwner={!!isOwner}
+        onRoundCreated={fetchCompany}
       />
 
       <Separator />

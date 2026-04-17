@@ -176,6 +176,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.POST("/investment/rounds", h.Investment.CreateRound, middleware.RequireScope("write:market"))
 	approved.POST("/investment/rounds/:id/invest", h.Investment.Invest, middleware.RequireScope("write:market"))
 	approved.GET("/investment/rounds", h.Investment.ListRounds, middleware.RequireScope("read:market"))
+	approved.GET("/investment/rounds/:id", h.Investment.GetRound, middleware.RequireScope("read:market"))
 	approved.GET("/investment/portfolio", h.Investment.GetPortfolio, middleware.RequireScope("read:market"))
 	approved.POST("/investment/dividends", h.Investment.ExecuteDividend, middleware.RequireScope("write:market"))
 	approved.GET("/investment/dividends", h.Investment.GetMyDividends, middleware.RequireScope("read:market"))

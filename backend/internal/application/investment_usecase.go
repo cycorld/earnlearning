@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/earnlearning/backend/internal/domain/company"
 	"github.com/earnlearning/backend/internal/domain/investment"
@@ -43,6 +44,7 @@ type CreateRoundInput struct {
 
 type InvestInput struct {
 	RoundID int `json:"round_id"`
+	Shares  int `json:"shares"` // number of shares to purchase (partial invest)
 }
 
 type ExecuteDividendInput struct {
@@ -121,16 +123,28 @@ func (uc *InvestmentUseCase) CreateRound(input CreateRoundInput, userID int) (*i
 	return uc.repo.FindRoundByID(id)
 }
 
-func (uc *InvestmentUseCase) Invest(roundID, userID int) (*investment.Investment, error) {
+// Invest supports partial investment: one round can be filled by multiple
+// investors, each buying a subset of the round's new_shares. When the final
+// share sells, the round is marked as `funded` and the company's valuation
+// jumps to the post-money value.
+func (uc *InvestmentUseCase) Invest(roundID, userID, shares int) (*investment.Investment, error) {
 	round, err := uc.repo.FindRoundByID(roundID)
+	if err != nil {
+		return nil, err
+	}
+	// Auto-expire if past expiry before any write.
+	round, err = uc.maybeAutoExpire(round)
 	if err != nil {
 		return nil, err
 	}
 	if round.Status != investment.RoundOpen {
 		return nil, investment.ErrRoundNotOpen
 	}
+	if shares <= 0 {
+		return nil, investment.ErrInvalidShares
+	}
 
-	// Get company to check ownership
+	// Company ownership guard
 	c, err := uc.companyRepo.FindByID(round.CompanyID)
 	if err != nil {
 		return nil, investment.ErrCompanyNotFound
@@ -139,8 +153,33 @@ func (uc *InvestmentUseCase) Invest(roundID, userID int) (*investment.Investment
 		return nil, investment.ErrCannotInvestOwnCompany
 	}
 
-	// 1 round = 1 investor, check balance >= target_amount
-	investAmount := round.TargetAmount
+	// Compute remaining shares = new_shares - sum(investments.shares)
+	sold, err := uc.repo.SumSharesByRound(round.ID)
+	if err != nil {
+		return nil, err
+	}
+	remaining := round.NewShares - sold
+	if remaining <= 0 {
+		return nil, investment.ErrRoundNotOpen
+	}
+	if shares > remaining {
+		return nil, investment.ErrOverSubscribed
+	}
+
+	// Compute this investor's payment.
+	// - Last investor pays `target - current_amount` exactly (eats rounding).
+	// - Others pay round(shares * price_per_share).
+	var investAmount int
+	if shares == remaining {
+		investAmount = round.TargetAmount - round.CurrentAmount
+		if investAmount < 0 {
+			investAmount = 0
+		}
+	} else {
+		investAmount = int(math.Round(float64(shares) * round.PricePerShare))
+	}
+
+	// Wallet balance check + debit
 	w, err := uc.walletRepo.FindByUserID(userID)
 	if err != nil {
 		return nil, investment.ErrInsufficientFunds
@@ -148,34 +187,43 @@ func (uc *InvestmentUseCase) Invest(roundID, userID int) (*investment.Investment
 	if w.Balance < investAmount {
 		return nil, investment.ErrInsufficientFunds
 	}
-
-	// Debit investor wallet
-	err = uc.walletRepo.Debit(w.ID, investAmount, wallet.TxInvestment,
-		fmt.Sprintf("%s 투자", c.Name), "investment_round", round.ID)
-	if err != nil {
+	if err := uc.walletRepo.Debit(w.ID, investAmount, wallet.TxInvestment,
+		fmt.Sprintf("%s 투자", c.Name), "investment_round", round.ID); err != nil {
 		return nil, err
 	}
 
-	// Fund round immediately
-	if err := uc.repo.UpdateRoundFunded(round.ID, investAmount); err != nil {
-		return nil, err
+	// Update round.current_amount. Close the round only if it's now fully sold.
+	newCurrentAmount := round.CurrentAmount + investAmount
+	isFinalSale := shares == remaining
+	if isFinalSale {
+		if err := uc.repo.UpdateRoundFunded(round.ID, newCurrentAmount); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := uc.repo.UpdateRoundCurrentAmount(round.ID, newCurrentAmount); err != nil {
+			return nil, err
+		}
 	}
 
-	// Update company: total_shares, total_capital, valuation
-	newTotalShares := c.TotalShares + round.NewShares
+	// Update company aggregates.
+	newTotalShares := c.TotalShares + shares
 	newTotalCapital := c.TotalCapital + investAmount
-	// Post-money valuation = target_amount / offered_percent
-	newValuation := int(math.Round(float64(investAmount) / round.OfferedPercent))
-
 	if err := uc.companyRepo.UpdateTotalShares(round.CompanyID, newTotalShares); err != nil {
 		return nil, err
+	}
+	// Valuation: only finalize on full close using post-money formula.
+	// For partial fills we leave the current valuation untouched (UpdateCapital-
+	// AndValuation takes both, so pass existing valuation through).
+	newValuation := c.Valuation
+	if isFinalSale {
+		newValuation = int(math.Round(float64(round.TargetAmount) / round.OfferedPercent))
 	}
 	if err := uc.companyRepo.UpdateCapitalAndValuation(round.CompanyID, newTotalCapital, newValuation); err != nil {
 		return nil, err
 	}
 
-	// Upsert shareholder
-	if err := uc.companyRepo.UpsertShareholder(round.CompanyID, userID, round.NewShares, "investment"); err != nil {
+	// Upsert shareholder (additive upsert adds to any existing position).
+	if err := uc.companyRepo.UpsertShareholder(round.CompanyID, userID, shares, "investment"); err != nil {
 		return nil, err
 	}
 
@@ -184,24 +232,22 @@ func (uc *InvestmentUseCase) Invest(roundID, userID int) (*investment.Investment
 	if err != nil {
 		return nil, err
 	}
-	err = uc.companyRepo.CreditCompanyWallet(companyWallet.ID, investAmount, "investment",
-		fmt.Sprintf("투자 유치: %d원", investAmount), "investment_round", round.ID)
-	if err != nil {
+	if err := uc.companyRepo.CreditCompanyWallet(companyWallet.ID, investAmount, "investment",
+		fmt.Sprintf("투자 유치: %d원", investAmount), "investment_round", round.ID); err != nil {
 		return nil, err
 	}
 
-	// Check listing
-	updatedCompany, err := uc.companyRepo.FindByID(round.CompanyID)
-	if err == nil && updatedCompany.CheckListing() && !updatedCompany.Listed {
+	// Auto-list check
+	if updated, err := uc.companyRepo.FindByID(round.CompanyID); err == nil && updated.CheckListing() && !updated.Listed {
 		_ = uc.companyRepo.UpdateListed(round.CompanyID, true)
 	}
 
-	// Create investment record
+	// Record this individual investment
 	inv := &investment.Investment{
 		RoundID: round.ID,
 		UserID:  userID,
 		Amount:  investAmount,
-		Shares:  round.NewShares,
+		Shares:  shares,
 	}
 	invID, err := uc.repo.CreateInvestment(inv)
 	if err != nil {
@@ -209,19 +255,50 @@ func (uc *InvestmentUseCase) Invest(roundID, userID int) (*investment.Investment
 	}
 	inv.ID = invID
 
-	// Notify company owner
-	uc.notify(c.OwnerID, "investment_funded",
-		"투자가 완료되었습니다",
-		fmt.Sprintf("%s에 %d원 투자가 완료되었습니다.", c.Name, investAmount),
-		"investment_round", round.ID)
-
-	// Notify investor
+	// Notifications
+	if isFinalSale {
+		uc.notify(c.OwnerID, "investment_funded",
+			"투자 라운드 마감",
+			fmt.Sprintf("%s 라운드가 목표 금액 %s을 달성하여 마감되었습니다.", c.Name, formatMoney(round.TargetAmount)),
+			"investment_round", round.ID)
+	} else {
+		uc.notify(c.OwnerID, "investment_funded",
+			"새 투자가 들어왔습니다",
+			fmt.Sprintf("%s에 %s이 투자되었습니다. (누적 %s / 목표 %s)",
+				c.Name, formatMoney(investAmount), formatMoney(newCurrentAmount), formatMoney(round.TargetAmount)),
+			"investment_round", round.ID)
+	}
 	uc.notify(userID, "investment_received",
 		"투자가 완료되었습니다",
-		fmt.Sprintf("%s에 %s을 투자하여 %d주를 취득했습니다.", c.Name, formatMoney(investAmount), round.NewShares),
+		fmt.Sprintf("%s에 %s을 투자하여 %d주를 취득했습니다.", c.Name, formatMoney(investAmount), shares),
 		"investment_round", round.ID)
 
 	return inv, nil
+}
+
+// maybeAutoExpire flips an open round to `failed` if expires_at has passed.
+// Returns the (possibly updated) round. No-op for non-open rounds.
+func (uc *InvestmentUseCase) maybeAutoExpire(round *investment.InvestmentRound) (*investment.InvestmentRound, error) {
+	if round.Status != investment.RoundOpen {
+		return round, nil
+	}
+	if round.ExpiresAt == nil || !time.Now().After(*round.ExpiresAt) {
+		return round, nil
+	}
+	if err := uc.repo.UpdateRoundStatus(round.ID, investment.RoundFailed); err != nil {
+		return round, err
+	}
+	round.Status = investment.RoundFailed
+	return round, nil
+}
+
+// GetRound fetches a single round by ID, auto-expiring if needed.
+func (uc *InvestmentUseCase) GetRound(id int) (*investment.InvestmentRound, error) {
+	round, err := uc.repo.FindRoundByID(id)
+	if err != nil {
+		return nil, err
+	}
+	return uc.maybeAutoExpire(round)
 }
 
 func (uc *InvestmentUseCase) ListRounds(companyID int, status string, page, limit int) ([]*investment.InvestmentRound, int, error) {
@@ -238,39 +315,60 @@ func (uc *InvestmentUseCase) ListRounds(companyID int, status string, page, limi
 	return uc.repo.ListRounds(filter, page, limit)
 }
 
+// GetPortfolio returns the user's holdings aggregated per company, shaped for
+// the frontend InvestPage (nested company object + derived profit / dividends).
 func (uc *InvestmentUseCase) GetPortfolio(userID int) ([]*investment.PortfolioItem, error) {
 	invs, err := uc.repo.ListByUser(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Aggregate by company
-	companyMap := make(map[int]*investment.PortfolioItem)
+	// Aggregate per company
+	type agg struct {
+		companyID int
+		shares    int
+		invested  int
+	}
+	aggs := make(map[int]*agg)
 	for _, inv := range invs {
-		item, exists := companyMap[inv.CompanyID]
-		if !exists {
-			item = &investment.PortfolioItem{
-				CompanyID:   inv.CompanyID,
-				CompanyName: inv.CompanyName,
-			}
-			companyMap[inv.CompanyID] = item
+		a, ok := aggs[inv.CompanyID]
+		if !ok {
+			a = &agg{companyID: inv.CompanyID}
+			aggs[inv.CompanyID] = a
 		}
-		item.UserShares += inv.Shares
-		item.Invested += inv.Amount
+		a.shares += inv.Shares
+		a.invested += inv.Amount
 	}
 
-	var portfolio []*investment.PortfolioItem
-	for _, item := range companyMap {
-		// Get current company data for valuation
-		c, err := uc.companyRepo.FindByID(item.CompanyID)
-		if err == nil {
-			item.TotalShares = c.TotalShares
-			if c.TotalShares > 0 {
-				item.Percentage = float64(item.UserShares) / float64(c.TotalShares) * 100
-				item.CurrentValue = int(float64(c.Valuation) * float64(item.UserShares) / float64(c.TotalShares))
-			}
+	portfolio := make([]*investment.PortfolioItem, 0, len(aggs))
+	for _, a := range aggs {
+		c, err := uc.companyRepo.FindByID(a.companyID)
+		if err != nil {
+			continue
 		}
-		portfolio = append(portfolio, item)
+		var pct float64
+		var currentValue int
+		if c.TotalShares > 0 {
+			pct = float64(a.shares) / float64(c.TotalShares) * 100
+			currentValue = int(float64(c.Valuation) * float64(a.shares) / float64(c.TotalShares))
+		}
+		dividendsReceived, _ := uc.repo.SumDividendsByUserAndCompany(userID, a.companyID)
+
+		portfolio = append(portfolio, &investment.PortfolioItem{
+			Company: investment.PortfolioCompany{
+				ID:        c.ID,
+				Name:      c.Name,
+				Valuation: c.Valuation,
+				LogoURL:   c.LogoURL,
+			},
+			TotalShares:       c.TotalShares,
+			Shares:            a.shares,
+			InvestedAmount:    a.invested,
+			CurrentValue:      currentValue,
+			Profit:            currentValue - a.invested,
+			DividendsReceived: dividendsReceived,
+			Percentage:        pct,
+		})
 	}
 	return portfolio, nil
 }
@@ -370,7 +468,15 @@ func (uc *InvestmentUseCase) GetMyDividends(userID int) ([]*investment.DividendP
 	return uc.repo.ListDividendsByUser(userID)
 }
 
-func (uc *InvestmentUseCase) CreateKpiRule(input CreateKpiRuleInput) (*investment.KpiRule, error) {
+// CreateKpiRule now requires the caller to be the company owner.
+func (uc *InvestmentUseCase) CreateKpiRule(input CreateKpiRuleInput, userID int) (*investment.KpiRule, error) {
+	c, err := uc.companyRepo.FindByID(input.CompanyID)
+	if err != nil {
+		return nil, investment.ErrCompanyNotFound
+	}
+	if c.OwnerID != userID {
+		return nil, investment.ErrNotOwner
+	}
 	rule := &investment.KpiRule{
 		CompanyID:       input.CompanyID,
 		RuleDescription: input.RuleDescription,

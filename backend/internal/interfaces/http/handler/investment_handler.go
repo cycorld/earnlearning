@@ -57,11 +57,39 @@ func (h *InvestmentHandler) Invest(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 라운드 ID입니다"))
 	}
-	inv, err := h.uc.Invest(roundID, userID)
+	var body struct {
+		Shares int `json:"shares"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "요청 형식이 잘못되었습니다"))
+	}
+	inv, err := h.uc.Invest(roundID, userID, body.Shares)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
 	}
 	return c.JSON(http.StatusCreated, successResp(inv))
+}
+
+// GetRound godoc — single round detail used by /invest/:id.
+//
+//	@Summary		투자 라운드 상세
+//	@Description	특정 라운드의 상세 정보 (누적 금액, 남은 주식 등)
+//	@Tags			Investment
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"라운드 ID"
+//	@Success		200	{object}	APIResponse
+//	@Router			/investment/rounds/{id} [get]
+func (h *InvestmentHandler) GetRound(c echo.Context) error {
+	roundID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 라운드 ID입니다"))
+	}
+	round, err := h.uc.GetRound(roundID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, errorResp("NOT_FOUND", err.Error()))
+	}
+	return c.JSON(http.StatusOK, successResp(round))
 }
 
 // ListRounds godoc
@@ -165,11 +193,12 @@ func (h *InvestmentHandler) GetMyDividends(c echo.Context) error {
 //	@Success		201		{object}	APIResponse
 //	@Router			/investment/kpi-rules [post]
 func (h *InvestmentHandler) CreateKpiRule(c echo.Context) error {
+	userID := middleware.GetUserID(c)
 	var input application.CreateKpiRuleInput
 	if err := c.Bind(&input); err != nil {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 요청입니다"))
 	}
-	rule, err := h.uc.CreateKpiRule(input)
+	rule, err := h.uc.CreateKpiRule(input, userID)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
 	}
