@@ -301,6 +301,173 @@ func (uc *InvestmentUseCase) GetRound(id int) (*investment.InvestmentRound, erro
 	return uc.maybeAutoExpire(round)
 }
 
+// =============================================================================
+// Early close — owner closes a partially-funded round and accepts the actual
+// capital raised. The company keeps what was paid, investors keep their shares,
+// and the company's valuation is re-set using the agreed per-share price.
+// =============================================================================
+
+// CloseRoundEarly turns an open round with at least one investor into a
+// `funded` state. Remaining un-sold shares are NOT minted. The post-close
+// valuation is computed as `price_per_share × total_shares_after` which
+// corresponds to the per-share price that investors actually paid.
+func (uc *InvestmentUseCase) CloseRoundEarly(roundID, userID int) (*investment.InvestmentRound, error) {
+	round, err := uc.repo.FindRoundByID(roundID)
+	if err != nil {
+		return nil, err
+	}
+	if round.Status != investment.RoundOpen {
+		return nil, investment.ErrRoundNotOpen
+	}
+	c, err := uc.companyRepo.FindByID(round.CompanyID)
+	if err != nil {
+		return nil, investment.ErrCompanyNotFound
+	}
+	if c.OwnerID != userID {
+		return nil, investment.ErrNotOwner
+	}
+	if round.SoldShares <= 0 {
+		return nil, investment.ErrNoInvestors
+	}
+
+	// Mark as funded with the actual raised amount.
+	if err := uc.repo.UpdateRoundFunded(round.ID, round.CurrentAmount); err != nil {
+		return nil, err
+	}
+
+	// Re-price the company. Using price_per_share keeps every investor's
+	// implicit valuation consistent with what they agreed to when buying.
+	// (Avoids computing target/offered_percent which would overstate it —
+	// only a fraction of the offered equity was actually taken.)
+	newValuation := int(math.Round(round.PricePerShare * float64(c.TotalShares)))
+	if err := uc.companyRepo.UpdateCapitalAndValuation(round.CompanyID, c.TotalCapital, newValuation); err != nil {
+		return nil, err
+	}
+	if updated, err := uc.companyRepo.FindByID(round.CompanyID); err == nil && updated.CheckListing() && !updated.Listed {
+		_ = uc.companyRepo.UpdateListed(round.CompanyID, true)
+	}
+
+	// Notify all shareholders and the owner.
+	title := fmt.Sprintf("[%s] 투자 라운드 조기 마감", c.Name)
+	body := fmt.Sprintf("목표 %s 중 %s 유치 후 라운드가 조기 마감되었습니다. 회사 가치가 %s로 재평가됐어요.",
+		formatMoney(round.TargetAmount), formatMoney(round.CurrentAmount), formatMoney(newValuation))
+	shareholders, _ := uc.companyRepo.FindShareholdersByCompanyID(round.CompanyID)
+	for _, sh := range shareholders {
+		if sh.Shares <= 0 {
+			continue
+		}
+		uc.notify(sh.UserID, "investment_funded", title, body, "investment_round", round.ID)
+	}
+
+	return uc.repo.FindRoundByID(roundID)
+}
+
+// =============================================================================
+// Cancel round with full refund. Undoes every investment:
+//   - debits company wallet → credits each investor
+//   - decrements each shareholder's shares (deletes row if zero)
+//   - rolls back company.total_shares and total_capital
+//   - marks round as 'cancelled'
+// Valuation is NOT changed — the original pre-round valuation persists.
+// =============================================================================
+
+func (uc *InvestmentUseCase) CancelRoundAndRefund(roundID, userID int) (*investment.InvestmentRound, error) {
+	round, err := uc.repo.FindRoundByID(roundID)
+	if err != nil {
+		return nil, err
+	}
+	if round.Status != investment.RoundOpen {
+		return nil, investment.ErrRoundNotOpen
+	}
+	c, err := uc.companyRepo.FindByID(round.CompanyID)
+	if err != nil {
+		return nil, investment.ErrCompanyNotFound
+	}
+	if c.OwnerID != userID {
+		return nil, investment.ErrNotOwner
+	}
+
+	// Guard: company must still have enough to refund everyone.
+	companyWallet, err := uc.companyRepo.FindCompanyWallet(round.CompanyID)
+	if err != nil {
+		return nil, err
+	}
+	if companyWallet.Balance < round.CurrentAmount {
+		return nil, investment.ErrCompanyFundsInsufficient
+	}
+
+	investments, err := uc.repo.ListByRound(round.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Debit full refund pool from company wallet in one transaction record.
+	if round.CurrentAmount > 0 {
+		if err := uc.companyRepo.DebitCompanyWallet(companyWallet.ID, round.CurrentAmount,
+			"investment_refund",
+			fmt.Sprintf("라운드 #%d 취소 — 투자금 환불", round.ID),
+			"investment_round", round.ID,
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	// Refund each investor and shrink their shareholdings.
+	totalSharesReturned := 0
+	for _, inv := range investments {
+		w, err := uc.walletRepo.FindByUserID(inv.UserID)
+		if err != nil {
+			continue
+		}
+		if err := uc.walletRepo.Credit(w.ID, inv.Amount, wallet.TxInvestment,
+			fmt.Sprintf("%s 라운드 취소 — 환불", c.Name),
+			"investment_round", round.ID,
+		); err != nil {
+			continue
+		}
+		_ = uc.companyRepo.SubtractShareholderShares(round.CompanyID, inv.UserID, inv.Shares)
+		totalSharesReturned += inv.Shares
+
+		// Notify investor.
+		uc.notify(inv.UserID, "investment_received",
+			"투자금이 환불되었습니다",
+			fmt.Sprintf("%s 라운드가 대표에 의해 취소되어 %s이 환불되었어요.", c.Name, formatMoney(inv.Amount)),
+			"investment_round", round.ID,
+		)
+	}
+
+	// Roll back company aggregates.
+	newTotalShares := c.TotalShares - totalSharesReturned
+	newTotalCapital := c.TotalCapital - round.CurrentAmount
+	if newTotalShares < 0 {
+		newTotalShares = 0
+	}
+	if newTotalCapital < 0 {
+		newTotalCapital = 0
+	}
+	if err := uc.companyRepo.UpdateTotalShares(round.CompanyID, newTotalShares); err != nil {
+		return nil, err
+	}
+	if err := uc.companyRepo.UpdateCapitalAndValuation(round.CompanyID, newTotalCapital, c.Valuation); err != nil {
+		return nil, err
+	}
+
+	// Mark round as cancelled.
+	if err := uc.repo.UpdateRoundStatus(round.ID, investment.RoundCancelled); err != nil {
+		return nil, err
+	}
+
+	// Notify owner too for audit trail.
+	uc.notify(c.OwnerID, "investment_funded",
+		"라운드를 취소했습니다",
+		fmt.Sprintf("%s 라운드 #%d — 투자자 %d명에게 총 %s 환불 완료.",
+			c.Name, round.ID, len(investments), formatMoney(round.CurrentAmount)),
+		"investment_round", round.ID,
+	)
+
+	return uc.repo.FindRoundByID(roundID)
+}
+
 func (uc *InvestmentUseCase) ListRounds(companyID int, status string, page, limit int) ([]*investment.InvestmentRound, int, error) {
 	if page < 1 {
 		page = 1
