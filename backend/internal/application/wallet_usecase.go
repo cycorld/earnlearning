@@ -215,12 +215,17 @@ func (uc *WalletUseCase) SearchRecipients(senderID int, query string) ([]*Recipi
 				if c.Status == "dissolved" {
 					continue
 				}
-				if q != "" && !contains(c.Name, q) {
+				ownerName := ""
+				if owner, oerr := uc.userRepo.FindByID(c.OwnerID); oerr == nil && owner != nil {
+					ownerName = owner.Name
+				}
+				// 검색은 회사명 + 대표자명 둘 다 매칭 가능하게 (예: "홍길동" 으로도 회사 찾기)
+				if q != "" && !contains(c.Name, q) && !contains(ownerName, q) {
 					continue
 				}
 				results = append(results, &Recipient{
 					ID:         c.ID,
-					Name:       c.Name,
+					Name:       CompanyAccountName(c.Name, ownerName),
 					StudentID:  "", // 법인은 학번 없음
 					Department: "법인",
 					AvatarURL:  c.LogoURL,
@@ -235,6 +240,15 @@ func (uc *WalletUseCase) SearchRecipients(senderID int, query string) ([]*Recipi
 
 func contains(s, substr string) bool {
 	return len(substr) > 0 && len(s) > 0 && strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+// CompanyAccountName formats a company wallet/account label as "회사명(대표자명)"
+// — 개인사업자 표기 컨벤션. ownerName 이 비어있으면 회사명만 반환.
+func CompanyAccountName(companyName, ownerName string) string {
+	if ownerName == "" {
+		return companyName
+	}
+	return fmt.Sprintf("%s(%s)", companyName, ownerName)
 }
 
 type TransferInput struct {
@@ -288,9 +302,15 @@ func (uc *WalletUseCase) Transfer(senderID int, input TransferInput) error {
 			return fmt.Errorf("법인 지갑을 찾을 수 없습니다")
 		}
 
+		ownerName := ""
+		if owner, oerr := uc.userRepo.FindByID(c.OwnerID); oerr == nil && owner != nil {
+			ownerName = owner.Name
+		}
+		companyLabel := CompanyAccountName(c.Name, ownerName)
+
 		// Debit sender (개인 잔액 차감)
 		if err := uc.walletRepo.Debit(senderWallet.ID, input.Amount, wallet.TxCompanyTransfer,
-			fmt.Sprintf("[%s] 법인 송금: %s", c.Name, desc), "company", companyID); err != nil {
+			fmt.Sprintf("[%s] 법인 송금: %s", companyLabel, desc), "company", companyID); err != nil {
 			return err
 		}
 
@@ -299,7 +319,7 @@ func (uc *WalletUseCase) Transfer(senderID int, input TransferInput) error {
 			fmt.Sprintf("%s 개인 송금 입금: %s", senderName, desc), "user", senderID); err != nil {
 			// Roll back the personal debit so funds are not lost.
 			_ = uc.walletRepo.Credit(senderWallet.ID, input.Amount, wallet.TxCompanyTransfer,
-				fmt.Sprintf("[%s] 법인 송금 실패 환불", c.Name), "company", companyID)
+				fmt.Sprintf("[%s] 법인 송금 실패 환불", companyLabel), "company", companyID)
 			return fmt.Errorf("법인 지갑 입금 실패: %w", err)
 		}
 		return nil

@@ -45,6 +45,8 @@ interface CompanyWalletData {
     company_id: number
     balance: number
   }
+  owner_name: string
+  account_name: string // "회사명(대표자명)" 컨벤션
 }
 
 interface Recipient {
@@ -208,7 +210,7 @@ export default function CompanyWalletPage() {
       <Button variant="ghost" size="sm" asChild className="gap-1 px-2">
         <Link to={`/company/${id}`}>
           <ArrowLeft className="h-4 w-4" />
-          {data.company.name}
+          {data.account_name}
         </Link>
       </Button>
 
@@ -229,7 +231,7 @@ export default function CompanyWalletPage() {
               </Badge>
             </div>
           </div>
-          <p className="text-sm opacity-80">{data.company.name} 법인 잔액</p>
+          <p className="text-sm opacity-80">{data.account_name} 법인 잔액</p>
           <p className="text-3xl font-bold">{formatMoney(data.wallet.balance)}</p>
           <p className="mt-2 text-xs opacity-70">
             ⚠️ 이 금액은 개인 재산과 분리되어 있습니다. 법인의 자산으로 법인 운영에 사용됩니다.
@@ -254,7 +256,7 @@ export default function CompanyWalletPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>법인 송금 — {data.company.name}</DialogTitle>
+              <DialogTitle>법인 송금 — {data.account_name}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               {!selectedRecipient ? (

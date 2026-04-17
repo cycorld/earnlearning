@@ -550,8 +550,10 @@ func (uc *CompanyUsecase) ApproveDisclosure(disclosureID int, input ApproveDiscl
 // =============================================================================
 
 type CompanyWalletResponse struct {
-	Company *company.Company       `json:"company"`
-	Wallet  *company.CompanyWallet `json:"wallet"`
+	Company     *company.Company       `json:"company"`
+	Wallet      *company.CompanyWallet `json:"wallet"`
+	OwnerName   string                 `json:"owner_name"`
+	AccountName string                 `json:"account_name"` // "회사명(대표자명)" 컨벤션
 }
 
 // GetCompanyWallet returns the company's wallet. Read is public to any approved
@@ -565,7 +567,16 @@ func (uc *CompanyUsecase) GetCompanyWallet(companyID int) (*CompanyWalletRespons
 	if err != nil {
 		return nil, err
 	}
-	return &CompanyWalletResponse{Company: c, Wallet: cw}, nil
+	ownerName := ""
+	if owner, oerr := uc.userRepo.FindByID(c.OwnerID); oerr == nil && owner != nil {
+		ownerName = owner.Name
+	}
+	return &CompanyWalletResponse{
+		Company:     c,
+		Wallet:      cw,
+		OwnerName:   ownerName,
+		AccountName: CompanyAccountName(c.Name, ownerName),
+	}, nil
 }
 
 type CompanyTxListResult struct {
@@ -644,19 +655,30 @@ func (uc *CompanyUsecase) TransferFromCompany(actorID, companyID int, input Comp
 		desc = "법인 송금"
 	}
 
+	// 회사명(대표자명) 컨벤션으로 거래내역 설명 생성
+	srcOwnerName := ""
+	if owner, oerr := uc.userRepo.FindByID(c.OwnerID); oerr == nil && owner != nil {
+		srcOwnerName = owner.Name
+	}
+	srcLabel := CompanyAccountName(c.Name, srcOwnerName)
+
 	switch input.TargetType {
 	case "user":
 		targetWallet, err := uc.walletRepo.FindByUserID(input.TargetID)
 		if err != nil {
 			return fmt.Errorf("받는 사람의 지갑을 찾을 수 없습니다")
 		}
+		targetName := ""
+		if u, uerr := uc.userRepo.FindByID(input.TargetID); uerr == nil && u != nil {
+			targetName = u.Name
+		}
 		if err := uc.companyRepo.DebitCompanyWallet(srcWallet.ID, input.Amount,
 			string(wallet.TxCompanyTransfer),
-			fmt.Sprintf("개인 계좌로 송금: %s", desc), "user", input.TargetID); err != nil {
+			fmt.Sprintf("%s에게 송금: %s", targetName, desc), "user", input.TargetID); err != nil {
 			return err
 		}
 		if err := uc.walletRepo.Credit(targetWallet.ID, input.Amount, wallet.TxCompanyTransfer,
-			fmt.Sprintf("[%s] 법인 송금 입금: %s", c.Name, desc), "company", companyID); err != nil {
+			fmt.Sprintf("[%s] 법인 송금 입금: %s", srcLabel, desc), "company", companyID); err != nil {
 			_ = uc.companyRepo.CreditCompanyWallet(srcWallet.ID, input.Amount,
 				string(wallet.TxCompanyTransfer),
 				fmt.Sprintf("송금 실패 환불: %s", desc), "user", input.TargetID)
@@ -679,14 +701,20 @@ func (uc *CompanyUsecase) TransferFromCompany(actorID, companyID int, input Comp
 		if err != nil {
 			return err
 		}
+		targetOwnerName := ""
+		if u, uerr := uc.userRepo.FindByID(targetCo.OwnerID); uerr == nil && u != nil {
+			targetOwnerName = u.Name
+		}
+		targetLabel := CompanyAccountName(targetCo.Name, targetOwnerName)
+
 		if err := uc.companyRepo.DebitCompanyWallet(srcWallet.ID, input.Amount,
 			string(wallet.TxCompanyTransfer),
-			fmt.Sprintf("[%s] 법인 송금: %s", targetCo.Name, desc), "company", input.TargetID); err != nil {
+			fmt.Sprintf("[%s] 법인 송금: %s", targetLabel, desc), "company", input.TargetID); err != nil {
 			return err
 		}
 		if err := uc.companyRepo.CreditCompanyWallet(targetWallet.ID, input.Amount,
 			string(wallet.TxCompanyTransfer),
-			fmt.Sprintf("[%s] 법인 송금 입금: %s", c.Name, desc), "company", companyID); err != nil {
+			fmt.Sprintf("[%s] 법인 송금 입금: %s", srcLabel, desc), "company", companyID); err != nil {
 			_ = uc.companyRepo.CreditCompanyWallet(srcWallet.ID, input.Amount,
 				string(wallet.TxCompanyTransfer),
 				fmt.Sprintf("송금 실패 환불: %s", desc), "company", input.TargetID)

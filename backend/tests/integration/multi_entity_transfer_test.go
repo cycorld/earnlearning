@@ -238,11 +238,43 @@ func TestSearchRecipients_IncludesCompanies(t *testing.T) {
 	for _, rc := range recs {
 		if rc.Type == "company" && rc.ID == cid {
 			foundCompany = true
+			// 컨벤션: "회사명(대표자명)"
+			if rc.Name != "search_target_co(srOwn)" {
+				t.Errorf("company account name convention mismatch, got %q", rc.Name)
+			}
 			break
 		}
 	}
 	if !foundCompany {
 		t.Errorf("expected company (id=%d) in recipients, got %+v", cid, recs)
+	}
+}
+
+// 대표자명으로도 법인 검색이 되는지 검증
+func TestSearchRecipients_FindsCompanyByOwnerName(t *testing.T) {
+	ts := setupTestServer(t)
+
+	_, cid := createUserWithCompany(t, ts, "on-own@test.com", "uniqueOwnerXyz", "20250080", "ownername_co")
+	_, searcherToken := createInvestor(t, ts, "on-s@test.com", "onS", "20250081", 100_000)
+
+	r := ts.get("/api/wallet/recipients?q=uniqueOwnerXyz", searcherToken)
+	if !r.Success {
+		t.Fatalf("search: %v", r.Error)
+	}
+	var recs []struct {
+		ID   int    `json:"id"`
+		Type string `json:"type"`
+	}
+	_ = json.Unmarshal(r.Data, &recs)
+	hit := false
+	for _, rc := range recs {
+		if rc.Type == "company" && rc.ID == cid {
+			hit = true
+			break
+		}
+	}
+	if !hit {
+		t.Errorf("expected to find company by owner name, got %+v", recs)
 	}
 }
 
