@@ -338,6 +338,245 @@ func TestInvestment_KpiRule_OwnerCheck(t *testing.T) {
 // Dividend → DividendsReceived in portfolio rolls up
 // =============================================================================
 
+// =============================================================================
+// Early close (#030)
+// =============================================================================
+
+func TestInvestment_EarlyClose_PartialFill_Revalues(t *testing.T) {
+	ts := setupTestServer(t)
+	ownerToken, cid := createUserWithCompany(t, ts, "ec-own@test.com", "ecown", "20240400", "ec_co")
+	_, aliceToken := createInvestor(t, ts, "ec-a@test.com", "eca", "20240401", 3_000_000)
+
+	// Round: 1M target @ 20% → 2500 new shares, price 400
+	rr := ts.post("/api/investment/rounds", map[string]interface{}{
+		"company_id": cid, "target_amount": 1_000_000, "offered_percent": 0.2,
+	}, ownerToken)
+	var round struct{ ID int }
+	_ = json.Unmarshal(rr.Data, &round)
+
+	// Alice buys 1000 shares (partial, 40% of round)
+	ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/invest",
+		map[string]int{"shares": 1000}, aliceToken)
+
+	// Owner closes early
+	cr := ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/close", nil, ownerToken)
+	if !cr.Success {
+		t.Fatalf("close early: %v", cr.Error)
+	}
+
+	// Round should be funded with current_amount, not target_amount
+	gr := ts.get("/api/investment/rounds/"+itoaUD(round.ID), aliceToken)
+	var got struct {
+		Status        string `json:"status"`
+		CurrentAmount int    `json:"current_amount"`
+	}
+	_ = json.Unmarshal(gr.Data, &got)
+	if got.Status != "funded" {
+		t.Errorf("expected status=funded, got %q", got.Status)
+	}
+	if got.CurrentAmount != 400_000 {
+		t.Errorf("expected current_amount=400000 (actual raised), got %d", got.CurrentAmount)
+	}
+
+	// Company valuation = price_per_share × total_shares = 400 × 11000 = 4,400,000
+	gc := ts.get("/api/companies/"+itoaUD(cid), ownerToken)
+	var co struct {
+		TotalShares int `json:"total_shares"`
+		Valuation   int `json:"valuation"`
+	}
+	_ = json.Unmarshal(gc.Data, &co)
+	if co.TotalShares != 11000 {
+		t.Errorf("total_shares: expected 11000 (founder 10000 + alice 1000), got %d", co.TotalShares)
+	}
+	if co.Valuation != 4_400_000 {
+		t.Errorf("valuation after early close: expected 4.4M, got %d", co.Valuation)
+	}
+}
+
+func TestInvestment_EarlyClose_ZeroInvestors_Rejected(t *testing.T) {
+	ts := setupTestServer(t)
+	ownerToken, cid := createUserWithCompany(t, ts, "ec0@test.com", "ec0", "20240410", "ec0co")
+	rr := ts.post("/api/investment/rounds", map[string]interface{}{
+		"company_id": cid, "target_amount": 1_000_000, "offered_percent": 0.2,
+	}, ownerToken)
+	var round struct{ ID int }
+	_ = json.Unmarshal(rr.Data, &round)
+
+	cr := ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/close", nil, ownerToken)
+	if cr.Success {
+		t.Fatal("early close with 0 investors should fail")
+	}
+}
+
+func TestInvestment_EarlyClose_NonOwner_Forbidden(t *testing.T) {
+	ts := setupTestServer(t)
+	ownerToken, cid := createUserWithCompany(t, ts, "ec-no@test.com", "ecno", "20240420", "ecnoco")
+	_, aliceToken := createInvestor(t, ts, "ec-a2@test.com", "eca2", "20240421", 3_000_000)
+	strangerToken := ts.registerAndApprove("ec-str@test.com", "pass1234", "str", "20240422")
+
+	rr := ts.post("/api/investment/rounds", map[string]interface{}{
+		"company_id": cid, "target_amount": 1_000_000, "offered_percent": 0.2,
+	}, ownerToken)
+	var round struct{ ID int }
+	_ = json.Unmarshal(rr.Data, &round)
+	ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/invest",
+		map[string]int{"shares": 500}, aliceToken)
+
+	cr := ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/close", nil, strangerToken)
+	if cr.Success {
+		t.Fatal("stranger early close should fail")
+	}
+}
+
+// =============================================================================
+// Cancel + refund (#030)
+// =============================================================================
+
+func TestInvestment_Cancel_FullRefund(t *testing.T) {
+	ts := setupTestServer(t)
+	ownerToken, cid := createUserWithCompany(t, ts, "cx-own@test.com", "cxown", "20240430", "cxco")
+	aliceID, aliceToken := createInvestor(t, ts, "cx-a@test.com", "cxa", "20240431", 3_000_000)
+	bobID, bobToken := createInvestor(t, ts, "cx-b@test.com", "cxb", "20240432", 3_000_000)
+	_ = aliceID
+	_ = bobID
+
+	rr := ts.post("/api/investment/rounds", map[string]interface{}{
+		"company_id": cid, "target_amount": 1_000_000, "offered_percent": 0.2,
+	}, ownerToken)
+	var round struct{ ID int }
+	_ = json.Unmarshal(rr.Data, &round)
+
+	// Alice 500 + Bob 800 = 1300 shares, 520,000원 raised
+	ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/invest",
+		map[string]int{"shares": 500}, aliceToken)
+	ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/invest",
+		map[string]int{"shares": 800}, bobToken)
+
+	// Wallets before cancel
+	aliceBefore := walletBalance(t, ts, aliceToken)
+	bobBefore := walletBalance(t, ts, bobToken)
+
+	// Cancel
+	cancel := ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/cancel", nil, ownerToken)
+	if !cancel.Success {
+		t.Fatalf("cancel: %v", cancel.Error)
+	}
+
+	// Alice refund: 500 shares × 400 = 200,000
+	aliceAfter := walletBalance(t, ts, aliceToken)
+	if aliceAfter-aliceBefore != 200_000 {
+		t.Errorf("alice refund: expected +200k, got %d", aliceAfter-aliceBefore)
+	}
+	// Bob refund: 800 × 400 = 320,000
+	bobAfter := walletBalance(t, ts, bobToken)
+	if bobAfter-bobBefore != 320_000 {
+		t.Errorf("bob refund: expected +320k, got %d", bobAfter-bobBefore)
+	}
+
+	// Round is cancelled
+	gr := ts.get("/api/investment/rounds/"+itoaUD(round.ID), aliceToken)
+	var state struct{ Status string }
+	_ = json.Unmarshal(gr.Data, &state)
+	if state.Status != "cancelled" {
+		t.Errorf("expected status=cancelled, got %q", state.Status)
+	}
+
+	// Company rolled back to 10000 shares, 1M capital, original valuation
+	gc := ts.get("/api/companies/"+itoaUD(cid), ownerToken)
+	var co struct {
+		TotalShares  int `json:"total_shares"`
+		TotalCapital int `json:"total_capital"`
+		Shareholders []struct {
+			Name   string `json:"name"`
+			Shares int    `json:"shares"`
+		} `json:"shareholders"`
+	}
+	_ = json.Unmarshal(gc.Data, &co)
+	if co.TotalShares != 10_000 {
+		t.Errorf("total_shares rolled back: expected 10000, got %d", co.TotalShares)
+	}
+	if co.TotalCapital != 1_000_000 {
+		t.Errorf("total_capital rolled back: expected 1M, got %d", co.TotalCapital)
+	}
+	// Only founder should remain — alice/bob removed
+	if len(co.Shareholders) != 1 || co.Shareholders[0].Shares != 10_000 {
+		t.Errorf("expected only founder, got %+v", co.Shareholders)
+	}
+}
+
+func TestInvestment_Cancel_InsufficientCompanyFunds_Rejected(t *testing.T) {
+	ts := setupTestServer(t)
+	ownerToken, cid := createUserWithCompany(t, ts, "ci-own@test.com", "ciown", "20240440", "cico")
+	_, aliceToken := createInvestor(t, ts, "ci-a@test.com", "cia", "20240441", 3_000_000)
+
+	rr := ts.post("/api/investment/rounds", map[string]interface{}{
+		"company_id": cid, "target_amount": 1_000_000, "offered_percent": 0.2,
+	}, ownerToken)
+	var round struct{ ID int }
+	_ = json.Unmarshal(rr.Data, &round)
+
+	// Alice invests 500 shares = 200k → company wallet now holds 1,200,000
+	ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/invest",
+		map[string]int{"shares": 500}, aliceToken)
+
+	// Simulate company spending its money: admin drains the wallet via dividend
+	ts.post("/api/investment/dividends", map[string]interface{}{
+		"company_id": cid, "total_amount": 1_100_000,
+	}, ownerToken)
+
+	// Now cancel should fail — wallet below the refund amount
+	cancel := ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/cancel", nil, ownerToken)
+	if cancel.Success {
+		t.Fatal("cancel should fail when company wallet can't cover refund")
+	}
+}
+
+func TestInvestment_Cancel_NonOwner_Forbidden(t *testing.T) {
+	ts := setupTestServer(t)
+	ownerToken, cid := createUserWithCompany(t, ts, "cn-own@test.com", "cnown", "20240450", "cnco")
+	_, aliceToken := createInvestor(t, ts, "cn-a@test.com", "cna", "20240451", 3_000_000)
+	strangerToken := ts.registerAndApprove("cn-str@test.com", "pass1234", "cnstr", "20240452")
+
+	rr := ts.post("/api/investment/rounds", map[string]interface{}{
+		"company_id": cid, "target_amount": 1_000_000, "offered_percent": 0.2,
+	}, ownerToken)
+	var round struct{ ID int }
+	_ = json.Unmarshal(rr.Data, &round)
+	ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/invest",
+		map[string]int{"shares": 500}, aliceToken)
+
+	cancel := ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/cancel", nil, strangerToken)
+	if cancel.Success {
+		t.Fatal("stranger cancel should fail")
+	}
+}
+
+func TestInvestment_CloseOrCancel_AlreadyFundedRound_Rejected(t *testing.T) {
+	ts := setupTestServer(t)
+	ownerToken, cid := createUserWithCompany(t, ts, "rf-own@test.com", "rfown", "20240460", "rfco")
+	_, aliceToken := createInvestor(t, ts, "rf-a@test.com", "rfa", "20240461", 3_000_000)
+
+	rr := ts.post("/api/investment/rounds", map[string]interface{}{
+		"company_id": cid, "target_amount": 500_000, "offered_percent": 0.2,
+	}, ownerToken)
+	var round struct{ ID int }
+	_ = json.Unmarshal(rr.Data, &round)
+
+	// Fully fund → status=funded
+	ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/invest",
+		map[string]int{"shares": 2500}, aliceToken)
+
+	// Both close and cancel should fail for a non-open round
+	close1 := ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/close", nil, ownerToken)
+	if close1.Success {
+		t.Fatal("close on funded round should fail")
+	}
+	cancel := ts.post("/api/investment/rounds/"+itoaUD(round.ID)+"/cancel", nil, ownerToken)
+	if cancel.Success {
+		t.Fatal("cancel on funded round should fail")
+	}
+}
+
 func TestInvestment_DividendsRolledIntoPortfolio(t *testing.T) {
 	ts := setupTestServer(t)
 	ownerToken, cid := createUserWithCompany(t, ts, "div-own@test.com", "divown", "20240360", "divco")

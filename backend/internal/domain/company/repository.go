@@ -17,6 +17,9 @@ type CompanyRepository interface {
 	FindShareholdersByCompanyID(companyID int) ([]*Shareholder, error)
 	FindShareholder(companyID, userID int) (*Shareholder, error)
 	UpsertShareholder(companyID, userID, shares int, acquisitionType string) error
+	// SubtractShareholderShares decrements a shareholder's position. If the
+	// result is <= 0, the row is deleted. Used for refund/cancel flows.
+	SubtractShareholderShares(companyID, userID, shares int) error
 	UpdateTotalShares(companyID, totalShares int) error
 	UpdateCapitalAndValuation(companyID, totalCapital, valuation int) error
 
