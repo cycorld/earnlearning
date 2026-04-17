@@ -545,6 +545,160 @@ func (uc *CompanyUsecase) ApproveDisclosure(disclosureID int, input ApproveDiscl
 	return nil
 }
 
+// =============================================================================
+// Company wallet (법인 계좌) — #031
+// =============================================================================
+
+type CompanyWalletResponse struct {
+	Company *company.Company       `json:"company"`
+	Wallet  *company.CompanyWallet `json:"wallet"`
+}
+
+// GetCompanyWallet returns the company's wallet. Read is public to any approved
+// user so shareholders, creditors, and investors can all inspect flows.
+func (uc *CompanyUsecase) GetCompanyWallet(companyID int) (*CompanyWalletResponse, error) {
+	c, err := uc.companyRepo.FindByID(companyID)
+	if err != nil {
+		return nil, err
+	}
+	cw, err := uc.companyRepo.FindCompanyWallet(companyID)
+	if err != nil {
+		return nil, err
+	}
+	return &CompanyWalletResponse{Company: c, Wallet: cw}, nil
+}
+
+type CompanyTxListResult struct {
+	Data       []*company.CompanyTransaction `json:"data"`
+	Pagination PaginationInfo                `json:"pagination"`
+}
+
+func (uc *CompanyUsecase) GetCompanyTransactions(companyID, page, limit int) (*CompanyTxListResult, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	cw, err := uc.companyRepo.FindCompanyWallet(companyID)
+	if err != nil {
+		return nil, err
+	}
+	txs, total, err := uc.companyRepo.GetCompanyTransactions(cw.ID, page, limit)
+	if err != nil {
+		return nil, err
+	}
+	if txs == nil {
+		txs = []*company.CompanyTransaction{}
+	}
+	totalPages := total / limit
+	if total%limit != 0 {
+		totalPages++
+	}
+	return &CompanyTxListResult{
+		Data: txs,
+		Pagination: PaginationInfo{
+			Page:       page,
+			Limit:      limit,
+			Total:      total,
+			TotalPages: totalPages,
+		},
+	}, nil
+}
+
+type CompanyTransferInput struct {
+	TargetID    int    `json:"target_id"`
+	TargetType  string `json:"target_type"` // "user" or "company"
+	Amount      int    `json:"amount"`
+	Description string `json:"description"`
+}
+
+// TransferFromCompany moves money out of a company wallet. Only the company
+// owner may authorize this. The target can be a user or another company.
+func (uc *CompanyUsecase) TransferFromCompany(actorID, companyID int, input CompanyTransferInput) error {
+	if input.Amount <= 0 {
+		return wallet.ErrInvalidAmount
+	}
+
+	c, err := uc.companyRepo.FindByID(companyID)
+	if err != nil {
+		return err
+	}
+	if c.OwnerID != actorID {
+		return company.ErrNotOwner
+	}
+	if c.Status == "dissolved" {
+		return fmt.Errorf("청산된 법인에서는 송금할 수 없습니다")
+	}
+
+	srcWallet, err := uc.companyRepo.FindCompanyWallet(companyID)
+	if err != nil {
+		return err
+	}
+	if srcWallet.Balance < input.Amount {
+		return company.ErrInsufficientFunds
+	}
+
+	desc := input.Description
+	if desc == "" {
+		desc = "법인 송금"
+	}
+
+	switch input.TargetType {
+	case "user":
+		targetWallet, err := uc.walletRepo.FindByUserID(input.TargetID)
+		if err != nil {
+			return fmt.Errorf("받는 사람의 지갑을 찾을 수 없습니다")
+		}
+		if err := uc.companyRepo.DebitCompanyWallet(srcWallet.ID, input.Amount,
+			string(wallet.TxCompanyTransfer),
+			fmt.Sprintf("개인 계좌로 송금: %s", desc), "user", input.TargetID); err != nil {
+			return err
+		}
+		if err := uc.walletRepo.Credit(targetWallet.ID, input.Amount, wallet.TxCompanyTransfer,
+			fmt.Sprintf("[%s] 법인 송금 입금: %s", c.Name, desc), "company", companyID); err != nil {
+			_ = uc.companyRepo.CreditCompanyWallet(srcWallet.ID, input.Amount,
+				string(wallet.TxCompanyTransfer),
+				fmt.Sprintf("송금 실패 환불: %s", desc), "user", input.TargetID)
+			return fmt.Errorf("입금 실패: %w", err)
+		}
+		return nil
+
+	case "company":
+		if input.TargetID == companyID {
+			return fmt.Errorf("같은 법인으로는 송금할 수 없습니다")
+		}
+		targetCo, err := uc.companyRepo.FindByID(input.TargetID)
+		if err != nil {
+			return fmt.Errorf("받는 법인을 찾을 수 없습니다")
+		}
+		if targetCo.Status == "dissolved" {
+			return fmt.Errorf("청산된 법인에는 송금할 수 없습니다")
+		}
+		targetWallet, err := uc.companyRepo.FindCompanyWallet(input.TargetID)
+		if err != nil {
+			return err
+		}
+		if err := uc.companyRepo.DebitCompanyWallet(srcWallet.ID, input.Amount,
+			string(wallet.TxCompanyTransfer),
+			fmt.Sprintf("[%s] 법인 송금: %s", targetCo.Name, desc), "company", input.TargetID); err != nil {
+			return err
+		}
+		if err := uc.companyRepo.CreditCompanyWallet(targetWallet.ID, input.Amount,
+			string(wallet.TxCompanyTransfer),
+			fmt.Sprintf("[%s] 법인 송금 입금: %s", c.Name, desc), "company", companyID); err != nil {
+			_ = uc.companyRepo.CreditCompanyWallet(srcWallet.ID, input.Amount,
+				string(wallet.TxCompanyTransfer),
+				fmt.Sprintf("송금 실패 환불: %s", desc), "company", input.TargetID)
+			return fmt.Errorf("입금 실패: %w", err)
+		}
+		return nil
+
+	default:
+		return fmt.Errorf("잘못된 target_type 입니다")
+	}
+}
+
 func (uc *CompanyUsecase) RejectDisclosure(disclosureID int, adminNote string) error {
 	d, err := uc.companyRepo.FindDisclosureByID(disclosureID)
 	if err != nil {

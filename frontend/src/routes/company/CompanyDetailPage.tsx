@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { CreditCard, ExternalLink, Pencil, Loader2, Plus, Upload } from 'lucide-react'
+import { CreditCard, ExternalLink, Pencil, Loader2, Plus, Upload, Wallet } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
 import { DisclosureSection } from './DisclosureSection'
 import { ProposalSection } from './ProposalSection'
@@ -278,6 +278,17 @@ export default function CompanyDetailPage() {
 
       {/* Actions */}
       <div className="space-y-2">
+        <Button variant="outline" className="w-full border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800" asChild>
+          <Link to={`/company/${id}/wallet`}>
+            <Wallet className="mr-2 h-4 w-4" />
+            법인 계좌 관리
+            {company.wallet_balance !== undefined && (
+              <span className="ml-auto text-xs font-semibold">
+                {formatMoney(company.wallet_balance)}
+              </span>
+            )}
+          </Link>
+        </Button>
         {company.business_card ? (
           <Button variant="outline" className="w-full" asChild>
             <Link to={`/company/${id}/card`}>

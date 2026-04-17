@@ -5,17 +5,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/earnlearning/backend/internal/domain/company"
 	"github.com/earnlearning/backend/internal/domain/user"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
 
 type WalletUseCase struct {
-	walletRepo wallet.Repository
-	userRepo   user.Repository
+	walletRepo  wallet.Repository
+	userRepo    user.Repository
+	companyRepo company.CompanyRepository
 }
 
-func NewWalletUseCase(wr wallet.Repository, ur user.Repository) *WalletUseCase {
-	return &WalletUseCase{walletRepo: wr, userRepo: ur}
+func NewWalletUseCase(wr wallet.Repository, ur user.Repository, cr company.CompanyRepository) *WalletUseCase {
+	return &WalletUseCase{walletRepo: wr, userRepo: ur, companyRepo: cr}
 }
 
 type WalletResponse struct {
@@ -205,6 +207,29 @@ func (uc *WalletUseCase) SearchRecipients(senderID int, query string) ([]*Recipi
 			Type:       "user",
 		})
 	}
+
+	if uc.companyRepo != nil {
+		companies, err := uc.companyRepo.FindAll()
+		if err == nil {
+			for _, c := range companies {
+				if c.Status == "dissolved" {
+					continue
+				}
+				if q != "" && !contains(c.Name, q) {
+					continue
+				}
+				results = append(results, &Recipient{
+					ID:         c.ID,
+					Name:       c.Name,
+					StudentID:  "", // 법인은 학번 없음
+					Department: "법인",
+					AvatarURL:  c.LogoURL,
+					Type:       "company",
+				})
+			}
+		}
+	}
+
 	return results, nil
 }
 
@@ -234,36 +259,63 @@ func (uc *WalletUseCase) Transfer(senderID int, input TransferInput) error {
 		return wallet.ErrInsufficientFunds
 	}
 
-	// Determine receiver
-	receiverUserID := input.TargetUserID
-	if input.TargetType == "company" {
-		// For company transfer, we need to find the company owner
-		// TargetUserID here is actually companyID
-		return fmt.Errorf("회사 송금은 회사 ID가 아닌 대표의 user_id로 전달해야 합니다")
-	}
-
-	// Find or create receiver wallet
-	receiverWallet, err := uc.walletRepo.FindByUserID(receiverUserID)
-	if err != nil {
-		return fmt.Errorf("받는 사람의 지갑을 찾을 수 없습니다")
-	}
-
-	// Get sender & receiver names for description
 	sender, _ := uc.userRepo.FindByID(senderID)
-	receiver, _ := uc.userRepo.FindByID(receiverUserID)
-
 	senderName := "알 수 없음"
-	receiverName := "알 수 없음"
 	if sender != nil {
 		senderName = sender.Name
-	}
-	if receiver != nil {
-		receiverName = receiver.Name
 	}
 
 	desc := input.Description
 	if desc == "" {
 		desc = "개인 송금"
+	}
+
+	if input.TargetType == "company" {
+		if uc.companyRepo == nil {
+			return fmt.Errorf("법인 송금이 지원되지 않습니다")
+		}
+		// TargetUserID 는 여기서는 companyID 로 해석
+		companyID := input.TargetUserID
+		c, err := uc.companyRepo.FindByID(companyID)
+		if err != nil {
+			return fmt.Errorf("법인을 찾을 수 없습니다")
+		}
+		if c.Status == "dissolved" {
+			return fmt.Errorf("청산된 법인에는 송금할 수 없습니다")
+		}
+		cw, err := uc.companyRepo.FindCompanyWallet(companyID)
+		if err != nil {
+			return fmt.Errorf("법인 지갑을 찾을 수 없습니다")
+		}
+
+		// Debit sender (개인 잔액 차감)
+		if err := uc.walletRepo.Debit(senderWallet.ID, input.Amount, wallet.TxCompanyTransfer,
+			fmt.Sprintf("[%s] 법인 송금: %s", c.Name, desc), "company", companyID); err != nil {
+			return err
+		}
+
+		// Credit company wallet
+		if err := uc.companyRepo.CreditCompanyWallet(cw.ID, input.Amount, string(wallet.TxCompanyTransfer),
+			fmt.Sprintf("%s 개인 송금 입금: %s", senderName, desc), "user", senderID); err != nil {
+			// Roll back the personal debit so funds are not lost.
+			_ = uc.walletRepo.Credit(senderWallet.ID, input.Amount, wallet.TxCompanyTransfer,
+				fmt.Sprintf("[%s] 법인 송금 실패 환불", c.Name), "company", companyID)
+			return fmt.Errorf("법인 지갑 입금 실패: %w", err)
+		}
+		return nil
+	}
+
+	// Default: user → user
+	receiverUserID := input.TargetUserID
+	receiverWallet, err := uc.walletRepo.FindByUserID(receiverUserID)
+	if err != nil {
+		return fmt.Errorf("받는 사람의 지갑을 찾을 수 없습니다")
+	}
+
+	receiver, _ := uc.userRepo.FindByID(receiverUserID)
+	receiverName := "알 수 없음"
+	if receiver != nil {
+		receiverName = receiver.Name
 	}
 
 	// Debit sender

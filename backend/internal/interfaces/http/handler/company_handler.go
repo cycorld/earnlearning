@@ -358,6 +358,106 @@ func (h *CompanyHandler) DownloadBusinessCard(c echo.Context) error {
 	return c.Blob(http.StatusOK, "text/plain; charset=utf-8", content)
 }
 
+// Company wallet handlers (#031)
+
+func (h *CompanyHandler) GetCompanyWallet(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 ID입니다"},
+		})
+	}
+	result, err := h.uc.GetCompanyWallet(id)
+	if err != nil {
+		if errors.Is(err, company.ErrNotFound) || errors.Is(err, company.ErrWalletNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_FOUND", "message": err.Error()},
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "FETCH_FAILED", "message": err.Error()},
+		})
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": result, "error": nil,
+	})
+}
+
+func (h *CompanyHandler) GetCompanyTransactions(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 ID입니다"},
+		})
+	}
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	result, err := h.uc.GetCompanyTransactions(id, page, limit)
+	if err != nil {
+		if errors.Is(err, company.ErrWalletNotFound) || errors.Is(err, company.ErrNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_FOUND", "message": err.Error()},
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "FETCH_FAILED", "message": err.Error()},
+		})
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": result, "error": nil,
+	})
+}
+
+func (h *CompanyHandler) TransferFromCompany(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_ID", "message": "유효하지 않은 ID입니다"},
+		})
+	}
+	var input application.CompanyTransferInput
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_INPUT", "message": "잘못된 입력입니다"},
+		})
+	}
+	if err := h.uc.TransferFromCompany(userID, id, input); err != nil {
+		switch {
+		case errors.Is(err, company.ErrNotOwner):
+			return c.JSON(http.StatusForbidden, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_OWNER", "message": err.Error()},
+			})
+		case errors.Is(err, company.ErrInsufficientFunds):
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "INSUFFICIENT_FUNDS", "message": err.Error()},
+			})
+		case errors.Is(err, company.ErrNotFound):
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_FOUND", "message": err.Error()},
+			})
+		}
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "TRANSFER_FAILED", "message": err.Error()},
+		})
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true, "data": map[string]string{"message": "송금이 완료되었습니다"}, "error": nil,
+	})
+}
+
 // Disclosure handlers
 
 func (h *CompanyHandler) CreateDisclosure(c echo.Context) error {

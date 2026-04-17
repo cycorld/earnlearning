@@ -242,6 +242,12 @@ export default function WalletPage() {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium">{displayName(r)}</p>
                         </div>
+                        {r.type === 'company' && (
+                          <Badge variant="secondary" className="gap-1 text-xs">
+                            <Building2 className="h-3 w-3" />
+                            법인
+                          </Badge>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -263,6 +269,9 @@ export default function WalletPage() {
                     </Avatar>
                     <div className="flex-1">
                       <p className="text-sm font-medium">{displayName(selectedRecipient)}</p>
+                      {selectedRecipient.type === 'company' && (
+                        <p className="text-xs text-purple-600">법인 계좌로 송금</p>
+                      )}
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setSelectedRecipient(null)}>
                       변경

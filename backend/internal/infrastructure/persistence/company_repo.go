@@ -598,6 +598,41 @@ func (r *CompanyRepo) FindVotesByProposalID(proposalID int) ([]*company.Vote, er
 	return votes, nil
 }
 
+func (r *CompanyRepo) GetCompanyTransactions(walletID int, page, limit int) ([]*company.CompanyTransaction, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	var total int
+	if err := r.db.QueryRow("SELECT COUNT(*) FROM company_transactions WHERE company_wallet_id = ?", walletID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count company txs: %w", err)
+	}
+	offset := (page - 1) * limit
+	rows, err := r.db.Query(`
+		SELECT id, company_wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id, created_at
+		FROM company_transactions
+		WHERE company_wallet_id = ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?`, walletID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("query company txs: %w", err)
+	}
+	defer rows.Close()
+
+	var txs []*company.CompanyTransaction
+	for rows.Next() {
+		t := &company.CompanyTransaction{}
+		if err := rows.Scan(&t.ID, &t.CompanyWalletID, &t.Amount, &t.BalanceAfter, &t.TxType,
+			&t.Description, &t.ReferenceType, &t.ReferenceID, &t.CreatedAt); err != nil {
+			return nil, 0, fmt.Errorf("scan company tx: %w", err)
+		}
+		txs = append(txs, t)
+	}
+	return txs, total, rows.Err()
+}
+
 func (r *CompanyRepo) DebitCompanyWallet(walletID int, amount int, txType string, desc string, refType string, refID int) error {
 	tx, err := r.db.Begin()
 	if err != nil {

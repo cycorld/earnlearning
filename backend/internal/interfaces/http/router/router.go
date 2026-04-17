@@ -116,6 +116,11 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.POST("/companies/:id/disclosures", h.Company.CreateDisclosure, middleware.RequireScope("write:company"))
 	approved.GET("/companies/:id/disclosures", h.Company.GetDisclosures, middleware.RequireScope("read:company"))
 
+	// Company wallet (#031)
+	approved.GET("/companies/:id/wallet", h.Company.GetCompanyWallet, middleware.RequireScope("read:company"))
+	approved.GET("/companies/:id/transactions", h.Company.GetCompanyTransactions, middleware.RequireScope("read:company"))
+	approved.POST("/companies/:id/transfer", h.Company.TransferFromCompany, middleware.RequireScope("write:company"))
+
 	// Shareholder proposals (주주총회 투표) — #022
 	approved.POST("/companies/:id/proposals", h.Company.CreateProposal, middleware.RequireScope("write:company"))
 	approved.GET("/companies/:id/proposals", h.Company.GetProposals, middleware.RequireScope("read:company"))
