@@ -23,6 +23,7 @@ import {
   Gift,
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 export default function AdminKpiPage() {
   const navigate = useNavigate()
@@ -149,7 +150,7 @@ export default function AdminKpiPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

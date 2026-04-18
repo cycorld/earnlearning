@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner'
 import { CreditCard, ExternalLink, Pencil, Loader2, Plus, Upload, Wallet } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 import { DisclosureSection } from './DisclosureSection'
 import { ProposalSection } from './ProposalSection'
 import { InvestmentRoundSection } from './InvestmentRoundSection'
@@ -130,7 +131,7 @@ export default function CompanyDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

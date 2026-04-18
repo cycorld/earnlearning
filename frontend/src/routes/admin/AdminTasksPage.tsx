@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, GripVertical, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Link } from 'react-router-dom'
 
 interface KanbanTask {
@@ -84,7 +85,7 @@ export default function AdminTasksPage() {
 
       {loading ? (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">

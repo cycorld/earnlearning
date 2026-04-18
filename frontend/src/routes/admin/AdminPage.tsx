@@ -16,6 +16,7 @@ import {
   FileText,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Spinner } from '@/components/ui/spinner'
 
 interface AdminStats {
   pending_users: number
@@ -120,7 +121,7 @@ export default function AdminPage() {
 
       {loading ? (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : (
         <div className="grid gap-3">

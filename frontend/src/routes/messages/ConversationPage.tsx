@@ -6,6 +6,7 @@ import { useWebSocket } from '@/hooks/use-ws'
 import type { DMMessage, User } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Spinner } from '@/components/ui/spinner'
 import { ArrowLeft, Send, Loader2 } from 'lucide-react'
 
 function timeAgo(dateStr: string): string {
@@ -112,7 +113,7 @@ export default function ConversationPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
