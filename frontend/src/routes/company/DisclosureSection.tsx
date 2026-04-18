@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { FileText, Loader2, Plus } from 'lucide-react'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, formatDate } from '@/lib/utils'
 
 const statusLabels: Record<string, string> = {
   pending: '심사 중',
@@ -113,7 +113,7 @@ export function DisclosureSection({ companyId, isOwner }: Props) {
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="text-sm font-medium">
-                        {d.period_from} ~ {d.period_to}
+                        {formatDate(d.period_from)} ~ {formatDate(d.period_to)}
                       </span>
                       <Badge variant={statusVariant[d.status] || 'secondary'}>
                         {statusLabels[d.status] || d.status}
@@ -201,7 +201,7 @@ export function DisclosureSection({ companyId, isOwner }: Props) {
               </DialogHeader>
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground">
-                  {selectedDisclosure.period_from} ~ {selectedDisclosure.period_to}
+                  {formatDate(selectedDisclosure.period_from)} ~ {formatDate(selectedDisclosure.period_to)}
                 </div>
                 <MarkdownContent content={selectedDisclosure.content} className="text-sm" />
                 {selectedDisclosure.reward > 0 && (
