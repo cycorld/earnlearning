@@ -14,6 +14,7 @@ import (
 	"github.com/earnlearning/backend/internal/infrastructure/llmproxy"
 	"github.com/earnlearning/backend/internal/infrastructure/persistence"
 	"github.com/earnlearning/backend/internal/infrastructure/push"
+	"github.com/earnlearning/backend/internal/infrastructure/ragindex"
 	"github.com/earnlearning/backend/internal/infrastructure/scheduler"
 	"github.com/earnlearning/backend/internal/infrastructure/userdbadmin"
 	"github.com/earnlearning/backend/internal/interfaces/http/handler"
@@ -79,6 +80,11 @@ func main() {
 	shareholderUpdater := persistence.NewShareholderUpdater(db)
 	userDBRepo := persistence.NewUserDBRepo(db)
 	llmRepo := persistence.NewLLMRepo(db)
+	chatSessionRepo := persistence.NewChatSessionRepo(db)
+	chatMessageRepo := persistence.NewChatMessageRepo(db)
+	chatSkillRepo := persistence.NewChatSkillRepo(db)
+	chatWikiRepo := persistence.NewChatWikiRepo(db)
+	chatUsageRepo := persistence.NewChatUsageRepo(db)
 
 	// WebSocket Hub
 	hub := ws.NewHub()
@@ -156,6 +162,7 @@ func main() {
 
 	// LLM API keys + daily billing (#068)
 	var llmUC *application.LLMUseCase
+	var chatUC *application.ChatUseCase
 	if cfg.LLMAdminAPIKey != "" {
 		proxy := llmproxy.New(cfg.LLMProxyBaseURL, cfg.LLMAdminAPIKey)
 		llmUC = application.NewLLMUseCase(
@@ -164,8 +171,31 @@ func main() {
 		)
 		scheduler.StartLLMBilling(context.Background(), llmUC)
 		log.Printf("LLM billing scheduler started (KST 03:33 daily, proxy=%s)", cfg.LLMProxyBaseURL)
+
+		// Chatbot TA (#071) — shares the same proxy admin key
+		wikiDir := os.Getenv("LLM_WIKI_DIR")
+		if wikiDir == "" {
+			wikiDir = "./docs/llm-wiki"
+		}
+		loader := ragindex.NewLoader(chatWikiRepo, wikiDir)
+		if n, err := loader.Sync(); err != nil {
+			log.Printf("chatbot wiki sync: %v", err)
+		} else {
+			log.Printf("chatbot wiki indexed: %d docs from %s", n, wikiDir)
+		}
+		// seed built-in skills
+		application.SeedBuiltinChatSkills(chatSkillRepo)
+
+		chatTools := application.BuildChatTools(walletRepo, userRepo, companyRepo, grantRepo,
+			llmRepo, chatWikiRepo, chatSkillRepo)
+		chatLLM := llmproxy.NewChatAdapter(proxy)
+		chatUC = application.NewChatUseCase(
+			chatSessionRepo, chatMessageRepo, chatSkillRepo,
+			chatWikiRepo, chatUsageRepo, chatTools, chatLLM, loader,
+		)
+		log.Printf("Chatbot TA initialized (wiki=%s)", wikiDir)
 	} else {
-		log.Printf("LLM_ADMIN_API_KEY not set — LLM key provisioning disabled")
+		log.Printf("LLM_ADMIN_API_KEY not set — LLM key provisioning + chatbot disabled")
 	}
 
 	// Docs directory (swagger.json location)
@@ -198,6 +228,9 @@ func main() {
 	}
 	if llmUC != nil {
 		handlers.LLM = handler.NewLLMHandler(llmUC)
+	}
+	if chatUC != nil {
+		handlers.Chat = handler.NewChatHandler(chatUC)
 	}
 
 	// Echo server
