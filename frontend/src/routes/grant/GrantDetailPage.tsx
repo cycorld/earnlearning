@@ -172,7 +172,7 @@ export default function GrantDetailPage() {
   const applications: GrantApplication[] = grant.applications ?? []
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="sticky top-14 z-40 -mx-4 bg-background px-4 py-1">
         <Button variant="ghost" size="sm" asChild>
           <Link to="/grant">

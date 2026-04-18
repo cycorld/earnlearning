@@ -116,7 +116,7 @@ export default function InvestPage() {
   )
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <h1 className="text-lg font-bold">투자</h1>
 
       {/* Summary Cards */}

@@ -120,7 +120,7 @@ export default function AdminClassroomDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4">
+    <div className="mx-auto max-w-2xl space-y-5 p-4">
       {/* Header */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={() => navigate('/admin/classroom')}>

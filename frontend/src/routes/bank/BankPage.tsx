@@ -78,7 +78,7 @@ export default function BankPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center justify-between">
         <h1 className="flex items-center gap-2 text-xl font-bold">
           <Landmark className="h-5 w-5" />

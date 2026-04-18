@@ -3,154 +3,285 @@
     "slug": "001-project-kickoff",
     "title": "프로젝트 기획과 설계: 아이디어를 문서로 만들기",
     "date": "2026-03-13",
-    "tags": ["기획", "설계", "PRD", "기술스펙", "PWA"],
+    "tags": [
+      "기획",
+      "설계",
+      "PRD",
+      "기술스펙",
+      "PWA"
+    ],
     "github": "https://github.com/cycorld/earnlearning/commit/3c9e496"
   },
   {
     "slug": "002-full-implementation",
     "title": "전체 기능 구현: 설계 문서를 동작하는 코드로",
     "date": "2026-03-13",
-    "tags": ["구현", "풀스택", "Go", "React", "API"],
+    "tags": [
+      "구현",
+      "풀스택",
+      "Go",
+      "React",
+      "API"
+    ],
     "github": "https://github.com/cycorld/earnlearning/commit/1e19397"
   },
   {
     "slug": "003-testing-and-bugfix",
     "title": "테스트와 버그 수정: 코드가 진짜로 동작하는지 확인하기",
     "date": "2026-03-13",
-    "tags": ["테스트", "E2E", "버그수정", "품질보증", "스모크테스트"],
+    "tags": [
+      "테스트",
+      "E2E",
+      "버그수정",
+      "품질보증",
+      "스모크테스트"
+    ],
     "github": "https://github.com/cycorld/earnlearning/commit/bde13f2"
   },
   {
     "slug": "004-ux-enhancements",
     "title": "UX 개선: 사용자 경험을 한 단계 끌어올리기",
     "date": "2026-03-14",
-    "tags": ["UX", "마크다운", "파일업로드", "태그", "에디터"],
+    "tags": [
+      "UX",
+      "마크다운",
+      "파일업로드",
+      "태그",
+      "에디터"
+    ],
     "github": "https://github.com/cycorld/earnlearning/commit/cec30e6"
   },
   {
     "slug": "005-deployment",
     "title": "배포: 내 컴퓨터에서 세상으로 나가기",
     "date": "2026-03-14",
-    "tags": ["배포", "AWS", "Docker", "Nginx", "Cloudflare", "백업"],
+    "tags": [
+      "배포",
+      "AWS",
+      "Docker",
+      "Nginx",
+      "Cloudflare",
+      "백업"
+    ],
     "github": "https://github.com/cycorld/earnlearning/commit/3d22fbb"
   },
   {
     "slug": "006-tdd-and-quality",
     "title": "TDD와 코드 품질: 테스트가 개발을 이끄는 방식",
     "date": "2026-03-15",
-    "tags": ["TDD", "테스트", "회귀테스트", "빌드", "품질"],
+    "tags": [
+      "TDD",
+      "테스트",
+      "회귀테스트",
+      "빌드",
+      "품질"
+    ],
     "github": "https://github.com/cycorld/earnlearning/commit/191d481"
   },
   {
     "slug": "007-cicd-and-security",
     "title": "CI/CD와 보안: 자동화된 배포와 안전한 운영",
     "date": "2026-03-15",
-    "tags": ["CI/CD", "GitHub Actions", "보안", "자동화", "배포"],
+    "tags": [
+      "CI/CD",
+      "GitHub Actions",
+      "보안",
+      "자동화",
+      "배포"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/1"
   },
   {
     "slug": "008-production-debugging",
     "title": "운영 환경 트러블슈팅: 배포 후 서비스가 안 될 때",
     "date": "2026-03-15",
-    "tags": ["트러블슈팅", "Docker", "Nginx", "WebSocket", "디버깅"],
+    "tags": [
+      "트러블슈팅",
+      "Docker",
+      "Nginx",
+      "WebSocket",
+      "디버깅"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/3"
   },
   {
     "slug": "009-token-and-version",
     "title": "토큰 자동 갱신과 앱 버전 관리: 사용자가 모르게 부드럽게",
     "date": "2026-03-15",
-    "tags": ["JWT", "인증", "토큰갱신", "버전관리", "UX"],
+    "tags": [
+      "JWT",
+      "인증",
+      "토큰갱신",
+      "버전관리",
+      "UX"
+    ],
     "github": "https://github.com/cycorld/earnlearning/commit/945638d"
   },
   {
     "slug": "010-cache-busting",
     "title": "캐시 문제 해결: 새 버전이 안 보일 때",
     "date": "2026-03-15",
-    "tags": ["캐시", "Service Worker", "PWA", "Nginx", "배포"],
+    "tags": [
+      "캐시",
+      "Service Worker",
+      "PWA",
+      "Nginx",
+      "배포"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/4"
   },
   {
     "slug": "011-brand-and-design",
     "title": "브랜드 디자인과 AI 이미지 생성: 서비스에 정체성 입히기",
     "date": "2026-03-15",
-    "tags": ["브랜드", "디자인", "AI", "Gemini", "PWA", "파비콘"],
+    "tags": [
+      "브랜드",
+      "디자인",
+      "AI",
+      "Gemini",
+      "PWA",
+      "파비콘"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/5"
   },
   {
     "slug": "012-brand-ui-redesign",
     "title": "브랜드 가이드 기반 UI 리디자인: 색상과 서체로 정체성 완성하기",
     "date": "2026-03-15",
-    "tags": ["브랜드", "UI", "디자인시스템", "타이포그래피", "CSS"],
+    "tags": [
+      "브랜드",
+      "UI",
+      "디자인시스템",
+      "타이포그래피",
+      "CSS"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/9"
   },
   {
     "slug": "013-admin-announce",
     "title": "공지 알림 + iOS 웹 푸시: 삽질의 기록",
     "date": "2026-03-15",
-    "tags": ["알림", "푸시", "관리자", "WebPush", "iOS", "VAPID", "트러블슈팅"],
+    "tags": [
+      "알림",
+      "푸시",
+      "관리자",
+      "WebPush",
+      "iOS",
+      "VAPID",
+      "트러블슈팅"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/12"
   },
   {
     "slug": "014-email-notifications",
     "title": "이메일 알림 시스템: AWS SES로 알림을 이메일로도 보내기",
     "date": "2026-03-16",
-    "tags": ["이메일", "AWS SES", "알림", "IAM", "DNS", "DKIM"],
+    "tags": [
+      "이메일",
+      "AWS SES",
+      "알림",
+      "IAM",
+      "DNS",
+      "DKIM"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/13"
   },
   {
     "slug": "015-announce-notify-toggle",
     "title": "공지 알림 전송 옵션: 푸시/이메일을 보낼지 선택하기",
     "date": "2026-03-16",
-    "tags": ["알림", "공지", "관리자", "UX"],
+    "tags": [
+      "알림",
+      "공지",
+      "관리자",
+      "UX"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/14"
   },
   {
     "slug": "016-auto-post-notifications",
     "title": "자동 피드 포스팅 & 알림 보강: 활동이 피드에 자동으로 올라가게",
     "date": "2026-03-16",
-    "tags": ["피드", "자동포스팅", "알림", "이메일", "거래소", "투자", "외주", "정부과제"],
+    "tags": [
+      "피드",
+      "자동포스팅",
+      "알림",
+      "이메일",
+      "거래소",
+      "투자",
+      "외주",
+      "정부과제"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/15"
   },
   {
     "slug": "017-loan-zero-interest",
     "title": "대출 0% 이자율 허용: 무이자 대출이 안 되던 버그 수정",
     "date": "2026-03-17",
-    "tags": ["버그수정", "대출", "은행"],
+    "tags": [
+      "버그수정",
+      "대출",
+      "은행"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/16"
   },
   {
     "slug": "018-kanban-board",
     "title": "칸반보드 태스크 관리: 개발 작업을 시각적으로 관리하기",
     "date": "2026-03-18",
-    "tags": ["관리자", "칸반보드", "태스크", "프로젝트관리"],
+    "tags": [
+      "관리자",
+      "칸반보드",
+      "태스크",
+      "프로젝트관리"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/17"
   },
   {
     "slug": "019-edit-post-format-money",
     "title": "게시글 수정 기능 + 금액 포맷팅 통합: DRY 원칙 실천하기",
     "date": "2026-03-18",
-    "tags": ["피드", "게시글수정", "포맷팅", "리팩토링", "UX"],
+    "tags": [
+      "피드",
+      "게시글수정",
+      "포맷팅",
+      "리팩토링",
+      "UX"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/18"
   },
   {
     "slug": "020-grant-markdown-counts",
     "title": "정부과제 지원서 마크다운 + 지원/승인 현황 표시",
     "date": "2026-03-18",
-    "tags": ["정부과제", "마크다운", "UX"],
+    "tags": [
+      "정부과제",
+      "마크다운",
+      "UX"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/20"
   },
   {
     "slug": "021-strikethrough-fix",
     "title": "마크다운 취소선 오작동 수정: ~를 범위 표현에 안전하게",
     "date": "2026-03-18",
-    "tags": ["마크다운", "버그수정", "UX"],
+    "tags": [
+      "마크다운",
+      "버그수정",
+      "UX"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/21"
   },
   {
     "slug": "022-classroom-dashboard",
     "title": "강의실 학생 대시보드: 학생 현황을 한눈에",
     "date": "2026-03-19",
-    "tags": ["관리자", "대시보드", "강의실", "UX"],
+    "tags": [
+      "관리자",
+      "대시보드",
+      "강의실",
+      "UX"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/22",
     "hotfix": "https://github.com/cycorld/earnlearning/pull/23",
     "fix2": "https://github.com/cycorld/earnlearning/pull/24"
@@ -159,7 +290,12 @@
     "slug": "023-transfer-display-name",
     "title": "P2P 송금 기능 + 사용자 이름 표시 개선",
     "date": "2026-03-19",
-    "tags": ["송금", "지갑", "UX", "유틸리티"],
+    "tags": [
+      "송금",
+      "지갑",
+      "UX",
+      "유틸리티"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/25",
     "fix": "https://github.com/cycorld/earnlearning/pull/26"
   },
@@ -167,36 +303,62 @@
     "slug": "024-notification-links",
     "title": "알림 클릭 시 관련 페이지 이동",
     "date": "2026-03-19",
-    "tags": ["알림", "UX", "네비게이션"],
+    "tags": [
+      "알림",
+      "UX",
+      "네비게이션"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/27"
   },
   {
     "slug": "025-api-docs-oauth",
     "title": "API 문서화 + OAuth2 시스템",
     "date": "2026-03-22",
-    "tags": ["API", "OAuth", "보안", "문서화"],
+    "tags": [
+      "API",
+      "OAuth",
+      "보안",
+      "문서화"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/28"
   },
   {
     "slug": "026-comment-notification",
     "title": "댓글 알림",
     "date": "2026-03-23",
-    "tags": ["알림", "댓글", "푸시", "이메일"],
+    "tags": [
+      "알림",
+      "댓글",
+      "푸시",
+      "이메일"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/29"
   },
   {
     "slug": "027-deploy-bluegreen",
     "title": "로컬 빌드 + GHCR + Blue-Green 무중단 배포",
     "date": "2026-03-23",
-    "tags": ["배포", "Docker", "Blue-Green", "GHCR", "무중단"],
+    "tags": [
+      "배포",
+      "Docker",
+      "Blue-Green",
+      "GHCR",
+      "무중단"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/30",
-    "fix": "https://github.com/cycorld/earnlearning/pull/31", "fix2": "https://github.com/cycorld/earnlearning/pull/32"
+    "fix": "https://github.com/cycorld/earnlearning/pull/31",
+    "fix2": "https://github.com/cycorld/earnlearning/pull/32"
   },
   {
     "slug": "028-remember-login",
     "title": "아이디 저장 & 로그인 유지 + 댓글 작성자 버그 수정",
     "date": "2026-03-24",
-    "tags": ["인증", "UX", "JWT", "버그수정"],
+    "tags": [
+      "인증",
+      "UX",
+      "JWT",
+      "버그수정"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/34",
     "fix": "https://github.com/cycorld/earnlearning/pull/35"
   },
@@ -204,42 +366,70 @@
     "slug": "029-grant-app-edit",
     "title": "정부과제 지원서 수정/삭제 및 승인 취소 기능",
     "date": "2026-04-01",
-    "tags": ["정부과제", "UX", "관리자", "보상"],
+    "tags": [
+      "정부과제",
+      "UX",
+      "관리자",
+      "보상"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/37"
   },
   {
     "slug": "030-mobile-file-download",
     "title": "모바일 PWA 파일 다운로드 수정",
     "date": "2026-04-01",
-    "tags": ["PWA", "모바일", "버그수정", "파일"],
+    "tags": [
+      "PWA",
+      "모바일",
+      "버그수정",
+      "파일"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/38"
   },
   {
     "slug": "031-feed-pagination",
     "title": "피드 페이지네이션 추가",
     "date": "2026-04-02",
-    "tags": ["UX", "피드", "페이지네이션"],
+    "tags": [
+      "UX",
+      "피드",
+      "페이지네이션"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/39"
   },
   {
     "slug": "032-dm-feature",
     "title": "유저 간 1:1 DM(메시지) 기능",
     "date": "2026-04-02",
-    "tags": ["DM", "WebSocket", "실시간", "UX"],
+    "tags": [
+      "DM",
+      "WebSocket",
+      "실시간",
+      "UX"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/40"
   },
   {
     "slug": "033-profile-detail",
     "title": "프로필 상세 활동 내역 + 아바타 변경",
     "date": "2026-04-02",
-    "tags": ["프로필", "UX", "아바타"],
+    "tags": [
+      "프로필",
+      "UX",
+      "아바타"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/41"
   },
   {
     "slug": "034-oauth-scope-bugfix",
     "title": "OAuth API 접근 버그 수정 + 스코프 기반 권한 제한",
     "date": "2026-04-03",
-    "tags": ["OAuth", "보안", "버그수정", "버그바운티"],
+    "tags": [
+      "OAuth",
+      "보안",
+      "버그수정",
+      "버그바운티"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/42",
     "contributor": "임서원"
   },
@@ -247,28 +437,45 @@
     "slug": "035-post-delete",
     "title": "게시글 삭제 기능 + 삭제 확인 다이얼로그",
     "date": "2026-04-03",
-    "tags": ["피드", "UX", "안전장치"],
+    "tags": [
+      "피드",
+      "UX",
+      "안전장치"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/43"
   },
   {
     "slug": "036-dm-push-notify",
     "title": "DM 수신 시 웹 푸시 + 이메일 알림",
     "date": "2026-04-03",
-    "tags": ["DM", "푸시알림", "이메일"],
+    "tags": [
+      "DM",
+      "푸시알림",
+      "이메일"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/45"
   },
   {
     "slug": "037-business-card",
     "title": "명함 5종 프리미엄 템플릿 + PNG 다운로드",
     "date": "2026-04-03",
-    "tags": ["명함", "UX", "디자인"],
+    "tags": [
+      "명함",
+      "UX",
+      "디자인"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/47"
   },
   {
     "slug": "038-oauth-bugfix-2",
     "title": "OAuth 버그바운티 2차 제보 수정",
     "date": "2026-04-03",
-    "tags": ["OAuth", "보안", "버그수정", "버그바운티"],
+    "tags": [
+      "OAuth",
+      "보안",
+      "버그수정",
+      "버그바운티"
+    ],
     "github": "https://github.com/cycorld/earnlearning/pull/49",
     "contributor": "김나연"
   },
@@ -276,156 +483,322 @@
     "slug": "039-postgres-server-setup",
     "title": "학생용 PostgreSQL 서버 설치 (PgBouncer 포함)",
     "date": "2026-04-10",
-    "tags": ["PostgreSQL", "PgBouncer", "인프라", "DB", "학생DB"]
+    "tags": [
+      "PostgreSQL",
+      "PgBouncer",
+      "인프라",
+      "DB",
+      "학생DB"
+    ]
   },
   {
     "slug": "040-student-db-provisioning",
     "title": "LMS 프로필에서 학생 개인 PostgreSQL 프로비저닝",
     "date": "2026-04-10",
-    "tags": ["Feature", "PostgreSQL", "프로필", "학생DB", "백엔드", "프론트엔드"]
+    "tags": [
+      "Feature",
+      "PostgreSQL",
+      "프로필",
+      "학생DB",
+      "백엔드",
+      "프론트엔드"
+    ]
   },
   {
     "slug": "041-userdb-slug-conflict-error",
     "title": "학생 DB 슬러그 충돌 에러 메시지 개선",
     "date": "2026-04-10",
-    "tags": ["fix", "PostgreSQL", "학생DB", "UX"]
+    "tags": [
+      "fix",
+      "PostgreSQL",
+      "학생DB",
+      "UX"
+    ]
   },
   {
     "slug": "042-profile-responsive-dialog-overflow",
     "title": "프로필 페이지 반응형 + DB 다이얼로그 모바일 오버플로우 수정",
     "date": "2026-04-10",
-    "tags": ["fix", "반응형", "UI", "프론트엔드", "학생DB"]
+    "tags": [
+      "fix",
+      "반응형",
+      "UI",
+      "프론트엔드",
+      "학생DB"
+    ]
   },
   {
     "slug": "043-company-edit-and-browse-all",
     "title": "기업 정보 수정 (이름/이미지) + 다른 학생 기업 둘러보기",
     "date": "2026-04-10",
-    "tags": ["feat", "fix", "회사", "백엔드", "프론트엔드"]
+    "tags": [
+      "feat",
+      "fix",
+      "회사",
+      "백엔드",
+      "프론트엔드"
+    ]
   },
   {
     "slug": "044-pwa-auto-refresh",
     "title": "PWA / 브라우저 자동 업데이트 (배포 시 즉시 반영)",
     "date": "2026-04-10",
-    "tags": ["feat", "PWA", "프론트엔드", "UX"]
+    "tags": [
+      "feat",
+      "PWA",
+      "프론트엔드",
+      "UX"
+    ]
   },
   {
     "slug": "045-grant-link-fix",
     "title": "정부과제 바로가기 링크 수정",
     "date": "2026-04-10",
-    "tags": ["fix", "라우팅", "정부과제"]
+    "tags": [
+      "fix",
+      "라우팅",
+      "정부과제"
+    ]
   },
   {
     "slug": "046-engagement-reward",
     "title": "게시글 좋아요/댓글 보상 시스템",
     "date": "2026-04-11",
-    "tags": ["feat", "보상", "좋아요", "댓글", "게임화"]
+    "tags": [
+      "feat",
+      "보상",
+      "좋아요",
+      "댓글",
+      "게임화"
+    ]
   },
   {
     "slug": "047-sticky-nav-header",
     "title": "서브페이지 네비게이션 헤더 고정 (sticky)",
     "date": "2026-04-11",
-    "tags": ["fix", "UX", "네비게이션"]
+    "tags": [
+      "fix",
+      "UX",
+      "네비게이션"
+    ]
   },
   {
     "slug": "048-company-disclosure",
     "title": "회사 공시 + 서비스 URL + 정부 수익금 입금 시스템",
     "date": "2026-04-12",
-    "tags": ["feat", "회사", "공시", "백엔드", "프론트엔드"]
+    "tags": [
+      "feat",
+      "회사",
+      "공시",
+      "백엔드",
+      "프론트엔드"
+    ]
   },
   {
     "slug": "049-disclosure-notification",
     "title": "공시 승인/거절 시 학생 알림 연동",
     "date": "2026-04-12",
-    "tags": ["feat", "알림", "공시"]
+    "tags": [
+      "feat",
+      "알림",
+      "공시"
+    ]
   },
   {
     "slug": "050-db-setup-prompt",
     "title": "DB 생성 시 바이브코딩용 연동 프롬프트 제공",
     "date": "2026-04-12",
-    "tags": ["feat", "PostgreSQL", "학생DB", "UX"]
+    "tags": [
+      "feat",
+      "PostgreSQL",
+      "학생DB",
+      "UX"
+    ]
   },
   {
     "slug": "051-shareholder-voting",
     "title": "주주총회 투표 시스템 구축",
     "date": "2026-04-12",
-    "tags": ["feat", "주주총회", "투표", "회사", "백엔드", "프론트엔드"]
+    "tags": [
+      "feat",
+      "주주총회",
+      "투표",
+      "회사",
+      "백엔드",
+      "프론트엔드"
+    ]
   },
   {
     "slug": "052-company-liquidation",
     "title": "회사 청산 기능 (세금 20% + 주주별 분배)",
     "date": "2026-04-12",
-    "tags": ["feat", "회사", "청산", "세금", "주주총회"]
+    "tags": [
+      "feat",
+      "회사",
+      "청산",
+      "세금",
+      "주주총회"
+    ]
   },
   {
     "slug": "053-pwa-no-cache-headers",
     "title": "PWA 업데이트 확실하게 만들기 — Cache-Control 강화",
     "date": "2026-04-16",
-    "tags": ["fix", "PWA", "nginx", "인프라"]
+    "tags": [
+      "fix",
+      "PWA",
+      "nginx",
+      "인프라"
+    ]
   },
   {
     "slug": "054-investment-overhaul",
     "title": "투자유치 기능 전면 개선 — 분할 투자 + 버그 수정 + 교육용 도움말",
     "date": "2026-04-16",
-    "tags": ["fix", "feat", "투자", "교육", "백엔드", "프론트엔드"]
+    "tags": [
+      "fix",
+      "feat",
+      "투자",
+      "교육",
+      "백엔드",
+      "프론트엔드"
+    ]
   },
   {
     "slug": "055-investment-close-cancel",
     "title": "투자 라운드 조기 마감 + 수동 취소(환불) 기능",
     "date": "2026-04-16",
-    "tags": ["feat", "투자", "교육", "백엔드", "프론트엔드"]
+    "tags": [
+      "feat",
+      "투자",
+      "교육",
+      "백엔드",
+      "프론트엔드"
+    ]
   },
   {
     "slug": "056-multi-entity-transfer",
     "title": "송금 기능 확장 — 개인↔법인 송금 + 법인 전용 지갑 페이지",
     "date": "2026-04-17",
-    "tags": ["feat", "지갑", "법인", "교육", "백엔드", "프론트엔드"]
+    "tags": [
+      "feat",
+      "지갑",
+      "법인",
+      "교육",
+      "백엔드",
+      "프론트엔드"
+    ]
   },
   {
     "slug": "057-investment-post-link-fix",
     "title": "투자 라운드 공지 글 링크 수정 — /investment → /invest/:id",
     "date": "2026-04-17",
-    "tags": ["fix", "투자", "링크", "회귀테스트", "데이터마이그레이션"]
+    "tags": [
+      "fix",
+      "투자",
+      "링크",
+      "회귀테스트",
+      "데이터마이그레이션"
+    ]
   },
   {
     "slug": "058-liquidation-auto-execute",
     "title": "청산 안건 UX 개선 — 세금 20% 안내 + 가결 즉시 자동 집행",
     "date": "2026-04-18",
-    "tags": ["feat", "청산", "주주총회", "UX", "백엔드", "프론트엔드"]
+    "tags": [
+      "feat",
+      "청산",
+      "주주총회",
+      "UX",
+      "백엔드",
+      "프론트엔드"
+    ]
   },
   {
     "slug": "059-user-guide-screenshots",
     "title": "전체 이용가이드용 스크린샷 추가 — Notion 매뉴얼 임베드 자산",
     "date": "2026-04-18",
-    "tags": ["docs", "매뉴얼", "스크린샷", "Notion"]
+    "tags": [
+      "docs",
+      "매뉴얼",
+      "스크린샷",
+      "Notion"
+    ]
   },
   {
     "slug": "060-post-detail-deeplink",
     "title": "포스트 상세 딥링크 페이지 (/post/:id) 추가",
     "date": "2026-04-18",
-    "tags": ["feat", "피드", "딥링크", "알림", "회귀테스트"]
+    "tags": [
+      "feat",
+      "피드",
+      "딥링크",
+      "알림",
+      "회귀테스트"
+    ]
   },
   {
     "slug": "061-disclosure-status-hardcoded",
     "title": "공시 INSERT SQL의 status 하드코딩 제거 — 도메인 Status 필드 살리기",
     "date": "2026-04-18",
-    "tags": ["fix", "공시", "청산", "SQL", "TDD", "회귀테스트"]
+    "tags": [
+      "fix",
+      "공시",
+      "청산",
+      "SQL",
+      "TDD",
+      "회귀테스트"
+    ]
   },
   {
     "slug": "062-disclosure-period-display",
     "title": "공시 카드 기간이 ISO 타임스탬프로 표시되던 문제 수정",
     "date": "2026-04-18",
-    "tags": ["fix", "공시", "날짜포맷", "프론트엔드", "유틸", "단위테스트"]
+    "tags": [
+      "fix",
+      "공시",
+      "날짜포맷",
+      "프론트엔드",
+      "유틸",
+      "단위테스트"
+    ]
   },
   {
     "slug": "063-pwa-version-check-auto-refresh",
     "title": "같은 신버전 N회 연속 감지 시 자동 새로고침 (stuck 구버전 방어)",
     "date": "2026-04-18",
-    "tags": ["feat", "PWA", "버전체크", "자동리프레시", "TDD", "회귀테스트"]
+    "tags": [
+      "feat",
+      "PWA",
+      "버전체크",
+      "자동리프레시",
+      "TDD",
+      "회귀테스트"
+    ]
   },
   {
     "slug": "064-admin-ws-force-reload",
     "title": "관리자 WebSocket 강제 새로고침 브로드캐스트",
     "date": "2026-04-18",
-    "tags": ["feat", "PWA", "WebSocket", "관리자", "배포", "회귀테스트"]
+    "tags": [
+      "feat",
+      "PWA",
+      "WebSocket",
+      "관리자",
+      "배포",
+      "회귀테스트"
+    ]
+  },
+  {
+    "slug": "065-design-system-refresh",
+    "title": "디자인 시스템 리프레시: 이화 그린 + Warm Orange",
+    "date": "2026-04-18",
+    "tags": [
+      "디자인시스템",
+      "CSS변수",
+      "브랜드",
+      "이화여대",
+      "칸아카데미"
+    ]
   }
 ]

@@ -126,7 +126,7 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
@@ -141,11 +141,11 @@ export default function WalletPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-              <Wallet className="h-5 w-5 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Wallet className="h-5 w-5 text-primary" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">보유 현금</p>
@@ -181,12 +181,12 @@ export default function WalletPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-              <CreditCard className="h-5 w-5 text-red-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-coral/15">
+              <CreditCard className="h-5 w-5 text-coral" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">총 부채</p>
-              <p className="text-sm font-semibold text-red-600">
+              <p className="text-sm font-semibold text-coral">
                 -{formatMoney(wallet.asset_breakdown?.total_debt ?? 0)}
               </p>
             </div>
@@ -197,7 +197,7 @@ export default function WalletPage() {
       {/* Transfer Button */}
       <Dialog open={transferOpen} onOpenChange={(open) => { setTransferOpen(open); if (!open) resetTransfer() }}>
         <DialogTrigger asChild>
-          <Button className="w-full gap-2" variant="outline">
+          <Button className="w-full gap-2">
             <Send className="h-4 w-4" />
             송금하기
           </Button>

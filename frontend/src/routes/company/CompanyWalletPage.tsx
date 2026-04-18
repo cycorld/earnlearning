@@ -205,7 +205,7 @@ export default function CompanyWalletPage() {
   const canTransfer = isOwner && data.company.status !== 'dissolved'
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       {/* Back link */}
       <Button variant="ghost" size="sm" asChild className="gap-1 px-2">
         <Link to={`/company/${id}`}>

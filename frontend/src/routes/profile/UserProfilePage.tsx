@@ -128,7 +128,7 @@ export default function UserProfilePage() {
   const grantApps = activity?.grant_apps ?? []
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       {/* User info */}
       <Card>
         <CardContent className="p-6">
