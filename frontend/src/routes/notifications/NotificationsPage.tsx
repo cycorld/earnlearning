@@ -79,6 +79,7 @@ function getReferencePath(refType: string, refId: number): string | null {
   switch (refType) {
     case 'post':
     case 'posts':
+      return refId > 0 ? `/post/${refId}` : '/feed'
     case 'assignment':
     case 'submission':
       return '/feed'

@@ -132,6 +132,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	// Feed / Posts (OAuth: read:posts / write:posts)
 	approved.GET("/classrooms/:classroomId/channels", h.Post.GetChannels, middleware.RequireScope("read:posts"))
 	approved.GET("/posts", h.Post.GetPosts, middleware.RequireScope("read:posts"))
+	approved.GET("/posts/:id", h.Post.GetPost, middleware.RequireScope("read:posts"))
 	approved.GET("/channels/:channelId/posts", h.Post.GetPosts, middleware.RequireScope("read:posts"))
 	approved.POST("/channels/:channelId/posts", h.Post.CreatePost, middleware.RequireScope("write:posts"))
 	approved.PUT("/posts/:id", h.Post.UpdatePost, middleware.RequireScope("write:posts"))

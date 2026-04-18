@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/use-auth'
 import type { Post, Channel, Comment, PaginatedData } from '@/types'
@@ -678,7 +678,13 @@ export default function FeedPage() {
                       )}
                       {post.pinned && <Pin className="h-3 w-3 text-primary" />}
                       <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-                        {timeAgo(post.created_at)}
+                        <Link
+                          to={`/post/${post.id}`}
+                          className="hover:underline"
+                          title="이 글의 고유 링크"
+                        >
+                          {timeAgo(post.created_at)}
+                        </Link>
                         {(post.author?.id === user?.id || user?.role === 'admin') && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
