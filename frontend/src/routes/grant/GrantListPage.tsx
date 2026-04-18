@@ -94,7 +94,7 @@ export default function GrantListPage() {
         <>
           <div className="space-y-4">
             {grants.map((grant) => (
-              <Link key={grant.id} to={`/grant/${grant.id}`}>
+              <Link key={grant.id} to={`/grant/${grant.id}`} className="block">
                 <Card className="transition-colors hover:bg-accent/30">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">

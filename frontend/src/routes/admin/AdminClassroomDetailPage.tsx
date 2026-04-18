@@ -217,7 +217,7 @@ export default function AdminClassroomDetailPage() {
             </p>
           ) : (
             filtered.map((m, idx) => (
-              <Link key={m.user_id} to={`/profile/${m.user_id}`}>
+              <Link key={m.user_id} to={`/profile/${m.user_id}`} className="block">
                 <div className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-accent/30">
                   {/* Rank */}
                   <span className="w-6 text-center text-sm font-bold text-muted-foreground">

@@ -158,7 +158,7 @@ export default function AdminClassroomPage() {
             </p>
           ) : (
             classrooms.map((classroom) => (
-              <Link key={classroom.id} to={`/admin/classroom/${classroom.id}`}>
+              <Link key={classroom.id} to={`/admin/classroom/${classroom.id}`} className="block">
                 <Card className="transition-colors hover:bg-accent/30">
                   <CardContent className="flex items-center justify-between p-4">
                     <div>
