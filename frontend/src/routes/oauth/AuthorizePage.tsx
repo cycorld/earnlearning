@@ -165,17 +165,17 @@ export default function AuthorizePage() {
                 <div
                   key={s}
                   className={`flex items-start gap-3 rounded-lg border p-3 ${
-                    isWrite ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30' : ''
+                    isWrite ? 'border-warning/25 bg-warning/10/50' : ''
                   }`}
                 >
-                  <Check className={`mt-0.5 h-4 w-4 shrink-0 ${isWrite ? 'text-amber-600' : 'text-primary'}`} />
+                  <Check className={`mt-0.5 h-4 w-4 shrink-0 ${isWrite ? 'text-warning' : 'text-primary'}`} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">
                         {scopeInfo?.label || s}
                       </span>
                       {isWrite && (
-                        <Badge variant="outline" className="border-amber-300 text-[10px] text-amber-700">
+                        <Badge variant="outline" className="border-warning/40 text-[10px] text-warning">
                           쓰기
                         </Badge>
                       )}
@@ -190,7 +190,7 @@ export default function AuthorizePage() {
           </div>
 
           {hasWriteScope && (
-            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            <div className="mt-3 rounded-lg border border-warning/25 bg-warning/10 p-2 text-xs text-warning">
               <AlertTriangle className="mb-0.5 inline h-3 w-3" /> 이 앱에 쓰기 권한이 포함되어 있습니다. 신뢰할 수 있는 앱인지 확인하세요.
             </div>
           )}
