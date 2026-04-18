@@ -239,6 +239,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.GET("/companies", h.Company.ListAllCompanies)
 	admin.POST("/users/:id/impersonate", h.Admin.ImpersonateUser)
 	admin.POST("/notifications/announce", h.Notification.AdminSendAnnouncement)
+	admin.POST("/force-reload", h.Admin.ForceReload)
 
 	// Kanban tasks (read-only, source of truth is tasks/ markdown files)
 	admin.GET("/tasks", h.Task.ListTasks)
