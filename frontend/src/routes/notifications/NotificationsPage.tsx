@@ -214,7 +214,7 @@ export default function NotificationsPage() {
           <p className="text-sm">알림이 없습니다.</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-4">
           {notifications.map((notif) => (
             <Card
               key={notif.id}
