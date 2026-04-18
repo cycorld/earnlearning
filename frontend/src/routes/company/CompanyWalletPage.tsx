@@ -31,6 +31,7 @@ import {
 import { toast } from 'sonner'
 import { formatMoney, displayName } from '@/lib/utils'
 import type { Transaction, Pagination } from '@/types'
+import { Spinner } from '@/components/ui/spinner'
 
 interface CompanyWalletData {
   company: {
@@ -188,7 +189,7 @@ export default function CompanyWalletPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

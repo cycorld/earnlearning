@@ -15,6 +15,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 interface Classroom {
   id: number
@@ -76,7 +77,7 @@ export default function AdminClassroomPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

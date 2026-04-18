@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { setToken } from '@/lib/auth'
 import { formatMoney, displayName } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 export default function AdminUsersPage() {
   const navigate = useNavigate()
@@ -158,7 +159,7 @@ export default function AdminUsersPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

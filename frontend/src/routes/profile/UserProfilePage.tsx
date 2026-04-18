@@ -19,6 +19,7 @@ import {
 import { formatMoney } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
 import { MarkdownContent } from '@/components/MarkdownContent'
+import { Spinner } from '@/components/ui/spinner'
 
 interface UserProfile extends User {
   companies?: Company[]
@@ -102,7 +103,7 @@ export default function UserProfilePage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

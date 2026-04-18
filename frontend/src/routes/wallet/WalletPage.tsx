@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatMoney, displayName } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 interface Recipient {
   id: number
@@ -109,7 +110,7 @@ export default function WalletPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

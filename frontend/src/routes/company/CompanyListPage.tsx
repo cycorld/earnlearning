@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Building2 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 export default function CompanyListPage() {
   const { user } = useAuth()
@@ -32,7 +33,7 @@ export default function CompanyListPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

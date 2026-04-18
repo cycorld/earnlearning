@@ -15,6 +15,7 @@ import {
 import { Plus, Clock, Users, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 const statusLabels: Record<string, string> = {
   open: '모집 중',
@@ -112,7 +113,7 @@ export default function MarketPage() {
 
       {loading ? (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : jobs.length === 0 ? (
         <p className="py-8 text-center text-muted-foreground">등록된 의뢰가 없습니다.</p>

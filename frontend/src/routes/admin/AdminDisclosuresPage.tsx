@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { ArrowLeft, CheckCircle2, FileText, Loader2, XCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatMoney, formatDate } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 const statusLabels: Record<string, string> = {
   pending: '심사 대기',
@@ -100,7 +101,7 @@ export default function AdminDisclosuresPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

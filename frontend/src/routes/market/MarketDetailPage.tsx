@@ -23,6 +23,7 @@ import {
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import { formatMoney, displayName } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 const statusLabels: Record<string, string> = {
   open: '모집 중',
@@ -157,7 +158,7 @@ export default function MarketDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

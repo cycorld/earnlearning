@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Users, CheckCircle } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 const statusLabels: Record<string, string> = {
   open: '모집 중',
@@ -85,7 +86,7 @@ export default function GrantListPage() {
 
       {loading ? (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : grants.length === 0 ? (
         <p className="py-8 text-center text-muted-foreground">등록된 과제가 없습니다.</p>

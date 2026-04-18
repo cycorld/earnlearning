@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import type { Company } from '@/types'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 import { Download, Share2, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toPng } from 'html-to-image'
@@ -217,7 +218,7 @@ export default function BusinessCardPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
