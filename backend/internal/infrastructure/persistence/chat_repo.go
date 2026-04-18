@@ -434,7 +434,7 @@ func (r *ChatWikiRepo) Search(query string, scope []string, limit int) ([]*chat.
 	args = append(args, limit)
 
 	rows, err := r.db.Query(`
-		SELECT slug, title, snippet(chat_wiki_docs, 2, '[', ']', ' … ', 12) AS snippet,
+		SELECT slug, title, snippet(chat_wiki_docs, 2, '[', ']', ' … ', 64) AS snippet,
 			bm25(chat_wiki_docs) AS score
 		FROM chat_wiki_docs WHERE chat_wiki_docs MATCH ?`+where+`
 		ORDER BY score ASC LIMIT ?`, args...)
