@@ -249,7 +249,7 @@ export default function CompanyWalletPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button className="w-full gap-2 bg-purple-600 hover:bg-purple-700">
+            <Button className="w-full gap-2 bg-entity hover:bg-entity">
               <Send className="h-4 w-4" />
               법인에서 송금하기
             </Button>
@@ -374,7 +374,7 @@ export default function CompanyWalletPage() {
                     Number(amount) <= 0 ||
                     Number(amount) > data.wallet.balance
                   }
-                  className="w-full gap-2 bg-purple-600 hover:bg-purple-700"
+                  className="w-full gap-2 bg-entity hover:bg-entity"
                 >
                   {sending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
