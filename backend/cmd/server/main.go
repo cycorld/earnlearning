@@ -17,6 +17,7 @@ import (
 	"github.com/earnlearning/backend/internal/infrastructure/ragindex"
 	"github.com/earnlearning/backend/internal/infrastructure/scheduler"
 	"github.com/earnlearning/backend/internal/infrastructure/userdbadmin"
+	"github.com/earnlearning/backend/internal/infrastructure/websearch"
 	"github.com/earnlearning/backend/internal/interfaces/http/handler"
 	"github.com/earnlearning/backend/internal/interfaces/http/router"
 	"github.com/earnlearning/backend/internal/interfaces/ws"
@@ -186,8 +187,9 @@ func main() {
 		// seed built-in skills
 		application.SeedBuiltinChatSkills(chatSkillRepo)
 
+		webClient := websearch.New()
 		chatTools := application.BuildChatTools(walletRepo, userRepo, companyRepo, grantRepo,
-			llmRepo, chatWikiRepo, chatSkillRepo)
+			llmRepo, chatWikiRepo, chatSkillRepo, webClient)
 		chatLLM := llmproxy.NewChatAdapter(proxy)
 		chatUC = application.NewChatUseCase(
 			chatSessionRepo, chatMessageRepo, chatSkillRepo,

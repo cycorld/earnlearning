@@ -223,6 +223,35 @@ func (h *ChatHandler) AdminDeleteSkill(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]string{"status": "deleted"}))
 }
 
+// AdminListSessions — 모든 유저의 세션 목록. ?user_id=N 필터 가능.
+func (h *ChatHandler) AdminListSessions(c echo.Context) error {
+	userID, _ := strconv.Atoi(c.QueryParam("user_id"))
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	items, total, err := h.uc.AdminListAllSessions(userID, page)
+	if err != nil {
+		return chatErrorResponse(c, err)
+	}
+	if items == nil {
+		items = []*chat.Session{}
+	}
+	return c.JSON(http.StatusOK, successResp(map[string]any{
+		"items": items, "total": total,
+	}))
+}
+
+// AdminGetSession — 임의 유저의 세션 + 전체 메시지 열람.
+func (h *ChatHandler) AdminGetSession(c echo.Context) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
+	}
+	s, err := h.uc.AdminGetSession(id)
+	if err != nil {
+		return chatErrorResponse(c, err)
+	}
+	return c.JSON(http.StatusOK, successResp(s))
+}
+
 func (h *ChatHandler) AdminListWiki(c echo.Context) error {
 	items, err := h.uc.ListWikiDocs()
 	if err != nil {
