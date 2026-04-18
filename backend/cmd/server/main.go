@@ -159,7 +159,7 @@ func main() {
 	// Handlers
 	handlers := &router.Handlers{
 		Auth:         handler.NewAuthHandler(authUC),
-		Admin:        handler.NewAdminHandler(authUC),
+		Admin:        handler.NewAdminHandler(authUC, hub),
 		Classroom:    handler.NewClassroomHandler(classroomUC),
 		Company:      handler.NewCompanyHandler(companyUC),
 		Wallet:       handler.NewWalletHandler(walletUC),

@@ -421,5 +421,11 @@
     "title": "같은 신버전 N회 연속 감지 시 자동 새로고침 (stuck 구버전 방어)",
     "date": "2026-04-18",
     "tags": ["feat", "PWA", "버전체크", "자동리프레시", "TDD", "회귀테스트"]
+  },
+  {
+    "slug": "064-admin-ws-force-reload",
+    "title": "관리자 WebSocket 강제 새로고침 브로드캐스트",
+    "date": "2026-04-18",
+    "tags": ["feat", "PWA", "WebSocket", "관리자", "배포", "회귀테스트"]
   }
 ]
