@@ -127,6 +127,49 @@ func (h *PostHandler) GetPosts(c echo.Context) error {
 	})
 }
 
+// GetPost godoc
+//
+//	@Summary		게시물 단건 조회 (딥링크용)
+//	@Description	ID로 단일 게시물을 조회한다. 알림·외부 공유 링크에서 진입하는 /post/:id 에 대응.
+//	@Tags			Feed
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"게시물 ID"
+//	@Success		200	{object}	APIResponse
+//	@Failure		404	{object}	APIResponse
+//	@Router			/posts/{id} [get]
+func (h *PostHandler) GetPost(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+
+	postID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || postID <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INVALID_PARAM", "message": "유효한 게시물 ID가 필요합니다"},
+		})
+	}
+
+	p, err := h.uc.GetPost(postID, userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "FETCH_FAILED", "message": err.Error()},
+		})
+	}
+	if p == nil {
+		return c.JSON(http.StatusNotFound, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "POST_NOT_FOUND", "message": "게시물을 찾을 수 없습니다"},
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"data":    p,
+		"error":   nil,
+	})
+}
+
 // CreatePost godoc
 //
 //	@Summary		게시물 작성
