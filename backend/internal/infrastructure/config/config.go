@@ -21,6 +21,8 @@ type Config struct {
 	LLMProxyBaseURL string
 	LLMAdminAPIKey  string
 	LLMAffiliation  string
+	// Context7 (#071 follow-up)
+	Context7APIKey string
 }
 
 func Load() *Config {
@@ -41,6 +43,7 @@ func Load() *Config {
 		LLMProxyBaseURL:    getEnv("LLM_PROXY_BASE_URL", "https://llm.cycorld.com"),
 		LLMAdminAPIKey:     getEnv("LLM_ADMIN_API_KEY", ""),
 		LLMAffiliation:     getEnv("LLM_AFFILIATION", "이화여대"),
+		Context7APIKey:     getEnv("CONTEXT7_API_KEY", ""),
 	}
 }
 
