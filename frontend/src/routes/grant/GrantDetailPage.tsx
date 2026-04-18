@@ -228,7 +228,7 @@ export default function GrantDetailPage() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button type="submit" className="flex-1" disabled={actionLoading}>
+                  <Button type="submit" variant="highlight" className="flex-1" disabled={actionLoading}>
                     {actionLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -242,7 +242,7 @@ export default function GrantDetailPage() {
                 </div>
               </form>
             ) : (
-              <Button className="w-full" onClick={() => setShowApplyForm(true)}>
+              <Button variant="highlight" className="w-full" onClick={() => setShowApplyForm(true)}>
                 <Send className="mr-2 h-4 w-4" />
                 이 과제에 지원하기
               </Button>

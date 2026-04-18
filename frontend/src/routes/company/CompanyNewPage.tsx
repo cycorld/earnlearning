@@ -165,7 +165,7 @@ export default function CompanyNewPage() {
               </p>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" variant="highlight" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               회사 설립하기
             </Button>
