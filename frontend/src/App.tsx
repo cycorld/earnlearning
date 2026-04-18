@@ -52,6 +52,7 @@ import ConversationPage from '@/routes/messages/ConversationPage'
 
 // Developer / OAuth
 import DeveloperPage from '@/routes/developer/DeveloperPage'
+import GamificationShowcasePage from '@/routes/developer/GamificationShowcasePage'
 import OAuthAuthorizePage from '@/routes/oauth/AuthorizePage'
 
 // Admin pages
@@ -117,6 +118,7 @@ export default function App() {
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/changelog" element={<ChangelogPage />} />
               <Route path="/developer" element={<DeveloperPage />} />
+              <Route path="/developer/gamification" element={<GamificationShowcasePage />} />
               <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
 
               <Route element={<AdminGuard />}>
