@@ -17,7 +17,7 @@ import {
 import { toast } from 'sonner'
 import { ArrowLeft, CheckCircle2, FileText, Loader2, XCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, formatDate } from '@/lib/utils'
 
 const statusLabels: Record<string, string> = {
   pending: '심사 대기',
@@ -144,7 +144,7 @@ export default function AdminDisclosuresPage() {
                       </Badge>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {d.period_from} ~ {d.period_to} | 작성자: {d.author_name}
+                      {formatDate(d.period_from)} ~ {formatDate(d.period_to)} | 작성자: {d.author_name}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                       {d.content.substring(0, 120)}
@@ -177,7 +177,7 @@ export default function AdminDisclosuresPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground">
-                  기간: {selected.period_from} ~ {selected.period_to}
+                  기간: {formatDate(selected.period_from)} ~ {formatDate(selected.period_to)}
                   <br />
                   작성자: {selected.author_name}
                 </div>
