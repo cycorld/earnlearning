@@ -97,7 +97,7 @@ function CompanyGrid({
   showOwner?: boolean
 }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {companies.map((company) => (
         <Link key={company.id} to={`/company/${company.id}`}>
           <Card className="transition-colors hover:bg-accent/30">

@@ -51,7 +51,7 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-3 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <h1 className="text-lg font-bold">거래 내역</h1>
       {transactions.length === 0 ? (
         <p className="py-8 text-center text-muted-foreground">거래 내역이 없습니다.</p>

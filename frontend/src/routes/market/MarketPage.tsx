@@ -119,7 +119,7 @@ export default function MarketPage() {
         <p className="py-8 text-center text-muted-foreground">등록된 의뢰가 없습니다.</p>
       ) : (
         <>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {jobs.map((job) => (
               <Link key={job.id} to={`/market/${job.id}`}>
                 <Card className="transition-colors hover:bg-accent/30">

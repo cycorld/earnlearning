@@ -92,7 +92,7 @@ export default function GrantListPage() {
         <p className="py-8 text-center text-muted-foreground">등록된 과제가 없습니다.</p>
       ) : (
         <>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {grants.map((grant) => (
               <Link key={grant.id} to={`/grant/${grant.id}`}>
                 <Card className="transition-colors hover:bg-accent/30">
