@@ -28,7 +28,7 @@ type SearchResult struct {
 	ID             string  `json:"id"`
 	Title          string  `json:"title"`
 	Description    string  `json:"description"`
-	TrustScore     int     `json:"trustScore"`
+	TrustScore     float64 `json:"trustScore"`
 	BenchmarkScore float64 `json:"benchmarkScore"`
 	Stars          int     `json:"stars"`
 	TotalSnippets  int     `json:"totalSnippets"`
