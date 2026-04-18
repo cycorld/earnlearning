@@ -304,7 +304,7 @@ function KeyCard({
             재발급
           </Button>
           <a
-            href={`${PROXY_BASE}/admin/docs`}
+            href={PROXY_BASE}
             target="_blank"
             rel="noreferrer"
             className="text-sm text-muted-foreground underline-offset-2 hover:underline"

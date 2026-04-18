@@ -845,5 +845,15 @@
       "프록시",
       "TDD"
     ]
+  },
+  {
+    "slug": "070-llm-docs-link-fix",
+    "title": "/llm 페이지 API 문서 링크 수정 (/admin/docs → 랜딩)",
+    "date": "2026-04-18",
+    "tags": [
+      "프론트엔드",
+      "버그수정",
+      "LLM"
+    ]
   }
 ]
