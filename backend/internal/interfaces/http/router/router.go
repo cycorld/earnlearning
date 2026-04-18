@@ -31,6 +31,7 @@ type Handlers struct {
 	OAuthUC      *application.OAuthUseCase // needed for middleware
 	DM           *handler.DMHandler
 	UserDB       *handler.UserDBHandler
+	LLM          *handler.LLMHandler
 }
 
 // Setup registers all routes on the given Echo instance.
@@ -210,6 +211,13 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		approved.POST("/users/me/databases", h.UserDB.CreateMyDatabase)
 		approved.POST("/users/me/databases/:id/rotate", h.UserDB.RotateMyDatabasePassword)
 		approved.DELETE("/users/me/databases/:id", h.UserDB.DeleteMyDatabase)
+	}
+
+	// LLM API Keys (#068) — llm.cycorld.com 프록시 키 발급 + 자정 과금
+	if h.LLM != nil {
+		approved.GET("/llm/me", h.LLM.GetMyKey)
+		approved.POST("/llm/me/rotate", h.LLM.RotateMyKey)
+		approved.GET("/llm/me/usage", h.LLM.GetMyUsage)
 	}
 
 	// Notifications (OAuth: read:notifications)

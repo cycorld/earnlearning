@@ -15,6 +15,7 @@ import {
   BookOpen,
   FileCheck,
   MessageSquare,
+  Sparkles,
 } from 'lucide-react'
 import {
   Sheet,
@@ -50,6 +51,7 @@ export default function BottomNav() {
     { label: '투자', icon: <TrendingUp className="h-5 w-5" />, path: '/invest' },
     { label: '거래소', icon: <BarChart3 className="h-5 w-5" />, path: '/exchange' },
     { label: '은행', icon: <Landmark className="h-5 w-5" />, path: '/bank' },
+    { label: 'LLM 키', icon: <Sparkles className="h-5 w-5" />, path: '/llm' },
     { label: '프로필', icon: <User className="h-5 w-5" />, path: '/profile' },
     { label: '알림', icon: <Bell className="h-5 w-5" />, path: '/notifications' },
     { label: '개발일지', icon: <BookOpen className="h-5 w-5" />, path: '/changelog' },

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"strconv"
@@ -9,9 +10,11 @@ import (
 
 	"github.com/earnlearning/backend/internal/application"
 	"github.com/earnlearning/backend/internal/infrastructure/config"
-	"github.com/earnlearning/backend/internal/infrastructure/persistence"
 	"github.com/earnlearning/backend/internal/infrastructure/email"
+	"github.com/earnlearning/backend/internal/infrastructure/llmproxy"
+	"github.com/earnlearning/backend/internal/infrastructure/persistence"
 	"github.com/earnlearning/backend/internal/infrastructure/push"
+	"github.com/earnlearning/backend/internal/infrastructure/scheduler"
 	"github.com/earnlearning/backend/internal/infrastructure/userdbadmin"
 	"github.com/earnlearning/backend/internal/interfaces/http/handler"
 	"github.com/earnlearning/backend/internal/interfaces/http/router"
@@ -75,6 +78,7 @@ func main() {
 	notifRepo := persistence.NewNotificationRepo(db)
 	shareholderUpdater := persistence.NewShareholderUpdater(db)
 	userDBRepo := persistence.NewUserDBRepo(db)
+	llmRepo := persistence.NewLLMRepo(db)
 
 	// WebSocket Hub
 	hub := ws.NewHub()
@@ -150,6 +154,20 @@ func main() {
 		atoiDefault(os.Getenv("USER_DB_MAX_PER_USER"), 3),
 	)
 
+	// LLM API keys + daily billing (#068)
+	var llmUC *application.LLMUseCase
+	if cfg.LLMAdminAPIKey != "" {
+		proxy := llmproxy.New(cfg.LLMProxyBaseURL, cfg.LLMAdminAPIKey)
+		llmUC = application.NewLLMUseCase(
+			llmRepo, userRepo, walletRepo,
+			llmproxy.NewUseCaseAdapter(proxy), notifUC, cfg.LLMAffiliation,
+		)
+		scheduler.StartLLMBilling(context.Background(), llmUC)
+		log.Printf("LLM billing scheduler started (KST 03:33 daily, proxy=%s)", cfg.LLMProxyBaseURL)
+	} else {
+		log.Printf("LLM_ADMIN_API_KEY not set — LLM key provisioning disabled")
+	}
+
 	// Docs directory (swagger.json location)
 	docsDir := os.Getenv("DOCS_DIR")
 	if docsDir == "" {
@@ -177,6 +195,9 @@ func main() {
 		OAuthUC:      oauthUC,
 		DM:           handler.NewDMHandler(dmUC),
 		UserDB:       handler.NewUserDBHandler(userDBUC),
+	}
+	if llmUC != nil {
+		handlers.LLM = handler.NewLLMHandler(llmUC)
 	}
 
 	// Echo server

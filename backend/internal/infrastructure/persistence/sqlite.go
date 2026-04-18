@@ -214,6 +214,42 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// LLM API keys + daily billing usage (#068 LLM API 키 발급 + 자정 과금)
+	llmTables := []string{
+		`CREATE TABLE IF NOT EXISTS llm_api_keys (
+			id                INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id           INTEGER NOT NULL REFERENCES users(id),
+			proxy_student_id  INTEGER NOT NULL,
+			proxy_key_id      INTEGER NOT NULL,
+			prefix            TEXT NOT NULL,
+			label             TEXT NOT NULL DEFAULT '',
+			issued_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			revoked_at        DATETIME
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_llm_api_keys_user ON llm_api_keys(user_id, revoked_at)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_llm_api_keys_proxy ON llm_api_keys(proxy_key_id)`,
+		`CREATE TABLE IF NOT EXISTS llm_daily_usage (
+			id                INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id           INTEGER NOT NULL REFERENCES users(id),
+			usage_date        DATE NOT NULL,
+			prompt_tokens     INTEGER NOT NULL DEFAULT 0,
+			completion_tokens INTEGER NOT NULL DEFAULT 0,
+			cache_hits        INTEGER NOT NULL DEFAULT 0,
+			requests          INTEGER NOT NULL DEFAULT 0,
+			cost_krw          INTEGER NOT NULL DEFAULT 0,
+			debited_krw       INTEGER NOT NULL DEFAULT 0,
+			debt_krw          INTEGER NOT NULL DEFAULT 0,
+			billed_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(user_id, usage_date)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_llm_daily_usage_user_date ON llm_daily_usage(user_id, usage_date DESC)`,
+	}
+	for _, stmt := range llmTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create llm tables: %w", err)
+		}
+	}
+
 	// DM tables
 	dmTables := []string{
 		`CREATE TABLE IF NOT EXISTS dm_messages (

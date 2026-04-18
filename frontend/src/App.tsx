@@ -55,6 +55,9 @@ import DeveloperPage from '@/routes/developer/DeveloperPage'
 import GamificationShowcasePage from '@/routes/developer/GamificationShowcasePage'
 import OAuthAuthorizePage from '@/routes/oauth/AuthorizePage'
 
+// LLM API keys
+import LlmPage from '@/routes/llm/LlmPage'
+
 // Admin pages
 import AdminPage from '@/routes/admin/AdminPage'
 import AdminUsersPage from '@/routes/admin/AdminUsersPage'
@@ -119,6 +122,7 @@ export default function App() {
               <Route path="/changelog" element={<ChangelogPage />} />
               <Route path="/developer" element={<DeveloperPage />} />
               <Route path="/developer/gamification" element={<GamificationShowcasePage />} />
+              <Route path="/llm" element={<LlmPage />} />
               <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
 
               <Route element={<AdminGuard />}>
