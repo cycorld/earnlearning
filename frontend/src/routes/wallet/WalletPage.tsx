@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatMoney, displayName } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 interface Recipient {
   id: number
@@ -109,7 +110,7 @@ export default function WalletPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
@@ -126,7 +127,7 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
@@ -141,11 +142,11 @@ export default function WalletPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-              <Wallet className="h-5 w-5 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Wallet className="h-5 w-5 text-primary" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">보유 현금</p>
@@ -155,8 +156,8 @@ export default function WalletPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-info/15">
+              <TrendingUp className="h-5 w-5 text-info" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">주식 가치</p>
@@ -168,8 +169,8 @@ export default function WalletPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
-              <Building2 className="h-5 w-5 text-purple-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-entity/15">
+              <Building2 className="h-5 w-5 text-entity" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">회사 지분</p>
@@ -181,12 +182,12 @@ export default function WalletPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-              <CreditCard className="h-5 w-5 text-red-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-coral/15">
+              <CreditCard className="h-5 w-5 text-coral" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">총 부채</p>
-              <p className="text-sm font-semibold text-red-600">
+              <p className="text-sm font-semibold text-coral">
                 -{formatMoney(wallet.asset_breakdown?.total_debt ?? 0)}
               </p>
             </div>
@@ -197,7 +198,7 @@ export default function WalletPage() {
       {/* Transfer Button */}
       <Dialog open={transferOpen} onOpenChange={(open) => { setTransferOpen(open); if (!open) resetTransfer() }}>
         <DialogTrigger asChild>
-          <Button className="w-full gap-2" variant="outline">
+          <Button className="w-full gap-2">
             <Send className="h-4 w-4" />
             송금하기
           </Button>
@@ -270,7 +271,7 @@ export default function WalletPage() {
                     <div className="flex-1">
                       <p className="text-sm font-medium">{displayName(selectedRecipient)}</p>
                       {selectedRecipient.type === 'company' && (
-                        <p className="text-xs text-purple-600">법인 계좌로 송금</p>
+                        <p className="text-xs text-entity">법인 계좌로 송금</p>
                       )}
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setSelectedRecipient(null)}>
@@ -292,7 +293,7 @@ export default function WalletPage() {
                     <p className="text-xs text-muted-foreground">
                       {formatMoney(Number(amount))}
                       {Number(amount) > (wallet.asset_breakdown?.cash ?? 0) && (
-                        <span className="ml-2 text-red-500">잔액 부족</span>
+                        <span className="ml-2 text-destructive">잔액 부족</span>
                       )}
                     </p>
                   )}

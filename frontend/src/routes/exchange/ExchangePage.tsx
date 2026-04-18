@@ -14,6 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 interface ExchangeOrder {
   id: number
@@ -55,13 +56,13 @@ export default function ExchangePage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">거래소</h1>
         <Button variant="ghost" size="icon" onClick={fetchData}>

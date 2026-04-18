@@ -24,6 +24,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 interface OrderbookEntry {
   price: number
@@ -115,13 +116,13 @@ export default function ExchangeDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
@@ -140,7 +141,7 @@ export default function ExchangeDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <p className="text-xs font-medium text-red-500">매도 호가</p>
+              <p className="text-xs font-medium text-coral">매도 호가</p>
               {orderbook.sell_orders.length === 0 ? (
                 <p className="py-2 text-center text-xs text-muted-foreground">
                   매도 주문 없음
@@ -157,7 +158,7 @@ export default function ExchangeDetailPage() {
                         ({entry.order_count}건)
                       </span>
                     </span>
-                    <span className="font-medium text-red-500">
+                    <span className="font-medium text-coral">
                       {formatMoney(entry.price)}
                     </span>
                   </div>
@@ -168,7 +169,7 @@ export default function ExchangeDetailPage() {
             <Separator className="my-2" />
 
             <div className="space-y-1">
-              <p className="text-xs font-medium text-blue-500">매수 호가</p>
+              <p className="text-xs font-medium text-info">매수 호가</p>
               {orderbook.buy_orders.length === 0 ? (
                 <p className="py-2 text-center text-xs text-muted-foreground">
                   매수 주문 없음
@@ -179,7 +180,7 @@ export default function ExchangeDetailPage() {
                     key={`buy-${i}`}
                     className="flex items-center justify-between rounded px-2 py-1 text-sm"
                   >
-                    <span className="font-medium text-blue-500">
+                    <span className="font-medium text-info">
                       {formatMoney(entry.price)}
                     </span>
                     <span className="text-muted-foreground">
@@ -217,12 +218,12 @@ export default function ExchangeDetailPage() {
                 <SelectContent>
                   <SelectItem value="buy">
                     <span className="flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3 text-blue-500" /> 매수
+                      <TrendingUp className="h-3 w-3 text-info" /> 매수
                     </span>
                   </SelectItem>
                   <SelectItem value="sell">
                     <span className="flex items-center gap-1">
-                      <TrendingDown className="h-3 w-3 text-red-500" /> 매도
+                      <TrendingDown className="h-3 w-3 text-coral" /> 매도
                     </span>
                   </SelectItem>
                 </SelectContent>

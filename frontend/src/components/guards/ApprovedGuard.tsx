@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { Spinner } from '@/components/ui/spinner'
 
 export function ApprovedGuard() {
   const { user, isLoading } = useAuth()
@@ -7,7 +8,7 @@ export function ApprovedGuard() {
   if (isLoading) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }

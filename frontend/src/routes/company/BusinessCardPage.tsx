@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import type { Company } from '@/types'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 import { Download, Share2, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toPng } from 'html-to-image'
@@ -139,26 +140,26 @@ function CardTemplate({
 
     case 'elegant':
       return (
-        <div className="relative flex h-[220px] w-[400px] flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 p-8 shadow-2xl">
-          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-amber-200/30" />
-          <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-orange-200/30" />
+        <div className="relative flex h-[220px] w-[400px] flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-warning/10 to-highlight/10 p-8 shadow-2xl">
+          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-warning/25/30" />
+          <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-highlight/25/30" />
           <div className="relative flex items-center gap-3">
             {logo ? (
               <img src={logo} alt={name} className="h-10 w-10 rounded-xl object-cover shadow-md" />
             ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-600 text-lg font-bold text-white shadow-md">{name.charAt(0)}</div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning text-lg font-bold text-white shadow-md">{name.charAt(0)}</div>
             )}
             <div>
-              <p className="text-sm font-bold text-amber-900">{name}</p>
-              <p className="line-clamp-1 text-[9px] text-amber-700/60">{desc}</p>
+              <p className="text-sm font-bold text-warning">{name}</p>
+              <p className="line-clamp-1 text-[9px] text-warning/60">{desc}</p>
             </div>
           </div>
           <div className="relative">
-            <div className="mb-2 h-px bg-gradient-to-r from-amber-300 to-transparent" />
-            <h2 className="text-xl font-bold text-amber-900">{owner}</h2>
-            <p className="text-[10px] font-medium text-amber-600">CEO / Founder</p>
+            <div className="mb-2 h-px bg-gradient-to-r from-warning/40 to-transparent" />
+            <h2 className="text-xl font-bold text-warning">{owner}</h2>
+            <p className="text-[10px] font-medium text-warning">CEO / Founder</p>
           </div>
-          <p className="relative text-[10px] text-amber-700/60">{email}</p>
+          <p className="relative text-[10px] text-warning/60">{email}</p>
         </div>
       )
 
@@ -217,7 +218,7 @@ export default function BusinessCardPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
@@ -231,7 +232,7 @@ export default function BusinessCardPage() {
   const template = TEMPLATES[templateIdx]
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="sticky top-14 z-40 -mx-4 flex items-center gap-2 bg-background px-4 py-2">
         <Button variant="ghost" size="icon" asChild>
           <Link to={`/company/${id}`}>

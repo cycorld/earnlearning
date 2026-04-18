@@ -22,6 +22,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 const statusLabels: Record<string, string> = {
   open: '모집 중',
@@ -109,7 +110,7 @@ export default function InvestDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
@@ -245,7 +246,7 @@ export default function InvestDetailPage() {
   const pctLabel = (round.offered_percent * 100).toFixed(1)
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="sticky top-14 z-40 -mx-4 bg-background px-4 py-1">
         <Button variant="ghost" size="sm" asChild>
           <Link to="/invest">

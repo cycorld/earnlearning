@@ -160,7 +160,7 @@ export default function DeveloperPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild>
@@ -191,7 +191,7 @@ export default function DeveloperPage() {
                   <DialogTitle>앱 등록 완료</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                  <div className="rounded-lg border border-warning/25 bg-warning/10 p-3 text-sm text-warning">
                     <AlertCircle className="mb-1 inline h-4 w-4" /> client_secret은 이 화면에서만 확인할 수 있습니다. 안전한 곳에 저장해주세요.
                   </div>
                   <div>
@@ -205,7 +205,7 @@ export default function DeveloperPage() {
                         size="sm"
                         onClick={() => copyToClipboard(newClient.client_id, 'id')}
                       >
-                        {copiedField === 'id' ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                        {copiedField === 'id' ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
@@ -220,7 +220,7 @@ export default function DeveloperPage() {
                         size="sm"
                         onClick={() => copyToClipboard(newClient.client_secret, 'secret')}
                       >
-                        {copiedField === 'secret' ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                        {copiedField === 'secret' ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
@@ -318,7 +318,7 @@ export default function DeveloperPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {clients.map((client) => (
             <Card key={client.id}>
               <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -351,7 +351,7 @@ export default function DeveloperPage() {
                     onClick={() => copyToClipboard(client.id, client.id)}
                   >
                     {copiedField === client.id ? (
-                      <Check className="h-3 w-3 text-green-600" />
+                      <Check className="h-3 w-3 text-success" />
                     ) : (
                       <Copy className="h-3 w-3" />
                     )}
@@ -559,7 +559,7 @@ ${client.scopes?.includes('read:profile') ? '- GET /api/oauth/userinfo — 프�
                 >
                   {copiedField === 'prompt' ? (
                     <>
-                      <Check className="h-3 w-3 text-green-600" />
+                      <Check className="h-3 w-3 text-success" />
                       복사됨
                     </>
                   ) : (

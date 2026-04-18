@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ko-KR', {
@@ -44,13 +45,13 @@ export default function TransactionsPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-3 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <h1 className="text-lg font-bold">거래 내역</h1>
       {transactions.length === 0 ? (
         <p className="py-8 text-center text-muted-foreground">거래 내역이 없습니다.</p>
@@ -61,13 +62,13 @@ export default function TransactionsPage() {
               <CardContent className="flex items-center gap-3 p-4">
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                    tx.amount >= 0 ? 'bg-green-100' : 'bg-red-100'
+                    tx.amount >= 0 ? 'bg-success/15' : 'bg-coral/15'
                   }`}
                 >
                   {tx.amount >= 0 ? (
-                    <ArrowDownLeft className="h-4 w-4 text-green-600" />
+                    <ArrowDownLeft className="h-4 w-4 text-success" />
                   ) : (
-                    <ArrowUpRight className="h-4 w-4 text-red-600" />
+                    <ArrowUpRight className="h-4 w-4 text-coral" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -84,7 +85,7 @@ export default function TransactionsPage() {
                 <div className="text-right">
                   <p
                     className={`text-sm font-semibold ${
-                      tx.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                      tx.amount >= 0 ? 'text-success' : 'text-coral'
                     }`}
                   >
                     {tx.amount >= 0 ? '+' : '-'}

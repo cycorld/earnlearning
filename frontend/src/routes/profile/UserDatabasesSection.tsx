@@ -301,7 +301,7 @@ function KV({ label, value }: { label: string; value: string }) {
         }}
         aria-label={`${label} 복사`}
       >
-        {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+        {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
       </button>
     </div>
   )
@@ -395,7 +395,7 @@ function CredentialsDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>접속 정보</DialogTitle>
-          <DialogDescription className="flex items-start gap-2 rounded bg-yellow-50 p-2 text-xs text-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-200">
+          <DialogDescription className="flex items-start gap-2 rounded bg-warning/10 p-2 text-xs text-warning">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               비밀번호는 <strong>지금만</strong> 볼 수 있어요. 안전한 곳에 복사하세요.
@@ -510,7 +510,7 @@ function CopyBlock({ value }: { value: string }) {
         }}
         aria-label="복사"
       >
-        {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+        {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
       </Button>
     </div>
   )

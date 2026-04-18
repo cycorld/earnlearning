@@ -5,6 +5,7 @@ import type { Notification, PaginatedData } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Spinner } from '@/components/ui/spinner'
 import {
   Bell,
   CheckCheck,
@@ -34,21 +35,21 @@ function getNotifIcon(type: string) {
     case 'new_comment':
     case 'post':
     case 'assignment_graded':
-      return <MessageCircle className="h-5 w-5 text-blue-500" />
+      return <MessageCircle className="h-5 w-5 text-info" />
     case 'wallet':
     case 'transaction':
     case 'reward':
     case 'admin_transfer':
     case 'transfer':
-      return <Wallet className="h-5 w-5 text-green-500" />
+      return <Wallet className="h-5 w-5 text-success" />
     case 'company':
-      return <Building2 className="h-5 w-5 text-purple-500" />
+      return <Building2 className="h-5 w-5 text-entity" />
     case 'investment':
     case 'dividend':
-      return <TrendingUp className="h-5 w-5 text-orange-500" />
+      return <TrendingUp className="h-5 w-5 text-highlight" />
     case 'approval':
     case 'admin':
-      return <ShieldCheck className="h-5 w-5 text-red-500" />
+      return <ShieldCheck className="h-5 w-5 text-coral" />
     case 'grant_applied':
     case 'grant_approved':
     case 'grant_closed':
@@ -69,7 +70,7 @@ function getNotifIcon(type: string) {
     case 'proposal_closed':
       return <Building2 className="h-5 w-5 text-fuchsia-500" />
     case 'liquidation_payout':
-      return <Wallet className="h-5 w-5 text-amber-500" />
+      return <Wallet className="h-5 w-5 text-warning" />
     default:
       return <Bell className="h-5 w-5 text-muted-foreground" />
   }
@@ -173,13 +174,13 @@ export default function NotificationsPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-semibold">알림</h1>

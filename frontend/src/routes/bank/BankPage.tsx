@@ -13,6 +13,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 function loanStatusLabel(status: string): string {
   switch (status) {
@@ -72,13 +73,13 @@ export default function BankPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center justify-between">
         <h1 className="flex items-center gap-2 text-xl font-bold">
           <Landmark className="h-5 w-5" />
@@ -126,7 +127,7 @@ export default function BankPage() {
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground">대출금</p>
                       <p className="text-sm font-semibold">
@@ -135,7 +136,7 @@ export default function BankPage() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">잔액</p>
-                      <p className="text-sm font-semibold text-red-600">
+                      <p className="text-sm font-semibold text-coral">
                         {formatMoney(loan.remaining)}
                       </p>
                     </div>

@@ -64,34 +64,59 @@ export default function BottomNav() {
     !mainTabs.some((tab) => isActive(tab.path)) && !location.pathname.startsWith('/login')
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="flex h-16 items-stretch">
-        {mainTabs.map((tab) => (
-          <button
-            key={tab.path}
-            onClick={() => navigate(tab.path)}
-            className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-xs transition-colors ${
-              isActive(tab.path)
-                ? 'text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tab.icon}
-            <span>{tab.label}</span>
-          </button>
-        ))}
+        {mainTabs.map((tab) => {
+          const active = isActive(tab.path)
+          return (
+            <button
+              key={tab.path}
+              onClick={() => navigate(tab.path)}
+              className="flex flex-1 flex-col items-center justify-center gap-1 text-xs"
+              aria-current={active ? 'page' : undefined}
+            >
+              <span
+                className={`flex h-7 min-w-[3.25rem] items-center justify-center rounded-full transition-all duration-200 ${
+                  active
+                    ? 'bg-primary/12 text-primary'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                {tab.icon}
+              </span>
+              <span
+                className={`text-[11px] transition-colors ${
+                  active ? 'font-semibold text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                {tab.label}
+              </span>
+            </button>
+          )
+        })}
 
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
             <button
-              className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-xs transition-colors ${
-                isMoreActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className="flex flex-1 flex-col items-center justify-center gap-1 text-xs"
+              aria-current={isMoreActive ? 'page' : undefined}
             >
-              <MoreHorizontal className="h-5 w-5" />
-              <span>더보기</span>
+              <span
+                className={`flex h-7 min-w-[3.25rem] items-center justify-center rounded-full transition-all duration-200 ${
+                  isMoreActive
+                    ? 'bg-primary/12 text-primary'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                <MoreHorizontal className="h-5 w-5" />
+              </span>
+              <span
+                className={`text-[11px] transition-colors ${
+                  isMoreActive ? 'font-semibold text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                더보기
+              </span>
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-2xl">
@@ -99,21 +124,27 @@ export default function BottomNav() {
               <SheetTitle>더보기</SheetTitle>
             </SheetHeader>
             <div className="grid grid-cols-3 gap-4 py-4">
-              {moreItems.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => {
-                    setSheetOpen(false)
-                    navigate(item.path)
-                  }}
-                  className={`flex flex-col items-center gap-2 rounded-lg p-3 transition-colors hover:bg-accent ${
-                    isActive(item.path) ? 'text-primary' : 'text-foreground'
-                  }`}
-                >
-                  {item.icon}
-                  <span className="text-xs">{item.label}</span>
-                </button>
-              ))}
+              {moreItems.map((item) => {
+                const active = isActive(item.path)
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => {
+                      setSheetOpen(false)
+                      navigate(item.path)
+                    }}
+                    className={`flex flex-col items-center gap-2 rounded-2xl p-3 transition-colors hover:bg-accent ${
+                      active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                    }`}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    {item.icon}
+                    <span className={`text-xs ${active ? 'font-semibold' : ''}`}>
+                      {item.label}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </SheetContent>
         </Sheet>

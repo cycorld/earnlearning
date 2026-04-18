@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { setToken } from '@/lib/auth'
 import { formatMoney, displayName } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 export default function AdminUsersPage() {
   const navigate = useNavigate()
@@ -158,7 +159,7 @@ export default function AdminUsersPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
@@ -198,7 +199,7 @@ export default function AdminUsersPage() {
               onClick={() => handleApprove(user.id)}
               title="승인"
             >
-              <Check className="h-4 w-4 text-green-600" />
+              <Check className="h-4 w-4 text-success" />
             </Button>
             <Button
               variant="ghost"
@@ -206,7 +207,7 @@ export default function AdminUsersPage() {
               onClick={() => handleReject(user.id)}
               title="거절"
             >
-              <X className="h-4 w-4 text-red-600" />
+              <X className="h-4 w-4 text-coral" />
             </Button>
           </>
         )}
@@ -218,7 +219,7 @@ export default function AdminUsersPage() {
               onClick={() => handleImpersonate(user.id, user.name)}
               title="이 사용자로 로그인"
             >
-              <LogIn className="h-4 w-4 text-blue-600" />
+              <LogIn className="h-4 w-4 text-info" />
             </Button>
             <Button
               variant="ghost"
@@ -235,7 +236,7 @@ export default function AdminUsersPage() {
   )
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />

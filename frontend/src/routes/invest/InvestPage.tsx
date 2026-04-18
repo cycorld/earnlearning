@@ -17,6 +17,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 // DividendPayment matches backend investment.DividendPayment JSON shape.
 interface DividendPayment {
@@ -102,7 +103,7 @@ export default function InvestPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
@@ -116,7 +117,7 @@ export default function InvestPage() {
   )
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <h1 className="text-lg font-bold">투자</h1>
 
       {/* Summary Cards */}
@@ -138,7 +139,7 @@ export default function InvestPage() {
             <CardContent className="p-3">
               <p className="text-xs text-muted-foreground">수익/손실</p>
               <p
-                className={`text-sm font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                className={`text-sm font-bold ${totalProfit >= 0 ? 'text-success' : 'text-coral'}`}
               >
                 {totalProfit >= 0 ? '+' : ''}
                 {formatMoney(totalProfit)}
@@ -148,7 +149,7 @@ export default function InvestPage() {
           <Card>
             <CardContent className="p-3">
               <p className="text-xs text-muted-foreground">받은 배당금</p>
-              <p className="text-sm font-bold text-blue-600">
+              <p className="text-sm font-bold text-info">
                 {formatMoney(totalDividends)}
               </p>
             </CardContent>
@@ -299,12 +300,12 @@ export default function InvestPage() {
                       <h3 className="font-medium">{inv.company.name}</h3>
                       <div className="flex items-center gap-1">
                         {inv.profit >= 0 ? (
-                          <TrendingUp className="h-4 w-4 text-green-600" />
+                          <TrendingUp className="h-4 w-4 text-success" />
                         ) : (
-                          <TrendingDown className="h-4 w-4 text-red-600" />
+                          <TrendingDown className="h-4 w-4 text-coral" />
                         )}
                         <span
-                          className={`text-sm font-bold ${inv.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                          className={`text-sm font-bold ${inv.profit >= 0 ? 'text-success' : 'text-coral'}`}
                         >
                           {inv.profit >= 0 ? '+' : ''}
                           {profitPercent}%
@@ -339,7 +340,7 @@ export default function InvestPage() {
                           수익/손실
                         </p>
                         <p
-                          className={`font-medium ${inv.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                          className={`font-medium ${inv.profit >= 0 ? 'text-success' : 'text-coral'}`}
                         >
                           {inv.profit >= 0 ? '+' : ''}
                           {formatMoney(inv.profit)}
@@ -347,7 +348,7 @@ export default function InvestPage() {
                       </div>
                     </div>
                     {inv.dividends_received > 0 && (
-                      <div className="mt-2 flex items-center gap-1 text-xs text-blue-600">
+                      <div className="mt-2 flex items-center gap-1 text-xs text-info">
                         <Coins className="h-3 w-3" />
                         배당금 수령: {formatMoney(inv.dividends_received)}
                       </div>
@@ -393,7 +394,7 @@ export default function InvestPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-blue-600">
+                    <p className="font-bold text-info">
                       {formatMoney(d.amount)}
                     </p>
                   </div>
