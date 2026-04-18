@@ -288,7 +288,7 @@ export function ProposalSection({
                 rows={4}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>가결 기준(%)</Label>
                 <Input

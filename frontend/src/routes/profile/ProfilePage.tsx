@@ -182,7 +182,7 @@ export default function ProfilePage() {
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
           ) : wallet ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-muted-foreground">총 자산</p>
                 <p className="text-sm font-semibold">
