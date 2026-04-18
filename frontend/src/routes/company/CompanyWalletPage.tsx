@@ -215,7 +215,7 @@ export default function CompanyWalletPage() {
       </Button>
 
       {/* Balance card — purple/indigo 톤으로 개인 지갑(primary gradient)과 구분 */}
-      <Card className="border-entity/25 bg-gradient-to-br from-purple-600 to-indigo-700 text-white">
+      <Card className="border-entity/25 bg-gradient-to-br from-entity to-entity/80 text-white">
         <CardContent className="p-6">
           <div className="mb-3 flex items-center gap-2">
             <Avatar className="h-8 w-8 border border-white/30">

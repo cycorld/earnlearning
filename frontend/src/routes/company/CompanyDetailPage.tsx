@@ -185,7 +185,7 @@ export default function CompanyDetailPage() {
       </Card>
 
       {/* Key metrics */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-xs text-muted-foreground">기업가치</p>

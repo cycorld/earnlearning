@@ -180,7 +180,7 @@ export default function UserProfilePage() {
       {/* Stats */}
       {(profile.wallet_balance !== undefined ||
         profile.company_count !== undefined) && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-4">
           {profile.total_asset_value !== undefined && (
             <Card>
               <CardContent className="p-3 text-center">

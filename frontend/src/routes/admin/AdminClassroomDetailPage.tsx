@@ -135,7 +135,7 @@ export default function AdminClassroomDetailPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
           <CardContent className="p-3 text-center">
             <Users className="mx-auto mb-1 h-5 w-5 text-muted-foreground" />
