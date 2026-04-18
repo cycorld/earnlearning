@@ -40,7 +40,7 @@ build_backend() {
     -t "${BACKEND_IMAGE}:${IMAGE_TAG}" \
     -t "${BACKEND_IMAGE}:latest" \
     -f "$PROJECT_DIR/backend/Dockerfile" \
-    "$PROJECT_DIR/backend" >&2
+    "$PROJECT_DIR" >&2
   log "Pushing backend..."
   docker push "${BACKEND_IMAGE}:${IMAGE_TAG}" >&2
   docker push "${BACKEND_IMAGE}:latest" >&2

@@ -73,6 +73,37 @@ func (r *ChatSessionRepo) ListByUser(userID, page, limit int) ([]*chat.Session, 
 	return out, total, rows.Err()
 }
 
+func (r *ChatSessionRepo) ListAll(page, limit int) ([]*chat.Session, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 200 {
+		limit = 50
+	}
+	var total int
+	if err := r.db.QueryRow(`SELECT COUNT(*) FROM chat_sessions`).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := r.db.Query(`
+		SELECT id, user_id, title, active_skill_id, tokens_used, created_at, last_message_at
+		FROM chat_sessions
+		ORDER BY COALESCE(last_message_at, created_at) DESC
+		LIMIT ? OFFSET ?`, limit, (page-1)*limit)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []*chat.Session
+	for rows.Next() {
+		s, err := scanSessionRows(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, s)
+	}
+	return out, total, rows.Err()
+}
+
 func (r *ChatSessionRepo) UpdateTitle(id int, title string) error {
 	_, err := r.db.Exec(`UPDATE chat_sessions SET title = ? WHERE id = ?`, title, id)
 	return err

@@ -6,6 +6,7 @@ type SessionRepository interface {
 	Create(s *Session) (int, error)
 	FindByID(id int) (*Session, error)
 	ListByUser(userID, page, limit int) ([]*Session, int, error)
+	ListAll(page, limit int) ([]*Session, int, error) // admin 전용
 	UpdateTitle(id int, title string) error
 	UpdateActiveSkill(id int, skillID *int) error
 	UpdateLastMessageAt(id int, at time.Time, addTokens int) error
