@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
+import { forceRefresh } from '@/lib/force-refresh'
 
 // 빌드 시점에 vite define 으로 주입되는 commit SHA / build number.
 // __COMMIT_SHA__ 가 'local' 이면 dev 환경 → 버전 체크 비활성.
@@ -180,33 +181,6 @@ async function fetchVersion(): Promise<string | null> {
   } catch {
     return null
   }
-}
-
-async function forceRefresh(): Promise<void> {
-  // 1. SW 캐시 모두 삭제
-  if ('caches' in window) {
-    try {
-      const cacheNames = await caches.keys()
-      await Promise.all(cacheNames.map((name) => caches.delete(name)))
-    } catch {
-      // ignore
-    }
-  }
-
-  // 2. SW unregister (다음 로드에서 새로 등록됨)
-  if ('serviceWorker' in navigator) {
-    try {
-      const registrations = await navigator.serviceWorker.getRegistrations()
-      await Promise.all(registrations.map((r) => r.unregister()))
-    } catch {
-      // ignore
-    }
-  }
-
-  // 3. 캐시 버스팅 쿼리 + hard reload
-  const url = new URL(window.location.href)
-  url.searchParams.set('_v', Date.now().toString())
-  window.location.replace(url.toString())
 }
 
 // 테스트 전용: 모듈 내부 상태/로직 접근용. 프로덕션 코드에서는 사용 금지.
