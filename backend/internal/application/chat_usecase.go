@@ -111,6 +111,34 @@ func (uc *ChatUseCase) ListSessions(userID, page int) ([]*chat.Session, int, err
 	return uc.sessionRepo.ListByUser(userID, page, 20)
 }
 
+// AdminListAllSessions — 관리자 전용. userID 필터 옵션 (0 이면 전체).
+func (uc *ChatUseCase) AdminListAllSessions(userID, page int) ([]*chat.Session, int, error) {
+	if userID > 0 {
+		return uc.sessionRepo.ListByUser(userID, page, 50)
+	}
+	return uc.sessionRepo.ListAll(page, 50)
+}
+
+// AdminGetSession — 관리자 전용. 다른 유저의 세션도 열람 가능.
+func (uc *ChatUseCase) AdminGetSession(sessionID int) (*chat.Session, error) {
+	s, err := uc.sessionRepo.FindByID(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if s.ActiveSkillID != nil {
+		sk, err := uc.skillRepo.FindByID(*s.ActiveSkillID)
+		if err == nil {
+			s.ActiveSkill = sk
+		}
+	}
+	msgs, err := uc.messageRepo.ListBySession(sessionID, 500)
+	if err != nil {
+		return nil, err
+	}
+	s.Messages = msgs
+	return s, nil
+}
+
 func (uc *ChatUseCase) DeleteSession(userID, sessionID int) error {
 	s, err := uc.sessionRepo.FindByID(sessionID)
 	if err != nil {

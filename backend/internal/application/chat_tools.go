@@ -13,6 +13,7 @@ import (
 	"github.com/earnlearning/backend/internal/domain/llm"
 	userdom "github.com/earnlearning/backend/internal/domain/user"
 	"github.com/earnlearning/backend/internal/domain/wallet"
+	"github.com/earnlearning/backend/internal/infrastructure/websearch"
 )
 
 // ChatToolCtx 는 툴 실행 시 필요한 사용자/권한 컨텍스트.
@@ -79,6 +80,7 @@ func BuildChatTools(
 	llmRepo llm.Repository,
 	wikiRepo chat.WikiRepository,
 	skillRepo chat.SkillRepository,
+	webClient *websearch.Client,
 ) *ChatToolRegistry {
 	_ = companyRepo
 	_ = grantRepo
@@ -226,6 +228,62 @@ func BuildChatTools(
 			}
 			return fmt.Sprintf(`{"cumulative_cost_krw": %d, "cumulative_debt_krw": %d, "last_7d_cost_krw": %d}`,
 				totalCost, totalDebt, weekCost), nil
+		},
+	})
+
+	r.Register(&ChatTool{
+		Name:        "web_search",
+		Description: "공개 웹을 검색합니다. 오픈소스 라이브러리, 개발 도구, 공식 문서, 최신 튜토리얼 등 LMS 내부 위키에 없는 일반 기술 질문은 이 도구로 먼저 검색하세요. 검색 결과의 URL 을 확인하고 필요하면 fetch_url 로 상세 내용을 가져오세요.",
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"query": map[string]any{"type": "string", "description": "검색어 (영어/한국어 모두 가능)"},
+				"limit": map[string]any{"type": "integer", "description": "최대 결과 수 (기본 5, 최대 10)", "default": 5},
+			},
+			"required": []string{"query"},
+		},
+		Run: func(ctx context.Context, tctx ChatToolCtx, argsJSON string) (string, error) {
+			if webClient == nil {
+				return "", fmt.Errorf("웹 검색이 이 배포에서 비활성화되어 있습니다")
+			}
+			var args struct {
+				Query string `json:"query"`
+				Limit int    `json:"limit"`
+			}
+			_ = json.Unmarshal([]byte(argsJSON), &args)
+			results, err := webClient.Search(ctx, args.Query, args.Limit)
+			if err != nil {
+				return "", err
+			}
+			if len(results) == 0 {
+				return "검색 결과가 없습니다.", nil
+			}
+			b, _ := json.Marshal(results)
+			return string(b), nil
+		},
+	})
+
+	r.Register(&ChatTool{
+		Name:        "fetch_url",
+		Description: "주어진 URL 을 HTTP GET 으로 가져와 HTML 태그를 제거한 본문 텍스트를 반환합니다. web_search 결과의 URL 또는 공식 문서 URL(https://react.dev, https://go.dev/doc/, https://docs.python.org 등) 을 상세히 읽을 때 사용하세요.",
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"url":       map[string]any{"type": "string", "description": "fetch 할 전체 URL (http/https)"},
+				"max_chars": map[string]any{"type": "integer", "description": "최대 반환 글자 수 (기본 6000, 최대 20000)", "default": 6000},
+			},
+			"required": []string{"url"},
+		},
+		Run: func(ctx context.Context, tctx ChatToolCtx, argsJSON string) (string, error) {
+			if webClient == nil {
+				return "", fmt.Errorf("웹 fetch 가 이 배포에서 비활성화되어 있습니다")
+			}
+			var args struct {
+				URL      string `json:"url"`
+				MaxChars int    `json:"max_chars"`
+			}
+			_ = json.Unmarshal([]byte(argsJSON), &args)
+			return webClient.Fetch(ctx, args.URL, args.MaxChars)
 		},
 	})
 

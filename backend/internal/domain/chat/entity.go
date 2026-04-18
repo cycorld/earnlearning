@@ -6,7 +6,7 @@ import "time"
 // Session 은 한 학생의 챗봇 대화 세션.
 type Session struct {
 	ID            int       `json:"id"`
-	UserID        int       `json:"-"`
+	UserID        int       `json:"user_id"` // 학생은 자기 값만 보고, 관리자는 임의 유저 조회 가능
 	Title         string    `json:"title"`
 	ActiveSkillID *int      `json:"active_skill_id,omitempty"`
 	TokensUsed    int       `json:"tokens_used"`

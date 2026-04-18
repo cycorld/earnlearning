@@ -273,13 +273,15 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.POST("/disclosures/:did/approve", h.Company.ApproveDisclosure)
 	admin.POST("/disclosures/:did/reject", h.Company.RejectDisclosure)
 
-	// Admin chat skill / wiki management
+	// Admin chat skill / wiki / session management
 	if h.Chat != nil {
 		admin.POST("/chat/skills", h.Chat.AdminCreateSkill)
 		admin.PUT("/chat/skills/:id", h.Chat.AdminUpdateSkill)
 		admin.DELETE("/chat/skills/:id", h.Chat.AdminDeleteSkill)
 		admin.GET("/chat/wiki", h.Chat.AdminListWiki)
 		admin.POST("/chat/wiki/reindex", h.Chat.AdminReindexWiki)
+		admin.GET("/chat/sessions", h.Chat.AdminListSessions)
+		admin.GET("/chat/sessions/:id", h.Chat.AdminGetSession)
 	}
 
 	// ================================================================
