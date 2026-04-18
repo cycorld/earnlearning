@@ -331,10 +331,14 @@ func (r *CompanyRepo) CreditCompanyWallet(walletID int, amount int, txType strin
 // Disclosure operations
 
 func (r *CompanyRepo) CreateDisclosure(d *company.Disclosure) (int, error) {
+	status := d.Status
+	if status == "" {
+		status = "pending"
+	}
 	res, err := r.db.Exec(`
 		INSERT INTO company_disclosures (company_id, author_id, content, period_from, period_to, status)
-		VALUES (?, ?, ?, ?, ?, 'pending')`,
-		d.CompanyID, d.AuthorID, d.Content, d.PeriodFrom, d.PeriodTo,
+		VALUES (?, ?, ?, ?, ?, ?)`,
+		d.CompanyID, d.AuthorID, d.Content, d.PeriodFrom, d.PeriodTo, status,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("insert disclosure: %w", err)

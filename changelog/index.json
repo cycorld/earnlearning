@@ -403,5 +403,11 @@
     "title": "포스트 상세 딥링크 페이지 (/post/:id) 추가",
     "date": "2026-04-18",
     "tags": ["feat", "피드", "딥링크", "알림", "회귀테스트"]
+  },
+  {
+    "slug": "061-disclosure-status-hardcoded",
+    "title": "공시 INSERT SQL의 status 하드코딩 제거 — 도메인 Status 필드 살리기",
+    "date": "2026-04-18",
+    "tags": ["fix", "공시", "청산", "SQL", "TDD", "회귀테스트"]
   }
 ]
