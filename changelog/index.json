@@ -914,5 +914,15 @@
       "Context7",
       "버그수정"
     ]
+  },
+  {
+    "slug": "076-context7-trustscore",
+    "title": "context7 SearchResult.trustScore 타입 수정 (int → float64)",
+    "date": "2026-04-19",
+    "tags": [
+      "챗봇",
+      "Context7",
+      "버그수정"
+    ]
   }
 ]
