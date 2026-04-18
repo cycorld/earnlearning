@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Megaphone,
   KanbanSquare,
+  Sparkles,
   FileText,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -108,6 +109,14 @@ export default function AdminPage() {
       icon: KanbanSquare,
       href: '/admin/tasks',
       color: 'bg-indigo-100 text-indigo-600',
+      badge: null,
+    },
+    {
+      title: '챗봇 관리',
+      description: '스킬 관리 + 위키 재인덱싱',
+      icon: Sparkles,
+      href: '/admin/chat',
+      color: 'bg-highlight/15 text-highlight',
       badge: null,
     },
   ]

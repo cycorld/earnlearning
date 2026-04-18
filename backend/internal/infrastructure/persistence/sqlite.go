@@ -254,6 +254,84 @@ func RunMigrations(db *sql.DB) error {
 	// 환경(stage 등)을 위해 ALTER 로 보정한다. 중복 컬럼 에러는 무시.
 	db.Exec(`ALTER TABLE llm_daily_usage ADD COLUMN cache_tokens INTEGER NOT NULL DEFAULT 0`)
 
+	// Chatbot TA (#071)
+	chatTables := []string{
+		`CREATE TABLE IF NOT EXISTS chat_sessions (
+			id                INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id           INTEGER NOT NULL REFERENCES users(id),
+			title             TEXT NOT NULL DEFAULT '',
+			active_skill_id   INTEGER,
+			tokens_used       INTEGER NOT NULL DEFAULT 0,
+			created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			last_message_at   DATETIME
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_recent ON chat_sessions(user_id, last_message_at DESC)`,
+		`CREATE TABLE IF NOT EXISTS chat_messages (
+			id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+			session_id         INTEGER NOT NULL REFERENCES chat_sessions(id),
+			role               TEXT NOT NULL CHECK (role IN ('system','user','assistant','tool')),
+			content            TEXT NOT NULL,
+			reasoning_content  TEXT DEFAULT '',
+			model              TEXT DEFAULT '',
+			prompt_tokens      INTEGER DEFAULT 0,
+			completion_tokens  INTEGER DEFAULT 0,
+			cache_tokens       INTEGER DEFAULT 0,
+			tool_calls         TEXT DEFAULT '[]',
+			tool_call_id       TEXT DEFAULT '',
+			created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, created_at)`,
+		`CREATE TABLE IF NOT EXISTS chat_skills (
+			id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+			slug                      TEXT UNIQUE NOT NULL,
+			name                      TEXT NOT NULL,
+			description               TEXT NOT NULL DEFAULT '',
+			system_prompt             TEXT NOT NULL,
+			default_model             TEXT NOT NULL DEFAULT 'qwen-chat',
+			default_reasoning_effort  TEXT DEFAULT '',
+			tools_allowed             TEXT NOT NULL DEFAULT '[]',
+			wiki_scope                TEXT NOT NULL DEFAULT '[]',
+			enabled                   INTEGER NOT NULL DEFAULT 1,
+			admin_only                INTEGER NOT NULL DEFAULT 0,
+			created_by                INTEGER REFERENCES users(id),
+			updated_at                DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		// Wiki meta (git md 파일이 source-of-truth, 이건 파일 → FTS5 인덱스 메타)
+		`CREATE TABLE IF NOT EXISTS chat_wiki_meta (
+			slug            TEXT PRIMARY KEY,
+			path            TEXT NOT NULL,
+			title           TEXT NOT NULL,
+			notion_page_id  TEXT DEFAULT '',
+			synced_at       DATETIME,
+			updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		// FTS5 가상 테이블 (본문 검색)
+		`CREATE VIRTUAL TABLE IF NOT EXISTS chat_wiki_docs USING fts5(
+			slug UNINDEXED,
+			title,
+			body,
+			tokenize = 'unicode61 remove_diacritics 2'
+		)`,
+		// 챗봇 사용량 (학교 부담, 관리자 모니터링용)
+		`CREATE TABLE IF NOT EXISTS chat_usage (
+			id                INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id           INTEGER NOT NULL REFERENCES users(id),
+			usage_date        DATE NOT NULL,
+			requests          INTEGER NOT NULL DEFAULT 0,
+			prompt_tokens     INTEGER NOT NULL DEFAULT 0,
+			completion_tokens INTEGER NOT NULL DEFAULT 0,
+			cache_tokens      INTEGER NOT NULL DEFAULT 0,
+			cost_krw          INTEGER NOT NULL DEFAULT 0,
+			UNIQUE(user_id, usage_date)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_chat_usage_date ON chat_usage(usage_date DESC)`,
+	}
+	for _, stmt := range chatTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create chat tables: %w", err)
+		}
+	}
+
 	// DM tables
 	dmTables := []string{
 		`CREATE TABLE IF NOT EXISTS dm_messages (
