@@ -9,6 +9,18 @@ export function formatMoney(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(amount) + '원'
 }
 
+// YYYY-MM-DD 문자열이나 ISO 8601 타임스탬프를 "YYYY. M. D." 형태로 변환한다.
+// 타임존 변환을 피하기 위해 앞 10자(날짜 부분)만 파싱한다 — 서버가 DATE를 넘기든
+// DATETIME을 넘기든 동일한 결과를 돌려주기 위함.
+export function formatDate(s: string | null | undefined): string {
+  if (!s) return ''
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(s)
+  if (match) {
+    return `${match[1]}. ${Number(match[2])}. ${Number(match[3])}.`
+  }
+  return s
+}
+
 /**
  * 사용자 이름을 "이름(소속/학번2자리)" 형태로 표시합니다.
  * - department + student_id: "홍길동(컴공/33)"

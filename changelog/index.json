@@ -409,5 +409,11 @@
     "title": "공시 INSERT SQL의 status 하드코딩 제거 — 도메인 Status 필드 살리기",
     "date": "2026-04-18",
     "tags": ["fix", "공시", "청산", "SQL", "TDD", "회귀테스트"]
+  },
+  {
+    "slug": "062-disclosure-period-display",
+    "title": "공시 카드 기간이 ISO 타임스탬프로 표시되던 문제 수정",
+    "date": "2026-04-18",
+    "tags": ["fix", "공시", "날짜포맷", "프론트엔드", "유틸", "단위테스트"]
   }
 ]
