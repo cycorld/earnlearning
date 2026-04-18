@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import Header from './Header'
 import BottomNav from './BottomNav'
 import { PWAPrompt } from '@/components/PWAPrompt'
+import ChatDock from '@/components/chat/ChatDock'
 import { useVersionCheck } from '@/hooks/use-version-check'
 import { useForceReload } from '@/hooks/use-force-reload'
 
@@ -17,6 +18,7 @@ export default function MainLayout() {
       </main>
       <BottomNav />
       <PWAPrompt />
+      <ChatDock />
     </div>
   )
 }

@@ -7,6 +7,7 @@ COPY . .
 ARG BUILD_NUMBER=dev
 ARG COMMIT_SHA=local
 RUN CGO_ENABLED=1 GOOS=linux go build \
+    -tags "sqlite_fts5" \
     -ldflags "-X main.BuildNumber=${BUILD_NUMBER} -X main.CommitSHA=${COMMIT_SHA}" \
     -o server ./cmd/server
 

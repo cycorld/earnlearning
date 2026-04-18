@@ -68,6 +68,7 @@ import AdminAnnouncePage from '@/routes/admin/AdminAnnouncePage'
 import AdminTasksPage from '@/routes/admin/AdminTasksPage'
 import AdminDisclosuresPage from '@/routes/admin/AdminDisclosuresPage'
 import AdminClassroomDetailPage from '@/routes/admin/AdminClassroomDetailPage'
+import AdminChatPage from '@/routes/admin/AdminChatPage'
 
 // /grants/:id → /grant/:id 리다이렉트 (기존 공지 게시글의 잘못된 복수형 링크)
 function GrantRedirect() {
@@ -135,6 +136,7 @@ export default function App() {
                 <Route path="/admin/announce" element={<AdminAnnouncePage />} />
                 <Route path="/admin/tasks" element={<AdminTasksPage />} />
                 <Route path="/admin/disclosures" element={<AdminDisclosuresPage />} />
+                <Route path="/admin/chat" element={<AdminChatPage />} />
               </Route>
             </Route>
           </Route>

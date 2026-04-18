@@ -32,6 +32,7 @@ type Handlers struct {
 	DM           *handler.DMHandler
 	UserDB       *handler.UserDBHandler
 	LLM          *handler.LLMHandler
+	Chat         *handler.ChatHandler
 }
 
 // Setup registers all routes on the given Echo instance.
@@ -221,6 +222,16 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		approved.GET("/llm/status", h.LLM.GetStatus)
 	}
 
+	// Chatbot TA (#071) — in-app chatbot with RAG + skills
+	if h.Chat != nil {
+		approved.POST("/chat/sessions", h.Chat.CreateSession)
+		approved.GET("/chat/sessions", h.Chat.ListSessions)
+		approved.GET("/chat/sessions/:id", h.Chat.GetSession)
+		approved.POST("/chat/sessions/:id/ask", h.Chat.Ask)
+		approved.DELETE("/chat/sessions/:id", h.Chat.DeleteSession)
+		approved.GET("/chat/skills", h.Chat.ListSkills)
+	}
+
 	// Notifications (OAuth: read:notifications)
 	approved.GET("/notifications", h.Notification.GetNotifications, middleware.RequireScope("read:notifications"))
 	approved.PUT("/notifications/:id/read", h.Notification.MarkRead, middleware.RequireScope("read:notifications"))
@@ -261,6 +272,15 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.GET("/disclosures", h.Company.GetAllDisclosures)
 	admin.POST("/disclosures/:did/approve", h.Company.ApproveDisclosure)
 	admin.POST("/disclosures/:did/reject", h.Company.RejectDisclosure)
+
+	// Admin chat skill / wiki management
+	if h.Chat != nil {
+		admin.POST("/chat/skills", h.Chat.AdminCreateSkill)
+		admin.PUT("/chat/skills/:id", h.Chat.AdminUpdateSkill)
+		admin.DELETE("/chat/skills/:id", h.Chat.AdminDeleteSkill)
+		admin.GET("/chat/wiki", h.Chat.AdminListWiki)
+		admin.POST("/chat/wiki/reindex", h.Chat.AdminReindexWiki)
+	}
 
 	// ================================================================
 	// OAuth routes
