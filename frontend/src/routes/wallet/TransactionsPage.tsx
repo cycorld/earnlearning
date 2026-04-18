@@ -61,13 +61,13 @@ export default function TransactionsPage() {
               <CardContent className="flex items-center gap-3 p-4">
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                    tx.amount >= 0 ? 'bg-green-100' : 'bg-red-100'
+                    tx.amount >= 0 ? 'bg-success/15' : 'bg-coral/15'
                   }`}
                 >
                   {tx.amount >= 0 ? (
-                    <ArrowDownLeft className="h-4 w-4 text-green-600" />
+                    <ArrowDownLeft className="h-4 w-4 text-success" />
                   ) : (
-                    <ArrowUpRight className="h-4 w-4 text-red-600" />
+                    <ArrowUpRight className="h-4 w-4 text-coral" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -84,7 +84,7 @@ export default function TransactionsPage() {
                 <div className="text-right">
                   <p
                     className={`text-sm font-semibold ${
-                      tx.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                      tx.amount >= 0 ? 'text-success' : 'text-coral'
                     }`}
                   >
                     {tx.amount >= 0 ? '+' : '-'}

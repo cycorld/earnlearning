@@ -177,7 +177,7 @@ export default function PostDetailPage() {
               size="sm"
               onClick={handleLike}
               disabled={likeBusy}
-              className={post.is_liked ? 'text-red-500' : ''}
+              className={post.is_liked ? 'text-coral' : ''}
             >
               <Heart className={`mr-1 h-4 w-4 ${post.is_liked ? 'fill-current' : ''}`} />
               {post.like_count}

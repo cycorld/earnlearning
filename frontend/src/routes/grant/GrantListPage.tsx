@@ -122,7 +122,7 @@ export default function GrantListPage() {
                         지원 {grant.application_count ?? 0}명
                       </span>
                       {(grant.approved_count ?? 0) > 0 && (
-                        <span className="flex items-center gap-1 text-green-600">
+                        <span className="flex items-center gap-1 text-success">
                           <CheckCircle className="h-3 w-3" />
                           승인 {grant.approved_count}명
                         </span>

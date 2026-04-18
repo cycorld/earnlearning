@@ -155,8 +155,8 @@ export default function WalletPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-info/15">
+              <TrendingUp className="h-5 w-5 text-info" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">주식 가치</p>
@@ -168,8 +168,8 @@ export default function WalletPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
-              <Building2 className="h-5 w-5 text-purple-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-entity/15">
+              <Building2 className="h-5 w-5 text-entity" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">회사 지분</p>
@@ -270,7 +270,7 @@ export default function WalletPage() {
                     <div className="flex-1">
                       <p className="text-sm font-medium">{displayName(selectedRecipient)}</p>
                       {selectedRecipient.type === 'company' && (
-                        <p className="text-xs text-purple-600">법인 계좌로 송금</p>
+                        <p className="text-xs text-entity">법인 계좌로 송금</p>
                       )}
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setSelectedRecipient(null)}>
@@ -292,7 +292,7 @@ export default function WalletPage() {
                     <p className="text-xs text-muted-foreground">
                       {formatMoney(Number(amount))}
                       {Number(amount) > (wallet.asset_breakdown?.cash ?? 0) && (
-                        <span className="ml-2 text-red-500">잔액 부족</span>
+                        <span className="ml-2 text-destructive">잔액 부족</span>
                       )}
                     </p>
                   )}

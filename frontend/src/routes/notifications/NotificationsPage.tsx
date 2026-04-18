@@ -34,21 +34,21 @@ function getNotifIcon(type: string) {
     case 'new_comment':
     case 'post':
     case 'assignment_graded':
-      return <MessageCircle className="h-5 w-5 text-blue-500" />
+      return <MessageCircle className="h-5 w-5 text-info" />
     case 'wallet':
     case 'transaction':
     case 'reward':
     case 'admin_transfer':
     case 'transfer':
-      return <Wallet className="h-5 w-5 text-green-500" />
+      return <Wallet className="h-5 w-5 text-success" />
     case 'company':
-      return <Building2 className="h-5 w-5 text-purple-500" />
+      return <Building2 className="h-5 w-5 text-entity" />
     case 'investment':
     case 'dividend':
-      return <TrendingUp className="h-5 w-5 text-orange-500" />
+      return <TrendingUp className="h-5 w-5 text-highlight" />
     case 'approval':
     case 'admin':
-      return <ShieldCheck className="h-5 w-5 text-red-500" />
+      return <ShieldCheck className="h-5 w-5 text-coral" />
     case 'grant_applied':
     case 'grant_approved':
     case 'grant_closed':
@@ -69,7 +69,7 @@ function getNotifIcon(type: string) {
     case 'proposal_closed':
       return <Building2 className="h-5 w-5 text-fuchsia-500" />
     case 'liquidation_payout':
-      return <Wallet className="h-5 w-5 text-amber-500" />
+      return <Wallet className="h-5 w-5 text-warning" />
     default:
       return <Bell className="h-5 w-5 text-muted-foreground" />
   }

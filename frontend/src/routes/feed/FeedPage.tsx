@@ -739,7 +739,7 @@ export default function FeedPage() {
                     <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                       <button
                         onClick={() => handleLike(post.id, post.is_liked)}
-                        className={`flex items-center gap-1 ${post.is_liked ? 'text-red-500' : ''}`}
+                        className={`flex items-center gap-1 ${post.is_liked ? 'text-coral' : ''}`}
                       >
                         <Heart
                           className={`h-4 w-4 ${post.is_liked ? 'fill-current' : ''}`}
