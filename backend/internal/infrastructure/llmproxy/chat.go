@@ -94,7 +94,11 @@ func (c *Client) ChatComplete(ctx context.Context, req *ChatRequest) (*ChatRespo
 	if err != nil {
 		return nil, err
 	}
-	httpReq.Header.Set("Authorization", "Bearer "+c.adminKey)
+	key := c.userKey
+	if key == "" {
+		key = c.adminKey
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+key)
 	httpReq.Header.Set("Accept", "application/json")
 	httpReq.Header.Set("Content-Type", "application/json")
 
