@@ -85,7 +85,7 @@ func (c *Client) Docs(ctx context.Context, libraryID, topic string, tokens int) 
 		return "", fmt.Errorf("library id required")
 	}
 	if tokens <= 0 || tokens > 10000 {
-		tokens = 3000
+		tokens = 1500
 	}
 	// libraryID 는 /websites/foo 또는 /tanstack/query 등 슬래시 시작 형태
 	if libraryID[0] == '/' {
