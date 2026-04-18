@@ -72,7 +72,7 @@ func (c *Client) Search(ctx context.Context, query string, limit int) ([]SearchR
 }
 
 // Fetch — 임의 URL 을 가져와 HTML 태그 제거 후 일부 plain text 반환.
-// maxChars <= 0 이면 기본 6000.
+// maxChars <= 0 이면 기본 3500 (#078 타임아웃 완화).
 func (c *Client) Fetch(ctx context.Context, target string, maxChars int) (string, error) {
 	if target == "" {
 		return "", fmt.Errorf("empty url")
@@ -85,7 +85,7 @@ func (c *Client) Fetch(ctx context.Context, target string, maxChars int) (string
 		return "", fmt.Errorf("only http/https allowed")
 	}
 	if maxChars <= 0 || maxChars > 20000 {
-		maxChars = 6000
+		maxChars = 3500
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
