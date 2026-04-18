@@ -409,6 +409,79 @@ func TestLiquidation_AutoExecute_OnProposalPass(t *testing.T) {
 	}
 }
 
+// #024 회귀: 청산 시 자동 생성되는 공시는 심사 없이 바로 'approved' 상태로 저장되어야 한다.
+// CompanyRepo.CreateDisclosure가 SQL에 status='pending'을 하드코딩해 d.Status를 무시하던 버그 방어.
+func TestLiquidation_AutoDisclosure_SavedAsApproved(t *testing.T) {
+	ts := setupTestServer(t)
+	token, cid := createUserWithCompany(t, ts, "liq-disc@test.com", "ld", "20240230", "ld_co")
+	ts.addCompanyWalletBalance(t, cid, 1_000_000)
+
+	pr := ts.post("/api/companies/"+itoaUD(cid)+"/proposals", map[string]interface{}{
+		"proposal_type":  "liquidation",
+		"title":          "청산 공시 확인",
+		"pass_threshold": 70,
+	}, token)
+	var proposal struct{ ID int }
+	_ = json.Unmarshal(pr.Data, &proposal)
+	ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/vote", map[string]string{
+		"choice": "yes",
+	}, token) // auto-executes via #033 → auto-disclosure 생성
+
+	// admin이 전체 공시 조회 → 방금 생성된 청산 공시가 approved 상태여야 한다
+	adminToken := ts.login(testAdminEmail, testAdminPass)
+	r := ts.get("/api/admin/disclosures", adminToken)
+	if !r.Success {
+		t.Fatalf("admin list disclosures: %v", r.Error)
+	}
+	var list []struct {
+		CompanyID int    `json:"company_id"`
+		Status    string `json:"status"`
+		Content   string `json:"content"`
+	}
+	_ = json.Unmarshal(r.Data, &list)
+
+	var found *struct {
+		CompanyID int    `json:"company_id"`
+		Status    string `json:"status"`
+		Content   string `json:"content"`
+	}
+	for i := range list {
+		if list[i].CompanyID == cid {
+			found = &list[i]
+			break
+		}
+	}
+	if found == nil {
+		t.Fatalf("expected auto-generated disclosure for company %d, got none", cid)
+	}
+	if found.Status != "approved" {
+		t.Errorf("expected auto-disclosure status=approved, got %q (content=%q)", found.Status, found.Content)
+	}
+}
+
+// #024 회귀: 일반 사용자가 작성하는 공시는 여전히 기본값 'pending'으로 저장되어야 한다.
+// 수정으로 기본값이 깨지지 않았는지 방어.
+func TestDisclosure_UserCreated_DefaultsToPending(t *testing.T) {
+	ts := setupTestServer(t)
+	token, cid := createUserWithCompany(t, ts, "disc-def@test.com", "dd", "20240231", "dd_co")
+
+	r := ts.post("/api/companies/"+itoaUD(cid)+"/disclosures", map[string]string{
+		"content":     "정기 주간 보고",
+		"period_from": "2026-04-07",
+		"period_to":   "2026-04-11",
+	}, token)
+	if !r.Success {
+		t.Fatalf("create disclosure: %v", r.Error)
+	}
+	var created struct {
+		Status string `json:"status"`
+	}
+	_ = json.Unmarshal(r.Data, &created)
+	if created.Status != "pending" {
+		t.Errorf("expected default pending, got %q", created.Status)
+	}
+}
+
 func TestLiquidation_ZeroBalance_StillDissolves(t *testing.T) {
 	ts := setupTestServer(t)
 	token, cid := createUserWithCompany(t, ts, "liq9@test.com", "liq9", "20240211", "liq9_co")
