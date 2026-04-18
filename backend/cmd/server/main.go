@@ -86,6 +86,7 @@ func main() {
 	chatSkillRepo := persistence.NewChatSkillRepo(db)
 	chatWikiRepo := persistence.NewChatWikiRepo(db)
 	chatUsageRepo := persistence.NewChatUsageRepo(db)
+	chatServiceConfig := persistence.NewChatServiceConfigRepo(db)
 
 	// WebSocket Hub
 	hub := ws.NewHub()
@@ -186,6 +187,13 @@ func main() {
 		}
 		// seed built-in skills
 		application.SeedBuiltinChatSkills(chatSkillRepo)
+
+		// Chatbot 서비스 키 프로비저닝 (#076) — admin key 로는 /v1/chat/completions 가 401
+		if key, err := llmproxy.ProvisionServiceKey(context.Background(), proxy, chatServiceConfig); err != nil {
+			log.Printf("chatbot service key provisioning failed: %v (chat will return 500)", err)
+		} else {
+			proxy.SetUserKey(key)
+		}
 
 		webClient := websearch.New()
 		chatTools := application.BuildChatTools(walletRepo, userRepo, companyRepo, grantRepo,

@@ -893,5 +893,15 @@
       "관리자",
       "버그수정"
     ]
+  },
+  {
+    "slug": "074-chatbot-service-key",
+    "title": "챗봇 /v1/chat/completions 401 수정 — 서비스 키 자동 프로비저닝",
+    "date": "2026-04-19",
+    "tags": [
+      "챗봇",
+      "버그수정",
+      "LLM"
+    ]
   }
 ]

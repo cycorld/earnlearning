@@ -325,6 +325,12 @@ func RunMigrations(db *sql.DB) error {
 			UNIQUE(user_id, usage_date)
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_chat_usage_date ON chat_usage(usage_date DESC)`,
+		// Service-level config (#076) — 챗봇이 llm-proxy 호출용 서비스 키 저장
+		`CREATE TABLE IF NOT EXISTS chat_service_config (
+			key        TEXT PRIMARY KEY,
+			value      TEXT NOT NULL,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
 	}
 	for _, stmt := range chatTables {
 		if _, err := db.Exec(stmt); err != nil {
