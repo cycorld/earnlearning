@@ -99,7 +99,7 @@ export default function AdminAnnouncePage() {
             {sending ? '전송 중...' : '전체 유저에게 공지 보내기'}
           </Button>
           {result && (
-            <p className="text-center text-sm text-green-600 font-medium">{result}</p>
+            <p className="text-center text-sm text-success font-medium">{result}</p>
           )}
         </CardContent>
       </Card>

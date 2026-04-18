@@ -135,7 +135,7 @@ export default function BankPage() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">잔액</p>
-                      <p className="text-sm font-semibold text-red-600">
+                      <p className="text-sm font-semibold text-coral">
                         {formatMoney(loan.remaining)}
                       </p>
                     </div>

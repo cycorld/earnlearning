@@ -47,10 +47,10 @@ export default function LoanApplyPage() {
         </h1>
       </div>
 
-      <Card className="border-blue-200 bg-blue-50/50">
+      <Card className="border-info/25 bg-info/10/50">
         <CardContent className="flex items-start gap-3 p-4">
-          <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
-          <div className="space-y-1 text-sm text-blue-700">
+          <Info className="mt-0.5 h-5 w-5 shrink-0 text-info" />
+          <div className="space-y-1 text-sm text-info">
             <p className="font-medium">대출 안내</p>
             <ul className="list-inside list-disc space-y-0.5 text-xs">
               <li>대출 신청 후 관리자 승인이 필요합니다.</li>

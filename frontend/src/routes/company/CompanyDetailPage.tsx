@@ -278,7 +278,7 @@ export default function CompanyDetailPage() {
 
       {/* Actions */}
       <div className="space-y-2">
-        <Button variant="outline" className="w-full border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800" asChild>
+        <Button variant="outline" className="w-full border-entity/25 text-entity hover:bg-entity/10 hover:text-entity" asChild>
           <Link to={`/company/${id}/wallet`}>
             <Wallet className="mr-2 h-4 w-4" />
             법인 계좌 관리

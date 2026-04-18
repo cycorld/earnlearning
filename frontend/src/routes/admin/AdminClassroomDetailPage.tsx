@@ -258,7 +258,7 @@ export default function AdminClassroomDetailPage() {
                         </span>
                       )}
                       {m.total_debt > 0 && (
-                        <span className="flex items-center gap-0.5 text-red-500">
+                        <span className="flex items-center gap-0.5 text-coral">
                           <Banknote className="h-3 w-3" />
                           -{formatMoney(m.total_debt)}
                         </span>

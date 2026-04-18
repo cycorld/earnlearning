@@ -353,7 +353,7 @@ function CreateRoundDialog({
                 </div>
               </div>
               {preMoney < companyValuation && companyValuation > 0 && (
-                <p className="rounded bg-amber-100 p-2 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                <p className="rounded bg-warning/15 p-2 text-amber-900">
                   ⚠️ 프리머니({formatMoney(preMoney)})가 현재 기업가치(
                   {formatMoney(companyValuation)})보다 낮습니다. "다운라운드"
                   (가치 하락)로 기존 주주에게 불리할 수 있어요.

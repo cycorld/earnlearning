@@ -66,6 +66,11 @@
   --coral: #FF6B6B;
   --highlight: #FF6C00;
   --highlight-foreground: #FFFFFF;
+  /* Semantic tokens — 의미축별 브랜드 색 (수익/정보/경고/엔터티) */
+  --success: #00824B;
+  --info: #3B7DB3;
+  --warning: #F5A623;
+  --entity: #7B5FA3;
   /* 3D press shadow colors (Duolingo-style bottom edge) */
   --primary-shadow: #003F27;
   --highlight-shadow: #A84800;
@@ -107,6 +112,11 @@
   --coral: #FF8A8A;
   --highlight: #FF8A42;
   --highlight-foreground: #1A1814;
+  /* Semantic tokens (dark mode variants) */
+  --success: #6FCF97;
+  --info: #5FA3D1;
+  --warning: #FFC658;
+  --entity: #A383D1;
   /* 3D press shadow colors (darker variant for dark mode) */
   --primary-shadow: #2A6B4F;
   --highlight-shadow: #B55A23;
@@ -303,6 +313,10 @@
   --color-coral: var(--coral);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --color-warning: var(--warning);
+  --color-entity: var(--entity);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

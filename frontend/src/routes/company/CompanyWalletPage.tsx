@@ -215,7 +215,7 @@ export default function CompanyWalletPage() {
       </Button>
 
       {/* Balance card — purple/indigo 톤으로 개인 지갑(primary gradient)과 구분 */}
-      <Card className="border-purple-200 bg-gradient-to-br from-purple-600 to-indigo-700 text-white">
+      <Card className="border-entity/25 bg-gradient-to-br from-purple-600 to-indigo-700 text-white">
         <CardContent className="p-6">
           <div className="mb-3 flex items-center gap-2">
             <Avatar className="h-8 w-8 border border-white/30">
@@ -348,7 +348,7 @@ export default function CompanyWalletPage() {
                       <p className="text-xs text-muted-foreground">
                         {formatMoney(Number(amount))}
                         {Number(amount) > data.wallet.balance && (
-                          <span className="ml-2 text-red-500">법인 잔액 부족</span>
+                          <span className="ml-2 text-coral">법인 잔액 부족</span>
                         )}
                       </p>
                     )}
@@ -414,13 +414,13 @@ export default function CompanyWalletPage() {
               <div key={tx.id} className="flex items-center gap-3 rounded-lg border p-3">
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                    tx.amount >= 0 ? 'bg-green-100' : 'bg-red-100'
+                    tx.amount >= 0 ? 'bg-success/15' : 'bg-coral/15'
                   }`}
                 >
                   {tx.amount >= 0 ? (
-                    <ArrowDownLeft className="h-4 w-4 text-green-600" />
+                    <ArrowDownLeft className="h-4 w-4 text-success" />
                   ) : (
-                    <ArrowUpRight className="h-4 w-4 text-red-600" />
+                    <ArrowUpRight className="h-4 w-4 text-coral" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -437,7 +437,7 @@ export default function CompanyWalletPage() {
                 <div className="text-right">
                   <p
                     className={`text-sm font-semibold ${
-                      tx.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                      tx.amount >= 0 ? 'text-success' : 'text-coral'
                     }`}
                   >
                     {tx.amount >= 0 ? '+' : '-'}
