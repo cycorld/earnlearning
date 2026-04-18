@@ -17,6 +17,7 @@ import PendingPage from '@/routes/auth/PendingPage'
 
 // Main pages
 import FeedPage from '@/routes/feed/FeedPage'
+import PostDetailPage from '@/routes/post/PostDetailPage'
 import WalletPage from '@/routes/wallet/WalletPage'
 import TransactionsPage from '@/routes/wallet/TransactionsPage'
 import MarketPage from '@/routes/market/MarketPage'
@@ -87,6 +88,7 @@ export default function App() {
           <Route element={<AuthGuard />}>
             <Route element={<MainLayout />}>
               <Route path="/feed" element={<FeedPage />} />
+              <Route path="/post/:id" element={<PostDetailPage />} />
               <Route path="/wallet" element={<WalletPage />} />
               <Route path="/wallet/transactions" element={<TransactionsPage />} />
               <Route path="/market" element={<MarketPage />} />

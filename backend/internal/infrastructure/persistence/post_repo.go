@@ -100,6 +100,39 @@ func (r *PostRepo) FindPostByID(postID int) (*post.Post, error) {
 	return p, nil
 }
 
+// FindPostByIDWithViewer returns a single post enriched with author, channel
+// name, and the viewer's is_liked flag — same shape as GetPosts rows, so the
+// frontend can render a deep-linked detail page identically to a feed card.
+func (r *PostRepo) FindPostByIDWithViewer(postID, viewerUserID int) (*post.Post, error) {
+	p := &post.Post{}
+	var pinned, isLiked int
+	err := r.db.QueryRow(`
+		SELECT p.id, p.channel_id, p.author_id, p.content, p.post_type, p.media, p.tags,
+		       p.like_count, p.comment_count, p.pinned, p.created_at, p.updated_at,
+		       u.name, u.avatar_url, u.student_id, u.department,
+		       CASE WHEN pl.id IS NOT NULL THEN 1 ELSE 0 END as is_liked,
+		       COALESCE(ch.name, '') as channel_name
+		FROM posts p
+		JOIN users u ON u.id = p.author_id
+		LEFT JOIN channels ch ON ch.id = p.channel_id
+		LEFT JOIN post_likes pl ON pl.post_id = p.id AND pl.user_id = ?
+		WHERE p.id = ?`, viewerUserID, postID).Scan(
+		&p.ID, &p.ChannelID, &p.AuthorID, &p.Content, &p.PostType, &p.Media, &p.Tags,
+		&p.LikeCount, &p.CommentCount, &pinned, &p.CreatedAt, &p.UpdatedAt,
+		&p.AuthorName, &p.AuthorAvatar, &p.AuthorStudentID, &p.AuthorDepartment, &isLiked,
+		&p.ChannelName,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query post by id: %w", err)
+	}
+	p.Pinned = pinned == 1
+	p.IsLiked = isLiked == 1
+	return p, nil
+}
+
 func (r *PostRepo) UpdatePost(postID int, content string, tags string) error {
 	_, err := r.db.Exec("UPDATE posts SET content = ?, tags = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", content, tags, postID)
 	if err != nil {

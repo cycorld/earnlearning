@@ -79,6 +79,12 @@ func (uc *PostUsecase) GetPosts(input GetPostsInput) (*PostsResult, error) {
 	}, nil
 }
 
+// GetPost returns a single post enriched with viewer-specific is_liked flag.
+// Returns (nil, nil) if the post does not exist — caller maps to 404.
+func (uc *PostUsecase) GetPost(postID, viewerUserID int) (*post.Post, error) {
+	return uc.postRepo.FindPostByIDWithViewer(postID, viewerUserID)
+}
+
 type CreatePostInput struct {
 	ChannelID int    `json:"channel_id"`
 	Content   string `json:"content"`
