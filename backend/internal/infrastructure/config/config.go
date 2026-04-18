@@ -17,6 +17,10 @@ type Config struct {
 	SESAccessKeyID     string
 	SESSecretAccessKey string
 	SESFromEmail       string
+	// LLM proxy (#068)
+	LLMProxyBaseURL string
+	LLMAdminAPIKey  string
+	LLMAffiliation  string
 }
 
 func Load() *Config {
@@ -34,6 +38,9 @@ func Load() *Config {
 		SESAccessKeyID:     getEnv("AWS_ACCESS_KEY_ID", ""),
 		SESSecretAccessKey: getEnv("AWS_SECRET_ACCESS_KEY", ""),
 		SESFromEmail:       getEnv("SES_FROM_EMAIL", ""),
+		LLMProxyBaseURL:    getEnv("LLM_PROXY_BASE_URL", "https://llm.cycorld.com"),
+		LLMAdminAPIKey:     getEnv("LLM_ADMIN_API_KEY", ""),
+		LLMAffiliation:     getEnv("LLM_AFFILIATION", "이화여대"),
 	}
 }
 

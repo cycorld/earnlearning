@@ -28,6 +28,8 @@ const (
 	// Company liquidation (#023)
 	TxLiquidationPayout TxType = "liquidation_payout"
 	TxLiquidationTax    TxType = "liquidation_tax"
+	// LLM usage billing (#068)
+	TxLLMBilling TxType = "llm_billing"
 )
 
 type Wallet struct {

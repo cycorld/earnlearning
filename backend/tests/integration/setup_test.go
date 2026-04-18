@@ -34,6 +34,8 @@ type testServer struct {
 	t           *testing.T
 	db          *sql.DB
 	companyRepo *persistence.CompanyRepo
+	llmUC       *application.LLMUseCase
+	llmProxy    *fakeLLMProxy
 }
 
 // setupTestServer creates a fresh test server with an in-memory-like temp DB.
@@ -116,6 +118,11 @@ func setupTestServer(t *testing.T) *testServer {
 		3,
 	)
 
+	// LLM (fake proxy — 실제 외부 호출 없음)
+	llmRepo := persistence.NewLLMRepo(db)
+	llmProxy := newFakeLLMProxy()
+	llmUC := application.NewLLMUseCase(llmRepo, userRepo, walletRepo, llmProxy, notifUC, "이화여대")
+
 	// Docs directory — resolve relative to backend root
 	docsDir := "../../docs"
 
@@ -138,6 +145,7 @@ func setupTestServer(t *testing.T) *testServer {
 		OAuthUC:      oauthUC,
 		DM:           handler.NewDMHandler(dmUC),
 		UserDB:       handler.NewUserDBHandler(userDBUC),
+		LLM:          handler.NewLLMHandler(llmUC),
 	}
 
 	e := echo.New()
@@ -147,7 +155,7 @@ func setupTestServer(t *testing.T) *testServer {
 	ts := httptest.NewServer(e)
 	t.Cleanup(func() { ts.Close() })
 
-	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo}
+	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy}
 }
 
 // request helpers

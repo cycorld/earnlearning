@@ -44,6 +44,9 @@ const (
 
 	// DM
 	NotifNewDM             NotifType = "new_dm"
+
+	// LLM billing (#068)
+	NotifLLMBilled         NotifType = "llm_billed"
 )
 
 // PushEligibleTypes are notification types that should trigger push notifications.
@@ -75,6 +78,7 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifProposalStarted:    true,
 	NotifProposalClosed:     true,
 	NotifLiquidationPayout:  true,
+	NotifLLMBilled:          true,
 }
 
 type Notification struct {

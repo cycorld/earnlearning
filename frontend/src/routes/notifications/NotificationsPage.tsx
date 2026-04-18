@@ -15,6 +15,7 @@ import {
   Building2,
   TrendingUp,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -71,6 +72,8 @@ function getNotifIcon(type: string) {
       return <Building2 className="h-5 w-5 text-fuchsia-500" />
     case 'liquidation_payout':
       return <Wallet className="h-5 w-5 text-warning" />
+    case 'llm_billed':
+      return <Sparkles className="h-5 w-5 text-highlight" />
     default:
       return <Bell className="h-5 w-5 text-muted-foreground" />
   }
