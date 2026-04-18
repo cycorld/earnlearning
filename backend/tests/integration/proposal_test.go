@@ -233,10 +233,11 @@ func TestProposal_ThresholdReached_Passes(t *testing.T) {
 	_ = json.Unmarshal(ts.get("/api/auth/me", otherToken).Data, &other)
 	ts.giveShares(t, cid, owner.ID, other.ID, 2500)
 
-	// 70% threshold
+	// 70% threshold — use a general proposal so threshold logic is tested
+	// independent of liquidation's #033 auto-execute flow.
 	r := ts.post("/api/companies/"+itoaUD(cid)+"/proposals", map[string]interface{}{
-		"title":          "청산",
-		"proposal_type":  "liquidation",
+		"title":          "일반 안건",
+		"proposal_type":  "general",
 		"pass_threshold": 70,
 	}, token)
 	var created struct{ ID int }
