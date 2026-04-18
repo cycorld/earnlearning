@@ -102,7 +102,7 @@ export function DisclosureSection({ companyId, isOwner }: Props) {
               아직 공시가 없습니다.
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {disclosures.map((d) => (
                 <div
                   key={d.id}

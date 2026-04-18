@@ -636,7 +636,7 @@ export default function FeedPage() {
           아직 게시물이 없습니다.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {posts.map((post) => (
             <Card key={post.id} className="transition-colors hover:bg-accent/30">
               <CardContent className="p-4">

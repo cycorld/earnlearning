@@ -127,7 +127,7 @@ export default function AdminDisclosuresPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {disclosures.map((d) => (
             <Card
               key={d.id}

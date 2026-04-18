@@ -318,7 +318,7 @@ export default function DeveloperPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {clients.map((client) => (
             <Card key={client.id}>
               <CardHeader className="flex flex-row items-start justify-between pb-2">
