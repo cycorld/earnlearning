@@ -15,9 +15,15 @@ import (
 )
 
 // Client 는 llm-proxy admin API 호출기.
+//
+// 키 구분 (#076):
+//   - adminKey: `/admin/api/*` 용. admin-* 로 시작하는 관리자 키.
+//   - userKey:  `/v1/*` (chat completions 등) 용. sk-stu-* 학생 키.
+//     비어있으면 adminKey fallback 이지만 chat API 는 401 반환.
 type Client struct {
 	baseURL  string
 	adminKey string
+	userKey  string
 	http     *http.Client
 }
 
@@ -30,6 +36,9 @@ func New(baseURL, adminKey string) *Client {
 		http:     &http.Client{Timeout: 15 * time.Second},
 	}
 }
+
+// SetUserKey 는 /v1/* 호출에 쓸 학생 키를 설정한다.
+func (c *Client) SetUserKey(k string) { c.userKey = k }
 
 // Student / Key / Usage response 타입들. Swagger 스펙을 그대로 미러링.
 
