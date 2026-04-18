@@ -13,6 +13,10 @@ import (
 // liquidation (#023). The remaining 80% is distributed to shareholders.
 const LiquidationTaxPercent = 20
 
+// liquidationTaxNotice is prepended to every liquidation proposal's description
+// so voters always see the tax + distribution policy before casting a vote (#033).
+const liquidationTaxNotice = "⚠️ **청산 안내**: 가결 시 회사 자산의 **20%는 세금**으로 납부되고, 나머지 **80%가 주주별 지분율에 따라 자동 분배**됩니다. 가결 즉시 집행되며 회사는 영구 정지됩니다.\n\n---\n\n"
+
 // =============================================================================
 // Shareholder proposal (주주총회 안건) & voting usecase
 // These methods live on CompanyUsecase to reuse its wiring (repos + notifUC).
@@ -97,12 +101,17 @@ func (uc *CompanyUsecase) CreateProposal(companyID, userID int, input CreateProp
 	now := time.Now()
 	end := now.AddDate(0, 0, duration)
 
+	description := input.Description
+	if proposalType == company.ProposalTypeLiquidation {
+		description = liquidationTaxNotice + description
+	}
+
 	p := &company.Proposal{
 		CompanyID:     companyID,
 		ProposerID:    userID,
 		ProposalType:  proposalType,
 		Title:         input.Title,
-		Description:   input.Description,
+		Description:   description,
 		PassThreshold: threshold,
 		Status:        company.ProposalStatusActive,
 		StartDate:     now,
@@ -382,6 +391,26 @@ func (uc *CompanyUsecase) closeProposal(p *company.Proposal) (*company.Proposal,
 	p.ResultNote = resultNote
 	p.ClosedAt = &now
 
+	// #033: auto-execute passed liquidation proposals so shareholders don't
+	// have to wait for the owner to manually trigger distribution.
+	if finalStatus == company.ProposalStatusPassed &&
+		p.ProposalType == company.ProposalTypeLiquidation &&
+		c.Status == "active" {
+		if _, err := uc.executeLiquidationCore(p, c, p.ProposerID); err != nil {
+			// Do not roll back the pass status — log and let someone retry via
+			// the manual /execute endpoint.
+			fmt.Printf("[liquidation] auto-execute failed for proposal %d: %v\n", p.ID, err)
+		} else {
+			// Reload to reflect executed status for the caller.
+			if refreshed, err := uc.companyRepo.FindProposalByID(p.ID); err == nil {
+				p = refreshed
+			}
+			// Close-outcome notification is subsumed by per-shareholder
+			// payout notifications emitted inside executeLiquidationCore.
+			return p, nil
+		}
+	}
+
 	// Notify shareholders of the outcome
 	if uc.notifUC != nil {
 		shareholders, _ := uc.companyRepo.FindShareholdersByCompanyID(p.CompanyID)
@@ -451,24 +480,34 @@ func (uc *CompanyUsecase) ExecuteLiquidation(proposalID, userID int) (*Liquidati
 	if p.ProposalType != company.ProposalTypeLiquidation {
 		return nil, fmt.Errorf("청산 안건이 아닙니다")
 	}
-	if p.Status != company.ProposalStatusPassed {
-		return nil, fmt.Errorf("가결된 청산 안건만 집행할 수 있습니다 (현재 상태: %s)", p.Status)
-	}
 
 	c, err := uc.companyRepo.FindByID(p.CompanyID)
 	if err != nil {
 		return nil, err
 	}
-	if c.Status == "dissolved" {
-		return nil, fmt.Errorf("이미 청산된 회사입니다")
-	}
 
-	// Only a shareholder (typically owner) can trigger execution to avoid drive-by calls.
+	// Permission check runs before status checks so non-shareholders get a
+	// clear 'not shareholder' error regardless of proposal state.
 	trigger, err := uc.companyRepo.FindShareholder(c.ID, userID)
 	if err != nil || trigger == nil || trigger.Shares <= 0 {
 		return nil, company.ErrNotShareholder
 	}
 
+	if p.Status != company.ProposalStatusPassed {
+		return nil, fmt.Errorf("가결된 청산 안건만 집행할 수 있습니다 (현재 상태: %s)", p.Status)
+	}
+	if c.Status == "dissolved" {
+		return nil, fmt.Errorf("이미 청산된 회사입니다")
+	}
+
+	return uc.executeLiquidationCore(p, c, userID)
+}
+
+// executeLiquidationCore performs the actual distribution + state changes.
+// Assumes caller has already validated proposal type/status, company status,
+// and any required permission checks. Used by both ExecuteLiquidation (manual
+// API trigger) and closeProposal (automatic on vote pass, #033).
+func (uc *CompanyUsecase) executeLiquidationCore(p *company.Proposal, c *company.Company, actorID int) (*LiquidationResult, error) {
 	// Wallet balance
 	cw, err := uc.companyRepo.FindCompanyWallet(c.ID)
 	if err != nil {
@@ -578,7 +617,7 @@ func (uc *CompanyUsecase) ExecuteLiquidation(proposalID, userID int) (*Liquidati
 	}
 	_, _ = uc.companyRepo.CreateDisclosure(&company.Disclosure{
 		CompanyID:  c.ID,
-		AuthorID:   userID,
+		AuthorID:   actorID,
 		Content:    disclosureContent,
 		PeriodFrom: now.Format("2006-01-02"),
 		PeriodTo:   now.Format("2006-01-02"),

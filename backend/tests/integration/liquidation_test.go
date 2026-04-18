@@ -2,6 +2,7 @@ package integration
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -75,50 +76,17 @@ func TestLiquidation_FullFlow_SingleShareholder(t *testing.T) {
 		t.Fatalf("vote: %v", vr.Error)
 	}
 
-	// Verify proposal is now passed
+	// Proposal should be auto-executed after vote pass (#033)
 	gr := ts.get("/api/proposals/"+itoaUD(proposal.ID), token)
 	var detail struct {
 		Status string `json:"status"`
 	}
 	_ = json.Unmarshal(gr.Data, &detail)
-	if detail.Status != "passed" {
-		t.Fatalf("expected passed, got %q", detail.Status)
+	if detail.Status != "executed" {
+		t.Fatalf("expected auto-executed, got %q", detail.Status)
 	}
 
-	// Execute liquidation
-	er := ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/execute", nil, token)
-	if !er.Success {
-		t.Fatalf("execute liquidation: %v", er.Error)
-	}
-	var result struct {
-		TotalBalance  int `json:"total_balance"`
-		Tax           int `json:"tax"`
-		Distributable int `json:"distributable"`
-		Payouts       []struct {
-			UserID int `json:"user_id"`
-			Amount int `json:"amount"`
-		} `json:"payouts"`
-	}
-	_ = json.Unmarshal(er.Data, &result)
-
-	// Validate: total 10M, tax 20% = 2M, distributable 8M
-	if result.TotalBalance != 10_000_000 {
-		t.Errorf("total balance: expected 10M, got %d", result.TotalBalance)
-	}
-	if result.Tax != 2_000_000 {
-		t.Errorf("tax: expected 2M, got %d", result.Tax)
-	}
-	if result.Distributable != 8_000_000 {
-		t.Errorf("distributable: expected 8M, got %d", result.Distributable)
-	}
-	if len(result.Payouts) != 1 {
-		t.Fatalf("expected 1 payout, got %d", len(result.Payouts))
-	}
-	if result.Payouts[0].Amount != 8_000_000 {
-		t.Errorf("sole shareholder payout: expected 8M, got %d", result.Payouts[0].Amount)
-	}
-
-	// Owner's personal wallet increased by 8M
+	// Owner's personal wallet increased by 8M (10M - 20% tax)
 	balanceAfter := walletBalance(t, ts, token)
 	if balanceAfter-balanceBefore != 8_000_000 {
 		t.Errorf("owner wallet delta: expected +8M, got %d", balanceAfter-balanceBefore)
@@ -132,16 +100,6 @@ func TestLiquidation_FullFlow_SingleShareholder(t *testing.T) {
 	_ = json.Unmarshal(cr.Data, &company)
 	if company.Status != "dissolved" {
 		t.Errorf("company status: expected dissolved, got %q", company.Status)
-	}
-
-	// Proposal is marked as executed
-	gr2 := ts.get("/api/proposals/"+itoaUD(proposal.ID), token)
-	var detail2 struct {
-		Status string `json:"status"`
-	}
-	_ = json.Unmarshal(gr2.Data, &detail2)
-	if detail2.Status != "executed" {
-		t.Errorf("proposal status: expected executed, got %q", detail2.Status)
 	}
 }
 
@@ -190,22 +148,16 @@ func TestLiquidation_MultipleShareholders_DistributedByPercentage(t *testing.T) 
 		"choice": "yes",
 	}, other1Token)
 
-	// Verify passed
+	// Proposal should be auto-executed (#033) — no manual /execute call needed
 	var detail struct {
 		Status string `json:"status"`
 	}
 	_ = json.Unmarshal(ts.get("/api/proposals/"+itoaUD(proposal.ID), ownerToken).Data, &detail)
-	if detail.Status != "passed" {
-		t.Fatalf("expected passed, got %q", detail.Status)
+	if detail.Status != "executed" {
+		t.Fatalf("expected auto-executed, got %q", detail.Status)
 	}
 
-	// Execute
-	er := ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/execute", nil, ownerToken)
-	if !er.Success {
-		t.Fatalf("execute: %v", er.Error)
-	}
-
-	// Validate distribution
+	// Validate distribution via wallet deltas.
 	// Tax: 2M. Distributable: 8M.
 	// Owner (50%): 4M. Other1 (30%): 2.4M. Other2 (20%): 1.6M.
 	ownerAfter := walletBalance(t, ts, ownerToken)
@@ -308,8 +260,7 @@ func TestLiquidation_DissolvedCompany_BlocksNewDisclosures(t *testing.T) {
 	_ = json.Unmarshal(pr.Data, &proposal)
 	ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/vote", map[string]string{
 		"choice": "yes",
-	}, token)
-	ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/execute", nil, token)
+	}, token) // auto-executes via #033
 
 	// Try to create a disclosure on the dissolved company
 	dr := ts.post("/api/companies/"+itoaUD(cid)+"/disclosures", map[string]string{
@@ -337,8 +288,7 @@ func TestLiquidation_DissolvedCompany_BlocksNewProposals(t *testing.T) {
 	_ = json.Unmarshal(pr.Data, &proposal)
 	ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/vote", map[string]string{
 		"choice": "yes",
-	}, token)
-	ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/execute", nil, token)
+	}, token) // auto-executes via #033
 
 	// Try to create a new proposal
 	np := ts.post("/api/companies/"+itoaUD(cid)+"/proposals", map[string]interface{}{
@@ -349,7 +299,9 @@ func TestLiquidation_DissolvedCompany_BlocksNewProposals(t *testing.T) {
 	}
 }
 
-func TestLiquidation_DoubleExecute_Rejected(t *testing.T) {
+// Manual /execute after automatic execution (#033) should be rejected since the
+// proposal is already in 'executed' state.
+func TestLiquidation_ManualExecuteAfterAutoExecute_Rejected(t *testing.T) {
 	ts := setupTestServer(t)
 	token, cid := createUserWithCompany(t, ts, "liq8@test.com", "liq8", "20240210", "liq8_co")
 	ts.addCompanyWalletBalance(t, cid, 1_000_000)
@@ -361,20 +313,99 @@ func TestLiquidation_DoubleExecute_Rejected(t *testing.T) {
 	}, token)
 	var proposal struct{ ID int }
 	_ = json.Unmarshal(pr.Data, &proposal)
+	// Vote yes → auto-executes via #033
 	ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/vote", map[string]string{
 		"choice": "yes",
 	}, token)
 
-	// First execute succeeds
-	er1 := ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/execute", nil, token)
-	if !er1.Success {
-		t.Fatalf("first execute: %v", er1.Error)
+	// Manual execute after auto-execute should fail
+	er := ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/execute", nil, token)
+	if er.Success {
+		t.Fatal("expected manual execute after auto-execute to fail")
+	}
+}
+
+// #033 회귀: 청산 안건 description에 세금 20% 공지가 자동으로 prepend 되어야 한다.
+func TestLiquidation_CreateProposal_IncludesTaxNotice(t *testing.T) {
+	ts := setupTestServer(t)
+	token, cid := createUserWithCompany(t, ts, "liq-notice@test.com", "ln", "20240220", "ln_co")
+
+	pr := ts.post("/api/companies/"+itoaUD(cid)+"/proposals", map[string]interface{}{
+		"proposal_type":  "liquidation",
+		"title":          "청산 건",
+		"description":    "재무 여건상 청산이 타당합니다.",
+		"pass_threshold": 70,
+	}, token)
+	if !pr.Success {
+		t.Fatalf("create proposal: %v", pr.Error)
+	}
+	var p struct {
+		Description string `json:"description"`
+	}
+	_ = json.Unmarshal(pr.Data, &p)
+
+	if !strings.Contains(p.Description, "20%") || !strings.Contains(p.Description, "세금") {
+		t.Errorf("expected tax notice (세금 20%%) in description; got:\n%s", p.Description)
+	}
+	if !strings.Contains(p.Description, "재무 여건상 청산이 타당합니다.") {
+		t.Errorf("original user description should be preserved; got:\n%s", p.Description)
+	}
+}
+
+// #033 회귀: 청산 안건이 가결되면 별도 /execute 호출 없이 자동 집행되어야 한다.
+func TestLiquidation_AutoExecute_OnProposalPass(t *testing.T) {
+	ts := setupTestServer(t)
+	token, cid := createUserWithCompany(t, ts, "liq-auto@test.com", "la", "20240221", "la_co")
+
+	// 10M total balance (1M initial + 9M seeded)
+	ts.addCompanyWalletBalance(t, cid, 9_000_000)
+	balanceBefore := walletBalance(t, ts, token)
+
+	pr := ts.post("/api/companies/"+itoaUD(cid)+"/proposals", map[string]interface{}{
+		"proposal_type":  "liquidation",
+		"title":          "자동 집행 테스트",
+		"pass_threshold": 70,
+	}, token)
+	if !pr.Success {
+		t.Fatalf("create proposal: %v", pr.Error)
+	}
+	var proposal struct {
+		ID int `json:"id"`
+	}
+	_ = json.Unmarshal(pr.Data, &proposal)
+
+	// Owner has 100% shares — voting yes immediately passes and should auto-execute
+	vr := ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/vote", map[string]string{
+		"choice": "yes",
+	}, token)
+	if !vr.Success {
+		t.Fatalf("vote: %v", vr.Error)
 	}
 
-	// Second execute should fail (status=executed now)
-	er2 := ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/execute", nil, token)
-	if er2.Success {
-		t.Fatal("expected double-execute to fail")
+	// Proposal should be "executed" (not just "passed") without manual /execute call
+	gr := ts.get("/api/proposals/"+itoaUD(proposal.ID), token)
+	var detail struct {
+		Status string `json:"status"`
+	}
+	_ = json.Unmarshal(gr.Data, &detail)
+	if detail.Status != "executed" {
+		t.Errorf("expected auto-executed status, got %q", detail.Status)
+	}
+
+	// Company should be dissolved
+	cr := ts.get("/api/companies/"+itoaUD(cid), token)
+	var c struct {
+		Status string `json:"status"`
+	}
+	_ = json.Unmarshal(cr.Data, &c)
+	if c.Status != "dissolved" {
+		t.Errorf("company status: expected dissolved, got %q", c.Status)
+	}
+
+	// Owner wallet should have received 8M (10M - 20% tax)
+	balanceAfter := walletBalance(t, ts, token)
+	if balanceAfter-balanceBefore != 8_000_000 {
+		t.Errorf("expected owner delta +8M (auto-distributed), got %d", balanceAfter-balanceBefore)
 	}
 }
 
@@ -390,14 +421,10 @@ func TestLiquidation_ZeroBalance_StillDissolves(t *testing.T) {
 	}, token)
 	var proposal struct{ ID int }
 	_ = json.Unmarshal(pr.Data, &proposal)
+	// Vote yes → auto-executes via #033 (no tax, no payouts, but still dissolves)
 	ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/vote", map[string]string{
 		"choice": "yes",
 	}, token)
-
-	er := ts.post("/api/proposals/"+itoaUD(proposal.ID)+"/execute", nil, token)
-	if !er.Success {
-		t.Fatalf("zero-balance liquidation: %v", er.Error)
-	}
 
 	// Company should be dissolved even with 0 balance
 	cr := ts.get("/api/companies/"+itoaUD(cid), token)

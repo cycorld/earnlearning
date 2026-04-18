@@ -258,6 +258,16 @@ export function ProposalSection({
                 </SelectContent>
               </Select>
             </div>
+            {form.proposal_type === 'liquidation' && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive-foreground">
+                <p className="font-medium text-destructive">⚠️ 청산 안내</p>
+                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
+                  <li>가결 시 회사 자산의 <strong>20%는 세금</strong>으로 납부됩니다.</li>
+                  <li>나머지 80%가 <strong>주주별 지분율에 따라 자동 분배</strong>됩니다.</li>
+                  <li>가결 즉시 집행되며, <strong>회사는 영구 정지</strong>됩니다.</li>
+                </ul>
+              </div>
+            )}
             <div className="space-y-1">
               <Label>제목</Label>
               <Input
