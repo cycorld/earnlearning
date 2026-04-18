@@ -56,7 +56,7 @@ func NewChatUseCase(
 		tools:       tools,
 		llm:         llmClient,
 		loader:      loader,
-		maxToolHops: 4,
+		maxToolHops: 6,
 	}
 }
 
@@ -201,8 +201,8 @@ type AskInput struct {
 }
 
 type AskOutput struct {
-	Message  *chat.Message  // final assistant message 저장본
-	ToolLogs []chat.Message // 실행된 툴 결과들 (UI 표시용 부가 정보)
+	Message  *chat.Message  `json:"message"`   // final assistant message 저장본
+	ToolLogs []chat.Message `json:"tool_logs"` // 실행된 툴 결과들 (UI 표시용 부가 정보)
 }
 
 // Ask 는 한 사용자 질문에 대해 LLM 을 호출하고, 필요시 도구를 실행하고,

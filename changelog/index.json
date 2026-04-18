@@ -903,5 +903,16 @@
       "버그수정",
       "LLM"
     ]
+  },
+  {
+    "slug": "075-chatbot-context7",
+    "title": "챗봇 Context7 통합 + AskOutput JSON 태그 + maxToolHops 6",
+    "date": "2026-04-19",
+    "tags": [
+      "챗봇",
+      "도구",
+      "Context7",
+      "버그수정"
+    ]
   }
 ]

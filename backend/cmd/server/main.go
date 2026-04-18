@@ -10,6 +10,7 @@ import (
 
 	"github.com/earnlearning/backend/internal/application"
 	"github.com/earnlearning/backend/internal/infrastructure/config"
+	"github.com/earnlearning/backend/internal/infrastructure/context7"
 	"github.com/earnlearning/backend/internal/infrastructure/email"
 	"github.com/earnlearning/backend/internal/infrastructure/llmproxy"
 	"github.com/earnlearning/backend/internal/infrastructure/persistence"
@@ -196,8 +197,15 @@ func main() {
 		}
 
 		webClient := websearch.New()
+		var ctx7Client *context7.Client
+		if cfg.Context7APIKey != "" {
+			ctx7Client = context7.New(cfg.Context7APIKey)
+			log.Printf("Context7 library docs integration enabled")
+		} else {
+			log.Printf("CONTEXT7_API_KEY not set — context7_search/context7_docs tools disabled")
+		}
 		chatTools := application.BuildChatTools(walletRepo, userRepo, companyRepo, grantRepo,
-			llmRepo, chatWikiRepo, chatSkillRepo, webClient)
+			llmRepo, chatWikiRepo, chatSkillRepo, webClient, ctx7Client)
 		chatLLM := llmproxy.NewChatAdapter(proxy)
 		chatUC = application.NewChatUseCase(
 			chatSessionRepo, chatMessageRepo, chatSkillRepo,

@@ -15,9 +15,14 @@ func SeedBuiltinChatSkills(repo chat.SkillRepository) {
 			Slug:         "general_ta",
 			Name:         "일반 조교",
 			Description:  "LMS 사용법, 정책, 용어, 그리고 일반 개발 질문에 답하는 기본 조교.",
-			SystemPrompt: "너는 이화여대 창업 수업 LMS(EarnLearning) 의 친절한 조교야. 학생 질문에 근거 있게 간결히 답해. 우선순위: (1) LMS 내부 용어(지갑·회사·공시·정부과제 등)는 먼저 `search_wiki` 로 공식 가이드를 참고. (2) 오픈소스 라이브러리/개발 도구/공식 문서 질문은 `web_search` 로 검색 후 필요하면 `fetch_url` 로 상세 페이지를 읽어. (3) 답변 끝에 참고 URL 을 반드시 인용.",
+			SystemPrompt: `너는 이화여대 창업 수업 LMS(EarnLearning) 의 친절한 조교야. 학생 질문에 근거 있게 간결히 답해. 우선순위:
+
+1) LMS 내부 용어(지갑·회사·공시·정부과제 등)는 먼저 search_wiki 로 공식 가이드 참고.
+2) 오픈소스 라이브러리/프레임워크 질문(React, TanStack Query 등)은 context7_search → context7_docs 로 공식 문서를 직접 조회.
+3) 나머지 일반 개발 질문은 기억하는 대로 답하되, 의심스러우면 fetch_url 로 공식 문서 확인.
+4) 답변 끝에 참고 URL/문서 출처 인용.`,
 			DefaultModel: "qwen-chat",
-			ToolsAllowed: []string{"search_wiki", "web_search", "fetch_url"},
+			ToolsAllowed: []string{"search_wiki", "web_search", "fetch_url", "context7_search", "context7_docs"},
 			Enabled:      true,
 		},
 		{
@@ -74,10 +79,21 @@ func SeedBuiltinChatSkills(repo chat.SkillRepository) {
 			Slug:         "dev_helper",
 			Name:         "개발 질문 도우미",
 			Description:  "오픈소스 라이브러리, 개발 도구, 공식 문서 조회 특화. React/Go/Python/SQL 등 일반 개발 질문.",
-			SystemPrompt: "너는 경험 많은 시니어 개발자 조교야. 오픈소스·프레임워크·SDK·CLI 질문을 받으면 우선 `web_search` 로 공식 문서/릴리스 노트를 찾고, 필요시 `fetch_url` 로 해당 페이지를 읽어 근거 있는 답을 해. 코드 예제는 실제로 동작하는 최신 문법으로 주고, 참고 URL 을 반드시 답변 끝에 인용. 버전별 차이가 중요한 질문은 반드시 확인 후 답해.",
+			SystemPrompt: `너는 경험 많은 시니어 개발자 조교야. 질문 처리 순서:
+
+1) 일반 상식 수준의 언어 기본기(Python list comprehension 등)는 툴 없이 바로 답해도 됨.
+2) 최신/특정 버전/API 이름이 필요하면 fetch_url 로 공식 문서를 직접 가져와. 주요 URL:
+   - React: https://react.dev/reference
+   - TanStack Query: https://tanstack.com/query/latest/docs/framework/react
+   - Next.js: https://nextjs.org/docs
+   - Go: https://go.dev/doc/
+   - Python: https://docs.python.org/3/
+   - MDN: https://developer.mozilla.org/en-US/docs/Web
+3) web_search 는 봇 탐지로 결과가 자주 비어있음 — 비면 위 URL 을 직접 fetch_url.
+4) 한국어로, 코드 예제는 최신 문법으로, 참고 URL 인용.`,
 			DefaultModel:           "qwen-reasoning",
 			DefaultReasoningEffort: "medium",
-			ToolsAllowed:           []string{"web_search", "fetch_url", "search_wiki"},
+			ToolsAllowed:           []string{"context7_search", "context7_docs", "fetch_url", "web_search", "search_wiki"},
 			Enabled:                true,
 		},
 		{

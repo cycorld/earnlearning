@@ -13,6 +13,7 @@ import (
 	"github.com/earnlearning/backend/internal/domain/llm"
 	userdom "github.com/earnlearning/backend/internal/domain/user"
 	"github.com/earnlearning/backend/internal/domain/wallet"
+	"github.com/earnlearning/backend/internal/infrastructure/context7"
 	"github.com/earnlearning/backend/internal/infrastructure/websearch"
 )
 
@@ -81,6 +82,7 @@ func BuildChatTools(
 	wikiRepo chat.WikiRepository,
 	skillRepo chat.SkillRepository,
 	webClient *websearch.Client,
+	ctx7Client *context7.Client,
 ) *ChatToolRegistry {
 	_ = companyRepo
 	_ = grantRepo
@@ -233,7 +235,7 @@ func BuildChatTools(
 
 	r.Register(&ChatTool{
 		Name:        "web_search",
-		Description: "공개 웹을 검색합니다. 오픈소스 라이브러리, 개발 도구, 공식 문서, 최신 튜토리얼 등 LMS 내부 위키에 없는 일반 기술 질문은 이 도구로 먼저 검색하세요. 검색 결과의 URL 을 확인하고 필요하면 fetch_url 로 상세 내용을 가져오세요.",
+		Description: "공개 웹을 검색합니다. (현재 스테이지: DuckDuckGo 봇 탐지로 인해 결과가 자주 비어있을 수 있음 — 검색 결과가 비었으면 알고 있는 공식 문서 URL 로 fetch_url 을 직접 호출하세요. 예: https://react.dev, https://tanstack.com/query/latest/docs, https://go.dev/doc/, https://docs.python.org, https://developer.mozilla.org)",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -253,10 +255,10 @@ func BuildChatTools(
 			_ = json.Unmarshal([]byte(argsJSON), &args)
 			results, err := webClient.Search(ctx, args.Query, args.Limit)
 			if err != nil {
-				return "", err
+				return `{"status":"search_failed","hint":"알고 있는 공식 문서 URL 로 fetch_url 을 직접 호출하세요. 예: https://react.dev, https://tanstack.com/query/latest/docs, https://docs.python.org"}`, nil
 			}
 			if len(results) == 0 {
-				return "검색 결과가 없습니다.", nil
+				return `{"status":"no_results","hint":"알고 있는 공식 문서 URL 로 fetch_url 을 직접 호출하세요. 예: https://react.dev/reference, https://tanstack.com/query/latest/docs/framework/react, https://docs.python.org/3/"}`, nil
 			}
 			b, _ := json.Marshal(results)
 			return string(b), nil
@@ -284,6 +286,64 @@ func BuildChatTools(
 			}
 			_ = json.Unmarshal([]byte(argsJSON), &args)
 			return webClient.Fetch(ctx, args.URL, args.MaxChars)
+		},
+	})
+
+	r.Register(&ChatTool{
+		Name:        "context7_search",
+		Description: "context7.com 의 인덱스에서 오픈소스 라이브러리/프레임워크를 검색합니다. React, Next.js, TanStack Query, Go stdlib, Python 등 공식 문서가 인덱싱돼 있음. 반환된 id 를 context7_docs 에 넘겨 상세 문서를 가져오세요.",
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"query": map[string]any{"type": "string", "description": "라이브러리 이름 또는 자연어 (예: 'React', 'tanstack query')"},
+				"limit": map[string]any{"type": "integer", "description": "최대 결과 수 (기본 5)", "default": 5},
+			},
+			"required": []string{"query"},
+		},
+		Run: func(ctx context.Context, tctx ChatToolCtx, argsJSON string) (string, error) {
+			if ctx7Client == nil {
+				return "", fmt.Errorf("context7 가 이 배포에서 비활성화되어 있습니다")
+			}
+			var args struct {
+				Query string `json:"query"`
+				Limit int    `json:"limit"`
+			}
+			_ = json.Unmarshal([]byte(argsJSON), &args)
+			results, err := ctx7Client.Search(ctx, args.Query, args.Limit)
+			if err != nil {
+				return "", err
+			}
+			if len(results) == 0 {
+				return "결과 없음. 다른 검색어를 시도해보세요.", nil
+			}
+			b, _ := json.Marshal(results)
+			return string(b), nil
+		},
+	})
+
+	r.Register(&ChatTool{
+		Name:        "context7_docs",
+		Description: "context7.com 에서 특정 라이브러리의 최신 문서·코드 예제를 가져옵니다. 먼저 context7_search 로 library id 를 찾은 뒤 사용하세요.",
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"library_id": map[string]any{"type": "string", "description": "context7_search 결과의 id (예: '/tanstack/query', '/websites/react_dev')"},
+				"topic":      map[string]any{"type": "string", "description": "특정 주제 (예: 'useSuspenseQuery', 'server-side rendering'). 비우면 개요."},
+				"tokens":     map[string]any{"type": "integer", "description": "응답 최대 토큰 (기본 3000)", "default": 3000},
+			},
+			"required": []string{"library_id"},
+		},
+		Run: func(ctx context.Context, tctx ChatToolCtx, argsJSON string) (string, error) {
+			if ctx7Client == nil {
+				return "", fmt.Errorf("context7 가 이 배포에서 비활성화되어 있습니다")
+			}
+			var args struct {
+				LibraryID string `json:"library_id"`
+				Topic     string `json:"topic"`
+				Tokens    int    `json:"tokens"`
+			}
+			_ = json.Unmarshal([]byte(argsJSON), &args)
+			return ctx7Client.Docs(ctx, args.LibraryID, args.Topic, args.Tokens)
 		},
 	})
 
