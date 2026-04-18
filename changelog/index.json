@@ -820,5 +820,17 @@
       "배포사이클",
       "게임화컴포넌트"
     ]
+  },
+  {
+    "slug": "068-gamification-components",
+    "title": "게임화 컴포넌트 4종: StreakBadge / LevelChip / CoinChip / SkillTree",
+    "date": "2026-04-18",
+    "tags": [
+      "프론트엔드",
+      "디자인시스템",
+      "게임화",
+      "컴포넌트",
+      "TDD"
+    ]
   }
 ]
