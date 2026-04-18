@@ -27,7 +27,8 @@ type DailyUsage struct {
 	UsageDate        time.Time `json:"usage_date"` // KST 기준 달력 일자
 	PromptTokens     int       `json:"prompt_tokens"`
 	CompletionTokens int       `json:"completion_tokens"`
-	CacheHits        int       `json:"cache_hits"`
+	CacheHits        int       `json:"cache_hits"`   // 캐시가 적중한 요청 수 (표시용)
+	CacheTokens      int       `json:"cache_tokens"` // 캐시에서 재사용된 prompt 토큰 수 (과금용)
 	Requests         int       `json:"requests"`
 	CostKRW          int       `json:"cost_krw"`      // 계산된 총 비용
 	DebitedKRW       int       `json:"debited_krw"`   // 실제 지갑에서 차감된 금액

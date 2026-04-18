@@ -5,7 +5,8 @@
 //   - 모델 가격 기준: Anthropic Claude Opus 4.7 공식가
 //   - 환율: 1 USD = 1,400 KRW 고정
 //   - 캐시 할인: Opus cached-input 는 $1.50/MTok (full 대비 90% off)
-//     → 일별 cache_hits / requests 비율을 cached token 비율로 근사.
+//     → llm-proxy 가 `cache_tokens` (llama.cpp timings.cache_n 합계) 를 반환하므로
+//     정확한 캐시 적중 토큰 수를 그대로 사용.
 package llm
 
 import "math"
@@ -18,36 +19,39 @@ const (
 	USDToKRW                   = 1400.0
 )
 
-// CostKRW 는 하루치 사용량 버킷에서 원화 비용을 계산한다.
+// CostKRW 는 하루치 사용량에서 원화 비용을 계산한다.
 //
-// cacheHits / requests 비율을 prompt_tokens 의 "캐시 히트 비율" 로 근사한다.
-// LLM proxy 가 cached-token 수를 따로 주지 않기 때문에 (요청 수 기준) 근사치.
+//   - promptTokens    : 전체 입력 토큰 수 (캐시 적중분 포함)
+//   - completionTokens: 출력 토큰 수
+//   - cacheTokens     : promptTokens 중 KV 캐시에서 재사용된 토큰 수
+//     (llm-proxy UsageBucket.cache_tokens)
 //
-// requests 가 0 이면 cache_hits 도 무시하고 전액 full-price 로 계산.
-// 모든 계산은 float 로 하고 마지막에 반올림해서 정수 원화를 반환.
-func CostKRW(promptTokens, completionTokens, cacheHits, requests int) int {
+// 공식:
+//
+//	fullInput  = (promptTokens - cacheTokens) × $15  / 1M
+//	cachedIn   = cacheTokens                  × $1.5 / 1M
+//	output     = completionTokens             × $75  / 1M
+//	cost_krw   = round((fullInput + cachedIn + output) × 1400)
+//
+// cacheTokens 가 promptTokens 를 넘으면 promptTokens 로 clamp. 음수는 0 으로 clamp.
+func CostKRW(promptTokens, completionTokens, cacheTokens int) int {
 	if promptTokens < 0 {
 		promptTokens = 0
 	}
 	if completionTokens < 0 {
 		completionTokens = 0
 	}
-
-	ratio := 0.0
-	if requests > 0 && cacheHits > 0 {
-		ratio = float64(cacheHits) / float64(requests)
-		if ratio > 1 {
-			ratio = 1
-		}
+	if cacheTokens < 0 {
+		cacheTokens = 0
 	}
-	prompt := float64(promptTokens)
-	completion := float64(completionTokens)
+	if cacheTokens > promptTokens {
+		cacheTokens = promptTokens
+	}
+	fullInputTokens := promptTokens - cacheTokens
 
-	fullInput := prompt * (1 - ratio) * InputPricePerMTokUSD
-	cachedInput := prompt * ratio * CachedInputPricePerMTokUSD
-	outputCost := completion * OutputPricePerMTokUSD
-
-	usd := (fullInput + cachedInput + outputCost) / 1_000_000
+	usd := (float64(fullInputTokens)*InputPricePerMTokUSD +
+		float64(cacheTokens)*CachedInputPricePerMTokUSD +
+		float64(completionTokens)*OutputPricePerMTokUSD) / 1_000_000
 	krw := usd * USDToKRW
 	return int(math.Round(krw))
 }

@@ -66,12 +66,51 @@ type UsageBucket struct {
 	PromptTokens     int    `json:"prompt_tokens"`
 	CompletionTokens int    `json:"completion_tokens"`
 	CacheHits        int    `json:"cache_hits"`
+	CacheTokens      int    `json:"cache_tokens"` // prompt 중 KV 캐시 재사용분
 	Errors           int    `json:"errors"`
 }
 
 type UsageResponse struct {
 	Days      int           `json:"days"`
 	ByStudent []UsageBucket `json:"by_student"`
+}
+
+// Swagger StatusResponse 미러링.
+type ServiceStatus struct {
+	Name          string `json:"name"`
+	Version       string `json:"version"`
+	UptimeSeconds int64  `json:"uptime_seconds"`
+	PID           int    `json:"pid"`
+}
+
+type UpstreamStatus struct {
+	URL             string  `json:"url"`
+	Status          string  `json:"status"`
+	LatencyMs       float64 `json:"latency_ms,omitempty"`
+	Model           string  `json:"model,omitempty"`
+	NCtx            int     `json:"n_ctx,omitempty"`
+	SlotsTotal      int     `json:"slots_total,omitempty"`
+	SlotsIdle       int     `json:"slots_idle,omitempty"`
+	SlotsProcessing int     `json:"slots_processing,omitempty"`
+}
+
+type DatabaseStatus struct {
+	Students     int `json:"students"`
+	KeysActive   int `json:"keys_active"`
+	KeysRevoked  int `json:"keys_revoked"`
+}
+
+type LogsStatus struct {
+	Dir                   string `json:"dir"`
+	ConversationsToday    int    `json:"conversations_today"`
+	MetricsFileSizeBytes  int64  `json:"metrics_file_size_bytes"`
+}
+
+type StatusResponse struct {
+	Service  ServiceStatus  `json:"service"`
+	Upstream UpstreamStatus `json:"upstream"`
+	Database DatabaseStatus `json:"database"`
+	Logs     LogsStatus     `json:"logs"`
 }
 
 // CreateStudent 는 llm-proxy 에 신규 학생을 등록한다. email unique.
@@ -131,6 +170,15 @@ func (c *Client) ListKeys(ctx context.Context, studentID int) ([]KeyMeta, error)
 func (c *Client) RevokeKey(ctx context.Context, keyID int) error {
 	path := fmt.Sprintf("/admin/api/keys/%d/revoke", keyID)
 	return c.do(ctx, http.MethodPost, path, nil, nil)
+}
+
+// Status 는 llm-proxy 의 서비스 상태를 반환한다.
+func (c *Client) Status(ctx context.Context) (*StatusResponse, error) {
+	var out StatusResponse
+	if err := c.do(ctx, http.MethodGet, "/admin/api/status", nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 // Usage 는 최근 N일 롤링 윈도우의 학생별 집계를 반환한다.

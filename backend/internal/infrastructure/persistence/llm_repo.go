@@ -82,20 +82,21 @@ func (r *LLMRepo) UpsertDailyUsage(u *llm.DailyUsage) error {
 	date := u.UsageDate.Format("2006-01-02")
 	_, err := r.db.Exec(`
 		INSERT INTO llm_daily_usage
-			(user_id, usage_date, prompt_tokens, completion_tokens, cache_hits, requests,
-			 cost_krw, debited_krw, debt_krw, billed_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			(user_id, usage_date, prompt_tokens, completion_tokens, cache_hits, cache_tokens,
+			 requests, cost_krw, debited_krw, debt_krw, billed_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(user_id, usage_date) DO UPDATE SET
 			prompt_tokens = excluded.prompt_tokens,
 			completion_tokens = excluded.completion_tokens,
 			cache_hits = excluded.cache_hits,
+			cache_tokens = excluded.cache_tokens,
 			requests = excluded.requests,
 			cost_krw = excluded.cost_krw,
 			debited_krw = excluded.debited_krw,
 			debt_krw = excluded.debt_krw,
 			billed_at = excluded.billed_at`,
-		u.UserID, date, u.PromptTokens, u.CompletionTokens, u.CacheHits, u.Requests,
-		u.CostKRW, u.DebitedKRW, u.DebtKRW, u.BilledAt)
+		u.UserID, date, u.PromptTokens, u.CompletionTokens, u.CacheHits, u.CacheTokens,
+		u.Requests, u.CostKRW, u.DebitedKRW, u.DebtKRW, u.BilledAt)
 	if err != nil {
 		return fmt.Errorf("upsert daily usage: %w", err)
 	}
@@ -106,7 +107,7 @@ func (r *LLMRepo) FindDailyUsage(userID int, usageDate time.Time) (*llm.DailyUsa
 	date := usageDate.Format("2006-01-02")
 	row := r.db.QueryRow(`
 		SELECT id, user_id, usage_date, prompt_tokens, completion_tokens, cache_hits,
-			   requests, cost_krw, debited_krw, debt_krw, billed_at
+			   cache_tokens, requests, cost_krw, debited_krw, debt_krw, billed_at
 		FROM llm_daily_usage WHERE user_id = ? AND usage_date = ?`, userID, date)
 	return scanDaily(row)
 }
@@ -117,7 +118,7 @@ func (r *LLMRepo) ListDailyUsage(userID int, days int) ([]*llm.DailyUsage, error
 	}
 	rows, err := r.db.Query(`
 		SELECT id, user_id, usage_date, prompt_tokens, completion_tokens, cache_hits,
-			   requests, cost_krw, debited_krw, debt_krw, billed_at
+			   cache_tokens, requests, cost_krw, debited_krw, debt_krw, billed_at
 		FROM llm_daily_usage
 		WHERE user_id = ?
 		ORDER BY usage_date DESC LIMIT ?`, userID, days)
@@ -226,7 +227,7 @@ func scanDaily(s scanner) (*llm.DailyUsage, error) {
 	u := &llm.DailyUsage{}
 	var date string
 	err := s.Scan(&u.ID, &u.UserID, &date, &u.PromptTokens, &u.CompletionTokens, &u.CacheHits,
-		&u.Requests, &u.CostKRW, &u.DebitedKRW, &u.DebtKRW, &u.BilledAt)
+		&u.CacheTokens, &u.Requests, &u.CostKRW, &u.DebitedKRW, &u.DebtKRW, &u.BilledAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -245,7 +246,7 @@ func scanDailyRows(rows *sql.Rows) (*llm.DailyUsage, error) {
 	u := &llm.DailyUsage{}
 	var date string
 	err := rows.Scan(&u.ID, &u.UserID, &date, &u.PromptTokens, &u.CompletionTokens, &u.CacheHits,
-		&u.Requests, &u.CostKRW, &u.DebitedKRW, &u.DebtKRW, &u.BilledAt)
+		&u.CacheTokens, &u.Requests, &u.CostKRW, &u.DebitedKRW, &u.DebtKRW, &u.BilledAt)
 	if err != nil {
 		return nil, err
 	}

@@ -235,6 +235,7 @@ func RunMigrations(db *sql.DB) error {
 			prompt_tokens     INTEGER NOT NULL DEFAULT 0,
 			completion_tokens INTEGER NOT NULL DEFAULT 0,
 			cache_hits        INTEGER NOT NULL DEFAULT 0,
+			cache_tokens      INTEGER NOT NULL DEFAULT 0,
 			requests          INTEGER NOT NULL DEFAULT 0,
 			cost_krw          INTEGER NOT NULL DEFAULT 0,
 			debited_krw       INTEGER NOT NULL DEFAULT 0,
@@ -249,6 +250,9 @@ func RunMigrations(db *sql.DB) error {
 			return fmt.Errorf("create llm tables: %w", err)
 		}
 	}
+	// cache_tokens 는 #068 중간 업데이트로 추가됨. 기존에 테이블이 이미 만들어진
+	// 환경(stage 등)을 위해 ALTER 로 보정한다. 중복 컬럼 에러는 무시.
+	db.Exec(`ALTER TABLE llm_daily_usage ADD COLUMN cache_tokens INTEGER NOT NULL DEFAULT 0`)
 
 	// DM tables
 	dmTables := []string{

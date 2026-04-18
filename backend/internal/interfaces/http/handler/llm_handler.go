@@ -91,6 +91,24 @@ func (h *LLMHandler) GetMyUsage(c echo.Context) error {
 	}))
 }
 
+// GetStatus godoc
+//
+//	@Summary		LLM 서비스 상태
+//	@Description	llm.cycorld.com 의 서비스 상태 (upstream 모델, 지연, 슬롯 사용률). 학생도 조회 가능.
+//	@Tags			LLM
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Router			/llm/status [get]
+func (h *LLMHandler) GetStatus(c echo.Context) error {
+	s, err := h.uc.Status(c.Request().Context())
+	if err != nil {
+		// 상태 조회 실패 시 503 로 내려 프론트가 "서비스 확인 중" 배너 띄울 수 있도록 한다.
+		return c.JSON(http.StatusServiceUnavailable, errorResp("PROXY_DOWN", err.Error()))
+	}
+	return c.JSON(http.StatusOK, successResp(s))
+}
+
 // llmErrorResponse — domain 에러를 HTTP 상태코드로 매핑.
 func llmErrorResponse(c echo.Context, err error) error {
 	switch {

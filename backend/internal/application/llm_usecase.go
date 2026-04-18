@@ -22,6 +22,22 @@ type ProxyClient interface {
 	IssueKey(ctx context.Context, studentID int, label string) (plaintext, prefix string, keyID int, err error)
 	RevokeKey(ctx context.Context, keyID int) error
 	Usage(ctx context.Context, days int) (map[int]ProxyUsage, error) // keyed by proxy student id
+	Status(ctx context.Context) (*ProxyStatus, error)
+}
+
+// ProxyStatus 는 학생에게 보여줄 sanitized 상태. PID / 로그 디렉토리 / DB 카운트 같은
+// 내부 정보는 포함하지 않는다.
+type ProxyStatus struct {
+	Service         string  `json:"service"`          // llm-proxy
+	Version         string  `json:"version"`
+	UptimeSeconds   int64   `json:"uptime_seconds"`
+	Upstream        string  `json:"upstream_status"`  // ok / down / http_500 / timeout
+	Model           string  `json:"model"`            // 파일명만 (경로 제거)
+	LatencyMs       float64 `json:"latency_ms,omitempty"`
+	ContextWindow   int     `json:"context_window,omitempty"`
+	SlotsTotal      int     `json:"slots_total,omitempty"`
+	SlotsIdle       int     `json:"slots_idle,omitempty"`
+	SlotsProcessing int     `json:"slots_processing,omitempty"`
 }
 
 // ProxyUsage 는 llmproxy.UsageBucket 의 의미만 추출한 스냅샷.
@@ -30,6 +46,7 @@ type ProxyUsage struct {
 	PromptTokens     int
 	CompletionTokens int
 	CacheHits        int
+	CacheTokens      int // prompt 중 캐시 재사용분 (없으면 0)
 	Errors           int
 }
 
@@ -131,6 +148,11 @@ func (uc *LLMUseCase) GetKey(userID int) (*llm.UserKey, error) {
 	return uc.repo.FindActiveKeyByUserID(userID)
 }
 
+// Status 는 llm-proxy 의 상태를 조회해 학생에게 보여줄 수준으로 반환.
+func (uc *LLMUseCase) Status(ctx context.Context) (*ProxyStatus, error) {
+	return uc.proxy.Status(ctx)
+}
+
 // ListDailyUsage 는 최근 N일 일별 사용량 레코드.
 func (uc *LLMUseCase) ListDailyUsage(userID int, days int) ([]*llm.DailyUsage, error) {
 	return uc.repo.ListDailyUsage(userID, days)
@@ -198,7 +220,7 @@ func (uc *LLMUseCase) BillAll(ctx context.Context, billingDate time.Time) (int, 
 }
 
 func (uc *LLMUseCase) billOne(k *llm.UserKey, bucket ProxyUsage, billingDate time.Time) error {
-	cost := llm.CostKRW(bucket.PromptTokens, bucket.CompletionTokens, bucket.CacheHits, bucket.Requests)
+	cost := llm.CostKRW(bucket.PromptTokens, bucket.CompletionTokens, bucket.CacheTokens)
 
 	w, err := uc.walletRepo.FindByUserID(k.UserID)
 	if err != nil {
@@ -229,6 +251,7 @@ func (uc *LLMUseCase) billOne(k *llm.UserKey, bucket ProxyUsage, billingDate tim
 		PromptTokens:     bucket.PromptTokens,
 		CompletionTokens: bucket.CompletionTokens,
 		CacheHits:        bucket.CacheHits,
+		CacheTokens:      bucket.CacheTokens,
 		Requests:         bucket.Requests,
 		CostKRW:          cost,
 		DebitedKRW:       debit,

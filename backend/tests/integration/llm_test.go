@@ -66,6 +66,18 @@ func (f *fakeLLMProxy) Usage(_ context.Context, _ int) (map[int]application.Prox
 	}
 	return out, nil
 }
+func (f *fakeLLMProxy) Status(_ context.Context) (*application.ProxyStatus, error) {
+	return &application.ProxyStatus{
+		Service:       "llm-proxy",
+		Version:       "test-0.0.1",
+		UptimeSeconds: 3600,
+		Upstream:      "ok",
+		Model:         "Qwen3.6-35B.gguf",
+		LatencyMs:     1.2,
+		SlotsTotal:    4,
+		SlotsIdle:     3,
+	}, nil
+}
 func (f *fakeLLMProxy) setUsage(studentID int, bucket application.ProxyUsage) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -205,6 +217,31 @@ func TestLLM_BillAll_DebitsWalletAndRecordsUsage(t *testing.T) {
 	}
 	if data.Summary.CumulativeCostKRW != data.Daily[0].CostKRW {
 		t.Errorf("summary should match daily total")
+	}
+}
+
+func TestLLM_GetStatus_ReturnsSanitizedProxyStatus(t *testing.T) {
+	ts := setupTestServer(t)
+	token := ts.registerAndApprove("llm-status@ewha.ac.kr", "pass1234", "상태조회", "2024099")
+
+	r := ts.get("/api/llm/status", token)
+	if !r.Success {
+		t.Fatalf("status GET failed: %+v", r.Error)
+	}
+	var s map[string]any
+	_ = json.Unmarshal(r.Data, &s)
+	if s["upstream_status"] != "ok" {
+		t.Errorf("upstream_status: got %v", s["upstream_status"])
+	}
+	if s["model"] != "Qwen3.6-35B.gguf" {
+		t.Errorf("model should be filename only: %v", s["model"])
+	}
+	// PID / logs / database 가 응답에 노출되지 않아야 함
+	if _, has := s["pid"]; has {
+		t.Errorf("pid must not leak to student view")
+	}
+	if _, has := s["logs"]; has {
+		t.Errorf("logs must not leak to student view")
 	}
 }
 

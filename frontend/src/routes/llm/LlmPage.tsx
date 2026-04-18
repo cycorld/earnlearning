@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { AlertTriangle, Check, Copy, Key, RefreshCw, Sparkles } from 'lucide-react'
+import { Activity, AlertTriangle, Check, Copy, Key, RefreshCw, Sparkles } from 'lucide-react'
 
 import { api, ApiError } from '@/lib/api'
 import { formatMoney } from '@/lib/utils'
@@ -25,6 +25,7 @@ interface DailyUsageRow {
   prompt_tokens: number
   completion_tokens: number
   cache_hits: number
+  cache_tokens: number
   requests: number
   cost_krw: number
   debited_krw: number
@@ -43,11 +44,26 @@ interface UsageResponse {
   summary: Summary
 }
 
+interface ProxyStatus {
+  service: string
+  version: string
+  uptime_seconds: number
+  upstream_status: string
+  model: string
+  latency_ms?: number
+  context_window?: number
+  slots_total?: number
+  slots_idle?: number
+  slots_processing?: number
+}
+
 const PROXY_BASE = 'https://llm.cycorld.com'
 
 export default function LlmPage() {
   const [key, setKey] = useState<UserKey | null>(null)
   const [usage, setUsage] = useState<UsageResponse | null>(null)
+  const [status, setStatus] = useState<ProxyStatus | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [rotating, setRotating] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -69,6 +85,15 @@ export default function LlmPage() {
       }
     } finally {
       setLoading(false)
+    }
+    // 상태는 실패해도 페이지 자체는 뜨도록 별도 처리
+    try {
+      const s = await api.get<ProxyStatus>('/llm/status')
+      setStatus(s)
+      setStatusError(null)
+    } catch (err) {
+      setStatus(null)
+      setStatusError(err instanceof Error ? err.message : '상태 조회 실패')
     }
   }, [])
 
@@ -121,6 +146,8 @@ export default function LlmPage() {
         {' '}로 사용할 수 있습니다. 사용한 만큼 매일 새벽 03:33 KST 에 자동으로 지갑에서 차감됩니다.
       </p>
 
+      <StatusCard status={status} error={statusError} />
+
       <KeyCard
         k={key}
         copied={copied}
@@ -134,6 +161,84 @@ export default function LlmPage() {
       <UsageCard usage={usage} />
     </div>
   )
+}
+
+function StatusCard({ status, error }: { status: ProxyStatus | null; error: string | null }) {
+  const ok = status?.upstream_status === 'ok'
+  const color = ok ? 'text-success' : error || status?.upstream_status ? 'text-coral' : 'text-muted-foreground'
+  const dot = ok ? 'bg-success' : error || status?.upstream_status ? 'bg-coral' : 'bg-muted-foreground'
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-primary" />
+          서비스 상태
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-2">
+          <span className={`inline-block h-2.5 w-2.5 rounded-full ${dot} ${ok ? 'animate-pulse' : ''}`} />
+          <span className={`text-sm font-semibold ${color}`}>
+            {ok
+              ? '정상 작동 중'
+              : error
+                ? '상태 조회 실패'
+                : `상태 ${status?.upstream_status ?? 'unknown'}`}
+          </span>
+          {status?.latency_ms != null && (
+            <span className="text-xs text-muted-foreground">· 지연 {status.latency_ms.toFixed(1)}ms</span>
+          )}
+        </div>
+
+        {status && (
+          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+            <dt className="text-muted-foreground">모델</dt>
+            <dd className="font-mono break-all">{status.model || '—'}</dd>
+            {status.context_window ? (
+              <>
+                <dt className="text-muted-foreground">컨텍스트</dt>
+                <dd className="tabular-nums">{status.context_window.toLocaleString()} tok</dd>
+              </>
+            ) : null}
+            {status.slots_total != null && status.slots_total > 0 ? (
+              <>
+                <dt className="text-muted-foreground">슬롯</dt>
+                <dd className="tabular-nums">
+                  <span className={status.slots_processing && status.slots_processing === status.slots_total ? 'text-coral' : ''}>
+                    {status.slots_processing ?? 0} / {status.slots_total} 처리 중
+                  </span>
+                  <span className="ml-2 text-muted-foreground">
+                    (여유 {status.slots_idle ?? 0})
+                  </span>
+                </dd>
+              </>
+            ) : null}
+            <dt className="text-muted-foreground">가동 시간</dt>
+            <dd className="tabular-nums">{formatUptime(status.uptime_seconds)}</dd>
+            <dt className="text-muted-foreground">버전</dt>
+            <dd className="font-mono text-muted-foreground">{status.service} {status.version}</dd>
+          </dl>
+        )}
+
+        {error && !status && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {error}. 키 발급은 계속 가능하지만, 실제 API 호출은 복구될 때까지 실패할 수 있습니다.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function formatUptime(sec: number): string {
+  if (sec < 60) return `${sec}초`
+  const m = Math.floor(sec / 60)
+  if (m < 60) return `${m}분`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}시간 ${m % 60}분`
+  const d = Math.floor(h / 24)
+  return `${d}일 ${h % 24}시간`
 }
 
 function KeyCard({
@@ -269,29 +374,41 @@ function UsageCard({ usage }: { usage: UsageResponse | null }) {
                 <tr className="border-b text-left text-xs uppercase text-muted-foreground">
                   <th className="py-2 pr-3">일자</th>
                   <th className="py-2 pr-3 text-right">입력 tok</th>
+                  <th className="py-2 pr-3 text-right">캐시 재사용</th>
                   <th className="py-2 pr-3 text-right">출력 tok</th>
-                  <th className="py-2 pr-3 text-right">캐시/요청</th>
+                  <th className="py-2 pr-3 text-right">요청 수</th>
                   <th className="py-2 pr-3 text-right">청구</th>
                   <th className="py-2 text-right">부채</th>
                 </tr>
               </thead>
               <tbody>
-                {daily.map((d) => (
-                  <tr key={d.id} className="border-b last:border-none">
-                    <td className="py-2 pr-3 font-medium">{d.usage_date.slice(0, 10)}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums">{d.prompt_tokens.toLocaleString()}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums">{d.completion_tokens.toLocaleString()}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">
-                      {d.cache_hits}/{d.requests}
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums font-semibold">
-                      {formatMoney(d.cost_krw)}
-                    </td>
-                    <td className={`py-2 text-right tabular-nums ${d.debt_krw > 0 ? 'text-coral' : 'text-muted-foreground'}`}>
-                      {d.debt_krw > 0 ? formatMoney(d.debt_krw) : '—'}
-                    </td>
-                  </tr>
-                ))}
+                {daily.map((d) => {
+                  const cacheRatio = d.prompt_tokens > 0 ? d.cache_tokens / d.prompt_tokens : 0
+                  return (
+                    <tr key={d.id} className="border-b last:border-none">
+                      <td className="py-2 pr-3 font-medium">{d.usage_date.slice(0, 10)}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums">{d.prompt_tokens.toLocaleString()}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums">
+                        <span className={cacheRatio > 0 ? 'text-success' : 'text-muted-foreground'}>
+                          {d.cache_tokens.toLocaleString()}
+                        </span>
+                        {cacheRatio > 0 && (
+                          <span className="ml-1 text-[11px] text-muted-foreground">
+                            ({Math.round(cacheRatio * 100)}%)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 pr-3 text-right tabular-nums">{d.completion_tokens.toLocaleString()}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">{d.requests}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums font-semibold">
+                        {formatMoney(d.cost_krw)}
+                      </td>
+                      <td className={`py-2 text-right tabular-nums ${d.debt_krw > 0 ? 'text-coral' : 'text-muted-foreground'}`}>
+                        {d.debt_krw > 0 ? formatMoney(d.debt_krw) : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

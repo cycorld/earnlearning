@@ -218,6 +218,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		approved.GET("/llm/me", h.LLM.GetMyKey)
 		approved.POST("/llm/me/rotate", h.LLM.RotateMyKey)
 		approved.GET("/llm/me/usage", h.LLM.GetMyUsage)
+		approved.GET("/llm/status", h.LLM.GetStatus)
 	}
 
 	// Notifications (OAuth: read:notifications)

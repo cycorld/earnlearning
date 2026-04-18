@@ -67,6 +67,9 @@ func (f *fakeProxy) Usage(_ context.Context, _ int) (map[int]ProxyUsage, error) 
 	}
 	return f.usage, nil
 }
+func (f *fakeProxy) Status(_ context.Context) (*ProxyStatus, error) {
+	return &ProxyStatus{Service: "llm-proxy", Upstream: "ok"}, nil
+}
 
 type fakeLLMRepo struct {
 	keys   []*llm.UserKey
@@ -389,6 +392,44 @@ func TestBillAll_ZeroBalance_NoDebitOnlyDebt(t *testing.T) {
 	got, _ := repo.FindDailyUsage(1, billingDate)
 	if got.DebitedKRW != 0 || got.DebtKRW == 0 {
 		t.Errorf("expected zero debit + positive debt: %+v", got)
+	}
+}
+
+func TestBillAll_CacheTokens_DiscountApplied(t *testing.T) {
+	uc, proxy, repo, wr := newUC(100_000)
+	k, _ := uc.EnsureKey(context.Background(), 1)
+	// 100k prompt 중 95k 캐시 적중 + 1k completion → 캐시 할인이 크게 적용돼야 함
+	proxy.usage = map[int]ProxyUsage{
+		k.ProxyStudentID: {
+			Requests:         10,
+			PromptTokens:     100_000,
+			CompletionTokens: 1_000,
+			CacheHits:        9,
+			CacheTokens:      95_000,
+		},
+	}
+	billingDate := time.Date(2026, 4, 17, 0, 0, 0, 0, llm.KST)
+	_, err := uc.BillAll(context.Background(), billingDate)
+	if err != nil {
+		t.Fatalf("BillAll: %v", err)
+	}
+	cached, _ := repo.FindDailyUsage(1, billingDate)
+	if cached == nil {
+		t.Fatalf("no usage row recorded")
+	}
+	// 기대 비용:
+	//   full:   5k × 15/M = 0.075
+	//   cached: 95k × 1.5/M = 0.1425
+	//   out:    1k × 75/M = 0.075
+	//   sum: 0.2925 USD × 1400 = 410원 (반올림)
+	if cached.CostKRW < 400 || cached.CostKRW > 420 {
+		t.Errorf("cache-discounted cost: got %d, expected ~410", cached.CostKRW)
+	}
+	if cached.CacheTokens != 95_000 {
+		t.Errorf("cache_tokens should be persisted: got %d", cached.CacheTokens)
+	}
+	if len(wr.debits) != 1 {
+		t.Fatalf("expected one debit")
 	}
 }
 

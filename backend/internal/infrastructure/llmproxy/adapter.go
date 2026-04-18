@@ -2,6 +2,7 @@ package llmproxy
 
 import (
 	"context"
+	"path/filepath"
 
 	"github.com/earnlearning/backend/internal/application"
 )
@@ -60,6 +61,30 @@ func (a *UseCaseAdapter) RevokeKey(ctx context.Context, keyID int) error {
 	return a.c.RevokeKey(ctx, keyID)
 }
 
+func (a *UseCaseAdapter) Status(ctx context.Context) (*application.ProxyStatus, error) {
+	s, err := a.c.Status(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// 모델 경로는 파일명만 노출 (파일시스템 경로 유출 방지).
+	model := s.Upstream.Model
+	if model != "" {
+		model = filepath.Base(model)
+	}
+	return &application.ProxyStatus{
+		Service:         s.Service.Name,
+		Version:         s.Service.Version,
+		UptimeSeconds:   s.Service.UptimeSeconds,
+		Upstream:        s.Upstream.Status,
+		Model:           model,
+		LatencyMs:       s.Upstream.LatencyMs,
+		ContextWindow:   s.Upstream.NCtx,
+		SlotsTotal:      s.Upstream.SlotsTotal,
+		SlotsIdle:       s.Upstream.SlotsIdle,
+		SlotsProcessing: s.Upstream.SlotsProcessing,
+	}, nil
+}
+
 func (a *UseCaseAdapter) Usage(ctx context.Context, days int) (map[int]application.ProxyUsage, error) {
 	out, err := a.c.Usage(ctx, days)
 	if err != nil {
@@ -72,6 +97,7 @@ func (a *UseCaseAdapter) Usage(ctx context.Context, days int) (map[int]applicati
 			PromptTokens:     b.PromptTokens,
 			CompletionTokens: b.CompletionTokens,
 			CacheHits:        b.CacheHits,
+			CacheTokens:      b.CacheTokens,
 			Errors:           b.Errors,
 		}
 	}
