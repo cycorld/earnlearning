@@ -1,9 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/plus-jakarta-sans";
-@import "@fontsource/noto-sans-kr/300.css";
-@import "@fontsource/noto-sans-kr/400.css";
+@import "pretendard/dist/web/variable/pretendardvariable.css";
 @import "@fontsource/jetbrains-mono/400.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -22,6 +20,24 @@
   /* Brand typography: Plus Jakarta Sans for headings */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+  }
+  /* Default heading size scale (overridable — .markdown-body 등 별도 scope 우선) */
+  :where(h1):not([class*="text-"]) {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+  :where(h2):not([class*="text-"]) {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  :where(h3):not([class*="text-"]) {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.4;
   }
   /* Brand typography: JetBrains Mono for code */
   code, pre, kbd, samp {
@@ -327,8 +343,8 @@ button:not(:disabled) > [data-slot="card"],
 }
 
 @theme inline {
-  --font-sans: 'Noto Sans KR', 'Plus Jakarta Sans Variable', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-heading: 'Plus Jakarta Sans Variable', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-heading: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --color-coral: var(--coral);
   --color-highlight: var(--highlight);
