@@ -97,7 +97,7 @@ export default function AdminTasksPage() {
                   {getColumnTasks(col.key).length}
                 </Badge>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {getColumnTasks(col.key).map((task) => (
                   <Card
                     key={task.id + task.filename}

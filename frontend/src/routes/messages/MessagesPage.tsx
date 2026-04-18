@@ -78,7 +78,7 @@ export default function MessagesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-4">
           {conversations.map((conv) => (
             <Card
               key={conv.peer_id}
