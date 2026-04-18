@@ -140,7 +140,7 @@ export default function CompanyDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       {/* Company header */}
       <Card>
         <CardContent className="flex items-center gap-4 p-6">

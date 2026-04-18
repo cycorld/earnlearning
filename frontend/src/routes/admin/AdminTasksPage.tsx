@@ -61,7 +61,7 @@ export default function AdminTasksPage() {
     tasks.filter((t) => t.status === status)
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-4">
+    <div className="mx-auto max-w-6xl space-y-5 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link to="/admin" className="rounded-full p-1 hover:bg-accent">

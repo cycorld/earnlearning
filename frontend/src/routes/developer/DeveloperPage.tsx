@@ -160,7 +160,7 @@ export default function DeveloperPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild>

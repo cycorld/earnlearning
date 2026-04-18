@@ -67,7 +67,8 @@ export default function Header() {
               <MessageSquare className="h-5 w-5" />
               {dmUnreadCount > 0 && (
                 <Badge
-                  className="absolute -top-1 -right-1 h-5 min-w-5 bg-coral px-1 text-xs text-white"
+                  variant="highlight"
+                  className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs"
                 >
                   {dmUnreadCount > 99 ? '99+' : dmUnreadCount}
                 </Badge>
@@ -79,7 +80,8 @@ export default function Header() {
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
                 <Badge
-                  className="absolute -top-1 -right-1 h-5 min-w-5 bg-coral px-1 text-xs text-white"
+                  variant="highlight"
+                  className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs"
                 >
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </Badge>

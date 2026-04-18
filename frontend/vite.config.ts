@@ -44,8 +44,8 @@ export default defineConfig({
         name: 'EarnLearning',
         short_name: 'EarnLearning',
         description: '스타트업을 위한 코딩입문 LMS',
-        theme_color: '#005F69',
-        background_color: '#F8F9FA',
+        theme_color: '#00643E',
+        background_color: '#F8F7F4',
         display: 'standalone',
         icons: [
           { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },

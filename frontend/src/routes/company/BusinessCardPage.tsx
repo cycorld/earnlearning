@@ -231,7 +231,7 @@ export default function BusinessCardPage() {
   const template = TEMPLATES[templateIdx]
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="sticky top-14 z-40 -mx-4 flex items-center gap-2 bg-background px-4 py-2">
         <Button variant="ghost" size="icon" asChild>
           <Link to={`/company/${id}`}>

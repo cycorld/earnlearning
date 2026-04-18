@@ -112,7 +112,7 @@ export default function AdminPage() {
   ]
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-5 w-5 text-primary" />
         <h1 className="text-xl font-bold">관리자</h1>

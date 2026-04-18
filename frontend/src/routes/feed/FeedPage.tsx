@@ -438,7 +438,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       {/* Classroom selector (if multiple) */}
       {classrooms.length > 1 && (
         <select
@@ -471,7 +471,7 @@ export default function FeedPage() {
       {/* Create post button */}
       <Dialog open={newPostOpen} onOpenChange={setNewPostOpen}>
         <DialogTrigger asChild>
-          <Button className="w-full gap-2" variant="outline">
+          <Button className="w-full gap-2">
             <Plus className="h-4 w-4" />
             새 게시물 작성
           </Button>
