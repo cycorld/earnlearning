@@ -132,6 +132,26 @@
 }
 
 /* ============================================
+   Interactive Card — Link/button으로 감싼 카드에 자동 hover lift
+   ============================================ */
+a[href]:hover > [data-slot="card"],
+button:not(:disabled):hover > [data-slot="card"],
+[data-slot="card"][data-interactive="true"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px -6px color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+a[href]:active > [data-slot="card"],
+button:not(:disabled):active > [data-slot="card"],
+[data-slot="card"][data-interactive="true"]:active {
+  transform: translateY(0);
+}
+a[href] > [data-slot="card"],
+button:not(:disabled) > [data-slot="card"],
+[data-slot="card"][data-interactive="true"] {
+  cursor: pointer;
+}
+
+/* ============================================
    GitHub-style Markdown (.markdown-body)
    ============================================ */
 .markdown-body {
