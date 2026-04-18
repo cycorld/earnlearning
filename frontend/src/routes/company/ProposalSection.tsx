@@ -288,7 +288,7 @@ export function ProposalSection({
                 rows={4}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>가결 기준(%)</Label>
                 <Input
@@ -390,12 +390,12 @@ function ProposalCard({
       {/* Tally bar */}
       <div className="mb-2 flex h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className="bg-green-500"
+          className="bg-success"
           style={{ width: `${yesPct}%` }}
           title={`찬성 ${yesPct.toFixed(1)}%`}
         />
         <div
-          className="bg-red-500"
+          className="bg-coral"
           style={{ width: `${noPct}%` }}
           title={`반대 ${noPct.toFixed(1)}%`}
         />
@@ -407,11 +407,11 @@ function ProposalCard({
       </div>
       <div className="mb-2 flex justify-between text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
-          <CheckCircle2 className="h-3 w-3 text-green-500" />
+          <CheckCircle2 className="h-3 w-3 text-success" />
           찬성 {yesPct.toFixed(1)}% ({tally?.yes_shares ?? 0}주)
         </span>
         <span className="flex items-center gap-1">
-          <XCircle className="h-3 w-3 text-red-500" />
+          <XCircle className="h-3 w-3 text-coral" />
           반대 {noPct.toFixed(1)}% ({tally?.no_shares ?? 0}주)
         </span>
       </div>
@@ -428,8 +428,8 @@ function ProposalCard({
           <span
             className={
               proposal.my_vote.choice === 'yes'
-                ? 'font-medium text-green-600'
-                : 'font-medium text-red-600'
+                ? 'font-medium text-success'
+                : 'font-medium text-coral'
             }
           >
             {proposal.my_vote.choice === 'yes' ? '찬성' : '반대'}
@@ -443,7 +443,7 @@ function ProposalCard({
           <Button
             size="sm"
             variant="outline"
-            className="flex-1 border-green-500 text-green-600 hover:bg-green-50"
+            className="flex-1 border-success text-success hover:bg-success/10"
             disabled={voteLoading}
             onClick={() => onVote('yes')}
           >
@@ -458,7 +458,7 @@ function ProposalCard({
           <Button
             size="sm"
             variant="outline"
-            className="flex-1 border-red-500 text-red-600 hover:bg-red-50"
+            className="flex-1 border-coral text-coral hover:bg-coral/10"
             disabled={voteLoading}
             onClick={() => onVote('no')}
           >

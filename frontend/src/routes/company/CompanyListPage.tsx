@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Building2 } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 export default function CompanyListPage() {
   const { user } = useAuth()
@@ -32,7 +33,7 @@ export default function CompanyListPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
@@ -43,7 +44,7 @@ export default function CompanyListPage() {
     : allCompanies
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">회사</h1>
         <Button size="sm" asChild>
@@ -96,7 +97,7 @@ function CompanyGrid({
   showOwner?: boolean
 }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {companies.map((company) => (
         <Link key={company.id} to={`/company/${company.id}`}>
           <Card className="transition-colors hover:bg-accent/30">

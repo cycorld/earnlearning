@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Users, CheckCircle } from 'lucide-react'
 import { formatMoney } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 const statusLabels: Record<string, string> = {
   open: '모집 중',
@@ -55,7 +56,7 @@ export default function GrantListPage() {
   }, [fetchGrants])
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">정부과제</h1>
         {user?.role === 'admin' && (
@@ -85,13 +86,13 @@ export default function GrantListPage() {
 
       {loading ? (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : grants.length === 0 ? (
         <p className="py-8 text-center text-muted-foreground">등록된 과제가 없습니다.</p>
       ) : (
         <>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {grants.map((grant) => (
               <Link key={grant.id} to={`/grant/${grant.id}`}>
                 <Card className="transition-colors hover:bg-accent/30">
@@ -122,7 +123,7 @@ export default function GrantListPage() {
                         지원 {grant.application_count ?? 0}명
                       </span>
                       {(grant.approved_count ?? 0) > 0 && (
-                        <span className="flex items-center gap-1 text-green-600">
+                        <span className="flex items-center gap-1 text-success">
                           <CheckCircle className="h-3 w-3" />
                           승인 {grant.approved_count}명
                         </span>

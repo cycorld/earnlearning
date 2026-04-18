@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner'
 import { CreditCard, ExternalLink, Pencil, Loader2, Plus, Upload, Wallet } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 import { DisclosureSection } from './DisclosureSection'
 import { ProposalSection } from './ProposalSection'
 import { InvestmentRoundSection } from './InvestmentRoundSection'
@@ -130,7 +131,7 @@ export default function CompanyDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
@@ -140,7 +141,7 @@ export default function CompanyDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       {/* Company header */}
       <Card>
         <CardContent className="flex items-center gap-4 p-6">
@@ -185,7 +186,7 @@ export default function CompanyDetailPage() {
       </Card>
 
       {/* Key metrics */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-xs text-muted-foreground">기업가치</p>
@@ -278,7 +279,7 @@ export default function CompanyDetailPage() {
 
       {/* Actions */}
       <div className="space-y-2">
-        <Button variant="outline" className="w-full border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800" asChild>
+        <Button variant="outline" className="w-full border-entity/25 text-entity hover:bg-entity/10 hover:text-entity" asChild>
           <Link to={`/company/${id}/wallet`}>
             <Wallet className="mr-2 h-4 w-4" />
             법인 계좌 관리

@@ -16,6 +16,7 @@ import {
   FileText,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Spinner } from '@/components/ui/spinner'
 
 interface AdminStats {
   pending_users: number
@@ -58,7 +59,7 @@ export default function AdminPage() {
       description: '가입 승인 및 사용자 관리',
       icon: Users,
       href: '/admin/users',
-      color: 'bg-blue-100 text-blue-600',
+      color: 'bg-info/15 text-info',
       badge: stats.pending_users > 0 ? `${stats.pending_users}명 대기` : null,
     },
     {
@@ -66,7 +67,7 @@ export default function AdminPage() {
       description: '강의실 생성 및 관리',
       icon: GraduationCap,
       href: '/admin/classroom',
-      color: 'bg-green-100 text-green-600',
+      color: 'bg-success/15 text-success',
       badge: null,
     },
     {
@@ -74,7 +75,7 @@ export default function AdminPage() {
       description: '대출 심사 및 이자 처리',
       icon: Landmark,
       href: '/admin/loans',
-      color: 'bg-orange-100 text-orange-600',
+      color: 'bg-highlight/15 text-highlight',
       badge: stats.active_loans > 0 ? `${stats.active_loans}건 진행` : null,
     },
     {
@@ -82,7 +83,7 @@ export default function AdminPage() {
       description: 'KPI 규칙 및 배당 관리',
       icon: BarChart3,
       href: '/admin/kpi',
-      color: 'bg-purple-100 text-purple-600',
+      color: 'bg-entity/15 text-entity',
       badge: null,
     },
     {
@@ -90,7 +91,7 @@ export default function AdminPage() {
       description: '전체 유저에게 공지 알림 보내기',
       icon: Megaphone,
       href: '/admin/announce',
-      color: 'bg-red-100 text-red-600',
+      color: 'bg-coral/15 text-coral',
       badge: null,
     },
     {
@@ -112,7 +113,7 @@ export default function AdminPage() {
   ]
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-5 w-5 text-primary" />
         <h1 className="text-xl font-bold">관리자</h1>
@@ -120,7 +121,7 @@ export default function AdminPage() {
 
       {loading ? (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : (
         <div className="grid gap-3">

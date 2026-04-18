@@ -45,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { displayName } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 interface Classroom {
   id: number
@@ -400,7 +401,7 @@ export default function FeedPage() {
   if (classroomLoading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
@@ -438,7 +439,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       {/* Classroom selector (if multiple) */}
       {classrooms.length > 1 && (
         <select
@@ -471,7 +472,7 @@ export default function FeedPage() {
       {/* Create post button */}
       <Dialog open={newPostOpen} onOpenChange={setNewPostOpen}>
         <DialogTrigger asChild>
-          <Button className="w-full gap-2" variant="outline">
+          <Button className="w-full gap-2">
             <Plus className="h-4 w-4" />
             새 게시물 작성
           </Button>
@@ -628,14 +629,14 @@ export default function FeedPage() {
       {/* Posts list */}
       {loading ? (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : posts.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground">
           아직 게시물이 없습니다.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {posts.map((post) => (
             <Card key={post.id} className="transition-colors hover:bg-accent/30">
               <CardContent className="p-4">
@@ -739,7 +740,7 @@ export default function FeedPage() {
                     <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                       <button
                         onClick={() => handleLike(post.id, post.is_liked)}
-                        className={`flex items-center gap-1 ${post.is_liked ? 'text-red-500' : ''}`}
+                        className={`flex items-center gap-1 ${post.is_liked ? 'text-coral' : ''}`}
                       >
                         <Heart
                           className={`h-4 w-4 ${post.is_liked ? 'fill-current' : ''}`}

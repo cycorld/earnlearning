@@ -102,7 +102,7 @@ export function DisclosureSection({ companyId, isOwner }: Props) {
               아직 공시가 없습니다.
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {disclosures.map((d) => (
                 <div
                   key={d.id}
@@ -142,7 +142,7 @@ export function DisclosureSection({ companyId, isOwner }: Props) {
             <DialogTitle>공시 작성</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="period-from">기간 시작</Label>
                 <Input

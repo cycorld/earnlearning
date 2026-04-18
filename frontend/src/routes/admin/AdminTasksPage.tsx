@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, GripVertical, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Link } from 'react-router-dom'
 
 interface KanbanTask {
@@ -18,22 +19,22 @@ interface KanbanTask {
 
 const COLUMNS = [
   { key: 'backlog', label: 'Backlog', color: 'bg-gray-100' },
-  { key: 'todo', label: 'To Do', color: 'bg-blue-50' },
-  { key: 'in-progress', label: 'In Progress', color: 'bg-yellow-50' },
-  { key: 'done', label: 'Done', color: 'bg-green-50' },
+  { key: 'todo', label: 'To Do', color: 'bg-info/10' },
+  { key: 'in-progress', label: 'In Progress', color: 'bg-warning/10' },
+  { key: 'done', label: 'Done', color: 'bg-success/10' },
 ]
 
 const PRIORITY_COLORS: Record<string, string> = {
-  high: 'bg-red-100 text-red-700',
-  medium: 'bg-yellow-100 text-yellow-700',
+  high: 'bg-coral/15 text-coral',
+  medium: 'bg-warning/15 text-warning',
   low: 'bg-gray-100 text-gray-700',
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  feat: 'bg-purple-100 text-purple-700',
-  fix: 'bg-orange-100 text-orange-700',
+  feat: 'bg-entity/15 text-entity',
+  fix: 'bg-highlight/15 text-highlight',
   chore: 'bg-gray-100 text-gray-700',
-  content: 'bg-blue-100 text-blue-700',
+  content: 'bg-info/15 text-info',
 }
 
 export default function AdminTasksPage() {
@@ -61,7 +62,7 @@ export default function AdminTasksPage() {
     tasks.filter((t) => t.status === status)
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-4">
+    <div className="mx-auto max-w-6xl space-y-5 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link to="/admin" className="rounded-full p-1 hover:bg-accent">
@@ -84,7 +85,7 @@ export default function AdminTasksPage() {
 
       {loading ? (
         <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">

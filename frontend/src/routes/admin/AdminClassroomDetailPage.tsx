@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Spinner } from '@/components/ui/spinner'
 import {
   ArrowLeft,
   Users,
@@ -110,7 +111,7 @@ export default function AdminClassroomDetailPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
@@ -120,7 +121,7 @@ export default function AdminClassroomDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4">
+    <div className="mx-auto max-w-2xl space-y-5 p-4">
       {/* Header */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={() => navigate('/admin/classroom')}>
@@ -135,7 +136,7 @@ export default function AdminClassroomDetailPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
           <CardContent className="p-3 text-center">
             <Users className="mx-auto mb-1 h-5 w-5 text-muted-foreground" />
@@ -258,7 +259,7 @@ export default function AdminClassroomDetailPage() {
                         </span>
                       )}
                       {m.total_debt > 0 && (
-                        <span className="flex items-center gap-0.5 text-red-500">
+                        <span className="flex items-center gap-0.5 text-coral">
                           <Banknote className="h-3 w-3" />
                           -{formatMoney(m.total_debt)}
                         </span>

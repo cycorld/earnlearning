@@ -19,6 +19,7 @@ import {
 import { formatMoney } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
 import { MarkdownContent } from '@/components/MarkdownContent'
+import { Spinner } from '@/components/ui/spinner'
 
 interface UserProfile extends User {
   companies?: Company[]
@@ -102,7 +103,7 @@ export default function UserProfilePage() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Spinner />
       </div>
     )
   }
@@ -128,7 +129,7 @@ export default function UserProfilePage() {
   const grantApps = activity?.grant_apps ?? []
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       {/* User info */}
       <Card>
         <CardContent className="p-6">
@@ -180,7 +181,7 @@ export default function UserProfilePage() {
       {/* Stats */}
       {(profile.wallet_balance !== undefined ||
         profile.company_count !== undefined) && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-4">
           {profile.total_asset_value !== undefined && (
             <Card>
               <CardContent className="p-3 text-center">

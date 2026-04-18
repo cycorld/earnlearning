@@ -43,7 +43,7 @@ export default function AdminAnnouncePage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center gap-2">
         <Link to="/admin" className="rounded-full p-1 hover:bg-accent">
           <ArrowLeft className="h-5 w-5" />
@@ -99,7 +99,7 @@ export default function AdminAnnouncePage() {
             {sending ? '전송 중...' : '전체 유저에게 공지 보내기'}
           </Button>
           {result && (
-            <p className="text-center text-sm text-green-600 font-medium">{result}</p>
+            <p className="text-center text-sm text-success font-medium">{result}</p>
           )}
         </CardContent>
       </Card>
