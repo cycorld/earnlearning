@@ -54,7 +54,8 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center justify-between px-4">
         <Link to="/feed" className="flex items-center gap-2">
-          <span className="text-lg font-bold text-primary">EarnLearning</span>
+          <img src="/favicon.svg" alt="" aria-hidden className="h-7 w-7" />
+          <span className="text-lg font-bold tracking-tight text-primary">EarnLearning</span>
           <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
             {__BUILD_NUMBER__ !== 'dev' ? `#${__BUILD_NUMBER__}` : 'dev'}
             {' · '}
