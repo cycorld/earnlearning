@@ -121,7 +121,7 @@ export default function MarketPage() {
         <>
           <div className="space-y-4">
             {jobs.map((job) => (
-              <Link key={job.id} to={`/market/${job.id}`}>
+              <Link key={job.id} to={`/market/${job.id}`} className="block">
                 <Card className="transition-colors hover:bg-accent/30">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">

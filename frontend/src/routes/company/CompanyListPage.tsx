@@ -99,7 +99,7 @@ function CompanyGrid({
   return (
     <div className="space-y-4">
       {companies.map((company) => (
-        <Link key={company.id} to={`/company/${company.id}`}>
+        <Link key={company.id} to={`/company/${company.id}`} className="block">
           <Card className="transition-colors hover:bg-accent/30">
             <CardContent className="flex items-center gap-4 p-4">
               <Avatar className="h-12 w-12">
