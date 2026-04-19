@@ -41,6 +41,7 @@ type WikiRepository interface {
 	// FTS5 가상 테이블 조작
 	UpsertDoc(slug, title, body string) error
 	DeleteDoc(slug string) error
+	GetDoc(slug string) (title, body string, err error)
 	// Search 는 BM25 정렬된 결과 반환. scope 가 비어있으면 전체.
 	Search(query string, scope []string, limit int) ([]*WikiSearchHit, error)
 	// Reset clears all docs (used on full reindex)

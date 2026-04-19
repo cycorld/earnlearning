@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,8 +31,12 @@ type ChatUseCase struct {
 	tools       *ChatToolRegistry
 	llm         ChatLLMClient
 	loader      WikiLoader // optional; used for manual reindex
+	wikiRootDir string     // optional; used by admin wiki editor for file write-through
 	maxToolHops int
 }
+
+// SetWikiRootDir — main.go 에서 wiki 루트 디렉토리를 주입 (admin 편집기 파일 쓰기용).
+func (uc *ChatUseCase) SetWikiRootDir(dir string) { uc.wikiRootDir = dir }
 
 // WikiLoader 는 관리자 재인덱스 요청 시 호출하는 선택적 의존성.
 type WikiLoader interface {
@@ -210,6 +216,81 @@ func (uc *ChatUseCase) AdminReindexWiki() (int, error) {
 
 func (uc *ChatUseCase) ListWikiDocs() ([]*chat.WikiDocMeta, error) {
 	return uc.wikiRepo.ListMeta()
+}
+
+// AdminUpdateWikiDocCallable — handler 가 rootDir 모르고 호출하도록.
+func (uc *ChatUseCase) AdminUpdateWikiDocAt(slug, title, body string) error {
+	return uc.AdminUpdateWikiDoc(slug, title, body, uc.wikiRootDir)
+}
+
+// AdminGetWikiDoc — admin 전용. meta + body 반환.
+func (uc *ChatUseCase) AdminGetWikiDoc(slug string) (*chat.WikiDocMeta, string, error) {
+	meta, err := uc.wikiRepo.FindMeta(slug)
+	if err != nil {
+		return nil, "", err
+	}
+	if meta == nil {
+		return nil, "", fmt.Errorf("wiki doc not found: %s", slug)
+	}
+	_, body, err := uc.wikiRepo.GetDoc(slug)
+	if err != nil {
+		return nil, "", err
+	}
+	return meta, body, nil
+}
+
+// AdminUpdateWikiDoc — admin 전용. FTS5 + meta 업데이트, 가능하면 파일도 덮어씀.
+// rootDir 가 비어있거나 파일 쓰기 실패하면 DB 만 업데이트 (warn 로그). 다음 재배포 시
+// .md 파일에서 다시 동기화되므로, 영구화하려면 PR 머지 필요.
+func (uc *ChatUseCase) AdminUpdateWikiDoc(slug, title, body, rootDir string) error {
+	if strings.TrimSpace(slug) == "" {
+		return fmt.Errorf("empty slug")
+	}
+	if strings.TrimSpace(body) == "" {
+		return fmt.Errorf("empty body")
+	}
+	meta, err := uc.wikiRepo.FindMeta(slug)
+	if err != nil {
+		return err
+	}
+	if meta == nil {
+		return fmt.Errorf("wiki doc not found: %s", slug)
+	}
+	if title == "" {
+		title = meta.Title
+	}
+	if err := uc.wikiRepo.UpsertDoc(slug, title, body); err != nil {
+		return fmt.Errorf("upsert doc: %w", err)
+	}
+	meta.Title = title
+	if err := uc.wikiRepo.UpsertMeta(meta); err != nil {
+		return fmt.Errorf("upsert meta: %w", err)
+	}
+	// best-effort 파일 쓰기 (개발 환경에서 영구화). 컨테이너 환경에선 ephemeral.
+	if rootDir != "" && meta.Path != "" {
+		full := filepath.Join(rootDir, meta.Path)
+		// frontmatter 보존: 기존 파일이 있으면 frontmatter 영역만 유지하고 body 만 교체
+		newContent := composeMarkdown(full, title, body)
+		if err := os.WriteFile(full, []byte(newContent), 0o644); err != nil {
+			log.Printf("[chat] admin wiki file write failed (DB 는 갱신됨): %v", err)
+		}
+	}
+	return nil
+}
+
+// composeMarkdown — 기존 파일의 frontmatter 를 보존하면서 body 만 교체.
+// 파일이 없거나 frontmatter 가 없으면 새로 만들어 frontmatter + body 형식으로 작성.
+func composeMarkdown(path, title, body string) string {
+	existing, err := os.ReadFile(path)
+	if err == nil {
+		s := string(existing)
+		if strings.HasPrefix(s, "---\n") {
+			if end := strings.Index(s[4:], "\n---\n"); end >= 0 {
+				return s[:4+end+5] + body
+			}
+		}
+	}
+	return "---\ntitle: " + title + "\n---\n" + body
 }
 
 // ============================================================================

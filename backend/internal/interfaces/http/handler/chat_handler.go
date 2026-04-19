@@ -264,6 +264,43 @@ func (h *ChatHandler) AdminGetSession(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(s))
 }
 
+// AdminGetWikiDoc — GET /admin/chat/wiki/:slug — body + meta 반환 (admin 편집용).
+func (h *ChatHandler) AdminGetWikiDoc(c echo.Context) error {
+	slug := c.Param("slug")
+	if slug == "" {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "slug required"))
+	}
+	meta, body, err := h.uc.AdminGetWikiDoc(slug)
+	if err != nil {
+		return chatErrorResponse(c, err)
+	}
+	return c.JSON(http.StatusOK, successResp(map[string]any{
+		"meta": meta, "body": body,
+	}))
+}
+
+type adminUpdateWikiInput struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
+
+// AdminUpdateWikiDoc — PUT /admin/chat/wiki/:slug — body 갱신.
+// FTS5 + meta 즉시 반영, 가능하면 .md 파일도 덮어씀 (dev 환경 영구화).
+func (h *ChatHandler) AdminUpdateWikiDoc(c echo.Context) error {
+	slug := c.Param("slug")
+	if slug == "" {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "slug required"))
+	}
+	var in adminUpdateWikiInput
+	if err := c.Bind(&in); err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 요청"))
+	}
+	if err := h.uc.AdminUpdateWikiDocAt(slug, in.Title, in.Body); err != nil {
+		return chatErrorResponse(c, err)
+	}
+	return c.JSON(http.StatusOK, successResp(map[string]string{"status": "updated"}))
+}
+
 func (h *ChatHandler) AdminListWiki(c echo.Context) error {
 	items, err := h.uc.ListWikiDocs()
 	if err != nil {
