@@ -557,6 +557,18 @@ func (uc *ChatUseCase) AskStream(ctx context.Context, in AskInput) (<-chan AskSt
 	if _, err := uc.messageRepo.Create(userMsg); err != nil {
 		return nil, err
 	}
+
+	// FAQ shortcut (#090) — 짧은 인사/감사 류는 LLM 안 거치고 즉시 응답.
+	// LLM 슬롯 점유 + 비용 절약. 매칭 못 한 모든 메시지는 평소처럼 LLM 호출.
+	if faqResp, ok := lookupFAQ(in.Message); ok {
+		out := make(chan AskStreamEvent, 4)
+		go func() {
+			defer close(out)
+			uc.respondFAQ(sess, in, faqResp, out)
+		}()
+		return out, nil
+	}
+
 	model, effort := uc.resolveModelAndEffort(skill, in.Mode, in.IsAdmin)
 	history, err := uc.messageRepo.ListBySession(sess.ID, 50)
 	if err != nil {
