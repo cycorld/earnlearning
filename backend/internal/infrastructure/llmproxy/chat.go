@@ -93,8 +93,14 @@ type ChatResponse struct {
 }
 
 // ChatComplete 은 /v1/chat/completions 를 non-streaming 으로 호출.
-// streaming 은 ChatCompleteStream 으로 추후 추가.
+// #087: in-flight semaphore 로 동시 호출을 cap (default 8). cap 초과 시
+// 큐잉 (블로킹) — llm.cycorld.com 자체 과부하 방지.
 func (c *Client) ChatComplete(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
+	if err := c.acquireChat(ctx); err != nil {
+		return nil, fmt.Errorf("queue cancelled: %w", err)
+	}
+	defer c.releaseChat()
+
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("marshal chat request: %w", err)
@@ -144,7 +150,21 @@ func truncate(b []byte, n int) string {
 //
 // 본 구현은 tool_calls 가 없는 "최종 응답" 전용 — caller (use case) 가 tool loop
 // 마지막 turn 에서만 호출. tool_calls delta 는 무시.
+//
+// #087: ChatComplete 와 동일하게 in-flight semaphore 로 cap. release 는 stream
+// 채널이 close 될 때 (goroutine 종료) 호출.
 func (c *Client) ChatCompleteStream(ctx context.Context, req *ChatRequest) (<-chan ChatStreamEvent, error) {
+	if err := c.acquireChat(ctx); err != nil {
+		return nil, fmt.Errorf("queue cancelled: %w", err)
+	}
+	// 실패 path 는 즉시 release. 성공 path 는 goroutine 종료 시.
+	releaseOnExit := true
+	defer func() {
+		if releaseOnExit {
+			c.releaseChat()
+		}
+	}()
+
 	streamReq := *req // shallow copy
 	streamReq.Stream = true
 	streamReq.StreamOptions = &StreamOptions{IncludeUsage: true}
@@ -185,10 +205,12 @@ func (c *Client) ChatCompleteStream(ctx context.Context, req *ChatRequest) (<-ch
 	}
 
 	out := make(chan ChatStreamEvent, 16)
+	releaseOnExit = false // ownership 이전 — goroutine 이 release 책임
 	go func() {
 		defer close(out)
 		defer resp.Body.Close()
 		defer cancel()
+		defer c.releaseChat()
 		parseSSEStream(resp.Body, out)
 	}()
 	return out, nil
