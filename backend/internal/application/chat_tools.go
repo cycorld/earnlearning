@@ -117,9 +117,16 @@ func BuildChatTools(
 			}
 			var sb strings.Builder
 			for _, h := range hits {
-				sb.WriteString("## " + h.Title + " (" + h.Slug + ")\n")
+				meta, _ := wikiRepo.FindMeta(h.Slug)
+				url := wikiNotionURL(meta)
+				sb.WriteString("## " + h.Title + "\n")
+				if url != "" {
+					sb.WriteString("출처: " + url + "\n")
+				}
+				sb.WriteString("(slug: " + h.Slug + ")\n")
 				sb.WriteString(h.Snippet + "\n\n")
 			}
+			sb.WriteString("\n_답변에서 이 문서를 인용할 때는 위 '출처:' 줄의 URL 만 사용해. slug 는 링크로 만들지 마._\n")
 			return sb.String(), nil
 		},
 	})
@@ -429,4 +436,17 @@ func ToToolSpecs(tools []*ChatTool) []map[string]any {
 		})
 	}
 	return out
+}
+
+// wikiNotionURL — WikiDocMeta 의 notion_page_id (UUID dashed) 를
+// `https://www.notion.so/<32hex>` 절대 URL 로 변환. 없으면 빈 문자열.
+func wikiNotionURL(meta *chat.WikiDocMeta) string {
+	if meta == nil || meta.NotionPageID == "" {
+		return ""
+	}
+	id := strings.ReplaceAll(meta.NotionPageID, "-", "")
+	if len(id) != 32 {
+		return ""
+	}
+	return "https://www.notion.so/" + id
 }
