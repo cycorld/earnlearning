@@ -169,6 +169,85 @@ func (uc *UserDBUseCase) Delete(userID, dbID int) error {
 	return uc.repo.Delete(dbID)
 }
 
+// AdminReconcileResult — #016: SQLite ↔ PG 정합성 검사 결과.
+type AdminReconcileResult struct {
+	Checked int                          `json:"checked"`
+	Removed int                          `json:"removed"`
+	Errors  int                          `json:"errors"`
+	Orphans []AdminReconcileOrphanDetail `json:"orphans"`
+}
+
+type AdminReconcileOrphanDetail struct {
+	ID      int    `json:"id"`
+	UserID  int    `json:"user_id"`
+	DBName  string `json:"db_name"`
+	Action  string `json:"action"` // "removed" | "error"
+	Error   string `json:"error,omitempty"`
+}
+
+// AdminReconcile — admin only. SQLite 의 모든 user_databases 행을 순회하면서
+// PG 에 실제 DB 가 없으면 SQLite 행을 삭제 (CLI delete 후 발생하는 고아 행 정리).
+// PG 에 있는 행은 건드리지 않음.
+func (uc *UserDBUseCase) AdminReconcile() (*AdminReconcileResult, error) {
+	if uc.provisioner == nil {
+		return nil, userdb.ErrProvisionerDown
+	}
+	rows, err := uc.repo.ListAll()
+	if err != nil {
+		return nil, err
+	}
+	res := &AdminReconcileResult{Checked: len(rows)}
+	for _, u := range rows {
+		exists, err := uc.provisioner.DBExists(u.DBName)
+		if err != nil {
+			res.Errors++
+			res.Orphans = append(res.Orphans, AdminReconcileOrphanDetail{
+				ID: u.ID, UserID: u.UserID, DBName: u.DBName, Action: "error", Error: err.Error(),
+			})
+			continue
+		}
+		if exists {
+			continue
+		}
+		// 고아 — SQLite 에서 삭제
+		if err := uc.repo.Delete(u.ID); err != nil {
+			res.Errors++
+			res.Orphans = append(res.Orphans, AdminReconcileOrphanDetail{
+				ID: u.ID, UserID: u.UserID, DBName: u.DBName, Action: "error", Error: err.Error(),
+			})
+			continue
+		}
+		res.Removed++
+		res.Orphans = append(res.Orphans, AdminReconcileOrphanDetail{
+			ID: u.ID, UserID: u.UserID, DBName: u.DBName, Action: "removed",
+		})
+	}
+	return res, nil
+}
+
+// AdminDeleteByDBName — admin only. db_name 으로 PG + SQLite 양쪽 정리.
+// "운영자가 CLI 로 PG 만 지운 케이스" 를 빠르게 정리할 때 사용.
+// PG 에 이미 없으면 SQLite 만 정리하고 정상 반환.
+func (uc *UserDBUseCase) AdminDeleteByDBName(dbName string) error {
+	if uc.provisioner == nil {
+		return userdb.ErrProvisionerDown
+	}
+	u, err := uc.repo.FindByDBName(dbName)
+	if err != nil {
+		return err
+	}
+	exists, err := uc.provisioner.DBExists(u.DBName)
+	if err != nil {
+		return fmt.Errorf("%w: %v", userdb.ErrProvisionFailed, err)
+	}
+	if exists {
+		if err := uc.provisioner.Delete(u.DBName, u.PGUsername); err != nil {
+			return fmt.Errorf("%w: %v", userdb.ErrProvisionFailed, err)
+		}
+	}
+	return uc.repo.Delete(u.ID)
+}
+
 // --- Helpers ---
 
 // buildURL 은 학생에게 표시할 DATABASE_URL 문자열을 만든다.
