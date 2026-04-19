@@ -291,6 +291,12 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		admin.GET("/chat/llm/stats", h.Chat.AdminLLMStats)
 	}
 
+	// User Databases admin reconcile (#016)
+	if h.UserDB != nil {
+		admin.POST("/user-databases/reconcile", h.UserDB.AdminReconcileUserDBs)
+		admin.DELETE("/user-databases/by-dbname/:db_name", h.UserDB.AdminDeleteUserDBByName)
+	}
+
 	// ================================================================
 	// OAuth routes
 	// ================================================================

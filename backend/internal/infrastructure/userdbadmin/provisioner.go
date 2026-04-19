@@ -26,6 +26,9 @@ type Provisioner interface {
 	Create(username, projectName string) (*CreatedDB, error)
 	Delete(dbName, pgUsername string) error
 	Rotate(pgUsername string) (newPassword string, err error)
+	// DBExists — pg_database 에 dbName 이 있는지 확인 (#016 reconcile 용).
+	// Noop 구현은 항상 true (테스트가 reconcile 로 행 지우는 거 방지).
+	DBExists(dbName string) (bool, error)
 }
 
 // CreatedDB 는 Create 결과. Host/Port 는 학생이 접속할 공개 주소.
@@ -276,6 +279,20 @@ func (p *PGProvisioner) Delete(dbName, pgUsername string) error {
 	return nil
 }
 
+// DBExists — pg_database 카탈로그에서 dbName 조회. PG ROLE 까지는 안 봄
+// (DB 가 있으면 실제 학생이 쓸 수 있는 상태로 간주).
+func (p *PGProvisioner) DBExists(dbName string) (bool, error) {
+	var n int
+	err := p.db.QueryRow(`SELECT 1 FROM pg_database WHERE datname = $1`, dbName).Scan(&n)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("pg_database lookup: %w", err)
+	}
+	return true, nil
+}
+
 func (p *PGProvisioner) Rotate(pgUsername string) (string, error) {
 	password, err := generatePassword()
 	if err != nil {
@@ -340,6 +357,9 @@ func (n *NoopProvisioner) Create(username, projectName string) (*CreatedDB, erro
 }
 
 func (n *NoopProvisioner) Delete(dbName, pgUsername string) error { return nil }
+
+// DBExists — Noop 은 항상 true (reconcile 가 SQLite 행 지우는 사고 방지).
+func (n *NoopProvisioner) DBExists(dbName string) (bool, error) { return true, nil }
 
 func (n *NoopProvisioner) Rotate(pgUsername string) (string, error) {
 	return "noop-rotated-" + pgUsername, nil

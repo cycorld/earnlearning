@@ -74,6 +74,54 @@ func (r *UserDBRepo) FindByUserIDAndProject(userID int, projectName string) (*us
 	return u, nil
 }
 
+// FindByDBName — admin reconcile / 직접 삭제용 (#016).
+func (r *UserDBRepo) FindByDBName(dbName string) (*userdb.UserDatabase, error) {
+	u := &userdb.UserDatabase{}
+	var lastRotated sql.NullTime
+	err := r.db.QueryRow(`
+		SELECT id, user_id, project_name, db_name, pg_username, host, port, created_at, last_rotated
+		FROM user_databases WHERE db_name = ?`, dbName).Scan(
+		&u.ID, &u.UserID, &u.ProjectName, &u.DBName, &u.PGUsername, &u.Host, &u.Port, &u.CreatedAt, &lastRotated,
+	)
+	if err == sql.ErrNoRows {
+		return nil, userdb.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if lastRotated.Valid {
+		t := lastRotated.Time
+		u.LastRotated = &t
+	}
+	return u, nil
+}
+
+// ListAll — admin reconcile (#016).
+func (r *UserDBRepo) ListAll() ([]*userdb.UserDatabase, error) {
+	rows, err := r.db.Query(`
+		SELECT id, user_id, project_name, db_name, pg_username, host, port, created_at, last_rotated
+		FROM user_databases
+		ORDER BY id ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("list all user_databases: %w", err)
+	}
+	defer rows.Close()
+	var out []*userdb.UserDatabase
+	for rows.Next() {
+		u := &userdb.UserDatabase{}
+		var lastRotated sql.NullTime
+		if err := rows.Scan(&u.ID, &u.UserID, &u.ProjectName, &u.DBName, &u.PGUsername, &u.Host, &u.Port, &u.CreatedAt, &lastRotated); err != nil {
+			return nil, err
+		}
+		if lastRotated.Valid {
+			t := lastRotated.Time
+			u.LastRotated = &t
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
 func (r *UserDBRepo) ListByUserID(userID int) ([]*userdb.UserDatabase, error) {
 	rows, err := r.db.Query(`
 		SELECT id, user_id, project_name, db_name, pg_username, host, port, created_at, last_rotated

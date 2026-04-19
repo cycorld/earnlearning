@@ -76,6 +76,24 @@ ssh earnlearning 'sudo earnlearning-db delete seowon todoapp'
 ```
 활성 세션 강제 종료 후 `DROP DATABASE` + `DROP ROLE`.
 
+⚠️ **주의 (#016)**: `earnlearning-db delete` 는 PG 만 정리, **LMS SQLite 의
+`user_databases` 행은 남음** → 학생 프로필에 좀비 카드. 두 가지 처리법:
+
+**A. 운영자가 즉시 정리 (권장)** — admin 토큰으로 DB명 직접 지정:
+```bash
+ADMIN_TOKEN='Bearer ...'  # admin 로그인 토큰
+DB_NAME='seowon_todoapp'
+curl -X DELETE -H "Authorization: $ADMIN_TOKEN" \
+  "https://earnlearning.com/api/admin/user-databases/by-dbname/$DB_NAME"
+```
+
+**B. 일괄 정합성 검사** — 모든 SQLite 행을 PG 와 대조해 고아 자동 제거:
+```bash
+curl -X POST -H "Authorization: $ADMIN_TOKEN" \
+  "https://earnlearning.com/api/admin/user-databases/reconcile"
+# → { "checked": N, "removed": M, "errors": K, "orphans": [...] }
+```
+
 ### 비밀번호 재발급
 ```bash
 ssh earnlearning 'sudo earnlearning-db rotate seowon todoapp'

@@ -112,6 +112,30 @@ func (h *UserDBHandler) DeleteMyDatabase(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "데이터베이스가 삭제되었습니다"}))
 }
 
+// AdminReconcileUserDBs — POST /api/admin/user-databases/reconcile (#016).
+// SQLite 의 user_databases 행을 PG 와 대조하여 고아 행 (PG 없음) 자동 정리.
+// `sudo earnlearning-db delete` 로 PG 만 지운 케이스 정리용.
+func (h *UserDBHandler) AdminReconcileUserDBs(c echo.Context) error {
+	res, err := h.uc.AdminReconcile()
+	if err != nil {
+		return userdbErrorResponse(c, err)
+	}
+	return c.JSON(http.StatusOK, successResp(res))
+}
+
+// AdminDeleteUserDBByName — DELETE /api/admin/user-databases/by-dbname/:db_name (#016).
+// db_name 으로 PG + SQLite 양쪽 정리. PG 에 이미 없으면 SQLite 만.
+func (h *UserDBHandler) AdminDeleteUserDBByName(c echo.Context) error {
+	dbName := c.Param("db_name")
+	if dbName == "" {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "db_name required"))
+	}
+	if err := h.uc.AdminDeleteByDBName(dbName); err != nil {
+		return userdbErrorResponse(c, err)
+	}
+	return c.JSON(http.StatusOK, successResp(map[string]string{"db_name": dbName, "status": "deleted"}))
+}
+
 // userdbErrorResponse 는 userdb 도메인 에러를 적절한 HTTP 응답으로 매핑한다.
 func userdbErrorResponse(c echo.Context, err error) error {
 	switch {
