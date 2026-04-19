@@ -1095,5 +1095,15 @@
       "Notion",
       "통합"
     ]
+  },
+  {
+    "slug": "095-wiki-slug-decode",
+    "title": "위키 slug `/` 포함 path param URL-decode 수정",
+    "date": "2026-04-19",
+    "tags": [
+      "챗봇",
+      "위키",
+      "핫픽스"
+    ]
   }
 ]
