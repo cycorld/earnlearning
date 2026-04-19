@@ -58,3 +58,11 @@ type LLMChatResponse struct {
 	Choices []LLMChatChoice
 	Usage   LLMChatUsage
 }
+
+// LLMStreamEvent — adapter 가 흘려보내는 SSE chunk 추상화. 한 번에 하나만 채워짐.
+type LLMStreamEvent struct {
+	TextDelta    string        // assistant content delta
+	FinishReason string        // "stop" | "length" 등
+	Usage        *LLMChatUsage // 마지막 chunk 의 누적 usage
+	Err          error
+}

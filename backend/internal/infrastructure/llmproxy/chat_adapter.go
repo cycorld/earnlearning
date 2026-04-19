@@ -93,3 +93,75 @@ func (a *ChatAdapter) ChatComplete(ctx context.Context, req *application.LLMChat
 	}
 	return out, nil
 }
+
+// ChatCompleteStream — application.ChatLLMClient 의 streaming 메서드.
+// 내부 ChatStreamEvent 를 application.LLMStreamEvent 로 변환.
+func (a *ChatAdapter) ChatCompleteStream(ctx context.Context, req *application.LLMChatRequest) (<-chan application.LLMStreamEvent, error) {
+	if req == nil {
+		return nil, nil
+	}
+	msgs := make([]ChatMessage, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		tcs := make([]ChatToolCall, 0, len(m.ToolCalls))
+		for _, tc := range m.ToolCalls {
+			tcs = append(tcs, ChatToolCall{
+				ID:   tc.ID,
+				Type: tc.Type,
+				Function: ChatToolFunction{
+					Name:      tc.Function.Name,
+					Arguments: tc.Function.Arguments,
+				},
+			})
+		}
+		msgs = append(msgs, ChatMessage{
+			Role:       m.Role,
+			Content:    m.Content,
+			ToolCalls:  tcs,
+			ToolCallID: m.ToolCallID,
+			Name:       m.Name,
+		})
+	}
+	tools := make([]ChatToolSpec, 0, len(req.Tools))
+	for _, t := range req.Tools {
+		tools = append(tools, ChatToolSpec{
+			Type: t.Type,
+			Function: ChatToolSpecFunction{
+				Name:        t.Function.Name,
+				Description: t.Function.Description,
+				Parameters:  t.Function.Parameters,
+			},
+		})
+	}
+	inner := &ChatRequest{
+		Model:           req.Model,
+		Messages:        msgs,
+		MaxTokens:       req.MaxTokens,
+		ReasoningEffort: req.ReasoningEffort,
+		Tools:           tools,
+		ToolChoice:      req.ToolChoice,
+	}
+	src, err := a.c.ChatCompleteStream(ctx, inner)
+	if err != nil {
+		return nil, err
+	}
+	out := make(chan application.LLMStreamEvent, 16)
+	go func() {
+		defer close(out)
+		for ev := range src {
+			outEv := application.LLMStreamEvent{
+				TextDelta:    ev.TextDelta,
+				FinishReason: ev.FinishReason,
+				Err:          ev.Err,
+			}
+			if ev.Usage != nil {
+				outEv.Usage = &application.LLMChatUsage{
+					PromptTokens:       ev.Usage.PromptTokens,
+					CompletionTokens:   ev.Usage.CompletionTokens,
+					PromptCachedTokens: ev.Usage.PromptCachedTokens,
+				}
+			}
+			out <- outEv
+		}
+	}()
+	return out, nil
+}

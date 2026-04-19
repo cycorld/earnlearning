@@ -3,6 +3,7 @@ import { MessageCircle, Send, Sparkles, Trash2, X, ZapOff, Zap } from 'lucide-re
 import { toast } from 'sonner'
 
 import { api, ApiError } from '@/lib/api'
+import { getToken } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -48,6 +49,104 @@ interface AskResponse {
 }
 
 type Mode = 'fast' | 'deep'
+
+interface StreamEvent {
+  type: 'tool_call' | 'tool_result' | 'text_delta' | 'done' | 'error' | 'close'
+  delta?: string
+  tool_name?: string
+  tool_id?: string
+  tool_args?: string
+  tool_content?: string
+  message_id?: number
+  tokens?: number
+  error?: string
+}
+
+interface StreamHandlers {
+  onToolCall?: (ev: StreamEvent) => void
+  onToolResult?: (ev: StreamEvent) => void
+  onTextDelta?: (delta: string) => void
+  onError?: (err: string) => void
+  onDone?: (ev: StreamEvent) => void
+}
+
+// streamAsk — POST /chat/sessions/:id/ask/stream 을 fetch + ReadableStream 으로 소비.
+// EventSource 는 GET 만 지원하므로 fetch 를 직접 사용.
+async function streamAsk(
+  sessionID: number,
+  message: string,
+  mode: Mode,
+  skillSlug: string,
+  handlers: StreamHandlers,
+): Promise<void> {
+  const token = getToken()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'text/event-stream',
+  }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const resp = await fetch(`/api/chat/sessions/${sessionID}/ask/stream`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ message, mode, skill_slug: skillSlug || undefined }),
+  })
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '')
+    throw new Error(`HTTP ${resp.status}: ${text || resp.statusText}`)
+  }
+  const reader = resp.body?.getReader()
+  if (!reader) throw new Error('스트리밍을 지원하지 않는 환경입니다.')
+  const decoder = new TextDecoder()
+  let buffer = ''
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    // SSE event boundary: \n\n
+    let idx = buffer.indexOf('\n\n')
+    while (idx !== -1) {
+      const event = buffer.slice(0, idx)
+      buffer = buffer.slice(idx + 2)
+      processSseEvent(event, handlers)
+      idx = buffer.indexOf('\n\n')
+    }
+  }
+}
+
+function processSseEvent(event: string, handlers: StreamHandlers): void {
+  for (const line of event.split('\n')) {
+    if (!line.startsWith('data:')) continue
+    const payload = line.slice(5).trim()
+    if (!payload) continue
+    let parsed: StreamEvent
+    try {
+      parsed = JSON.parse(payload) as StreamEvent
+    } catch {
+      continue
+    }
+    switch (parsed.type) {
+      case 'tool_call':
+        handlers.onToolCall?.(parsed)
+        break
+      case 'tool_result':
+        handlers.onToolResult?.(parsed)
+        break
+      case 'text_delta':
+        if (parsed.delta) handlers.onTextDelta?.(parsed.delta)
+        break
+      case 'error':
+        handlers.onError?.(parsed.error || '알 수 없는 오류')
+        break
+      case 'done':
+        handlers.onDone?.(parsed)
+        break
+      case 'close':
+        // end of stream — caller exits read loop on EOF
+        break
+    }
+  }
+}
 
 export default function ChatDock() {
   const { user } = useAuth()
@@ -123,30 +222,65 @@ export default function ChatDock() {
       content: text,
       created_at: new Date().toISOString(),
     }
-    setMessages((prev) => [...prev, userMsg])
+    // assistant placeholder — streaming 으로 채워짐
+    const assistantId = -Date.now() - 1
+    const assistantPlaceholder: Message = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      created_at: new Date().toISOString(),
+    }
+    setMessages((prev) => [...prev, userMsg, assistantPlaceholder])
     setInput('')
     setSending(true)
+
     try {
-      const resp = await api.post<AskResponse>(`/chat/sessions/${s.id}/ask`, {
-        message: text,
-        mode,
-        skill_slug: activeSkillSlug || undefined,
-      })
-      // Replace optimistic with actual + add assistant
-      setMessages((prev) => {
-        const withoutOpt = prev.filter((m) => m.id !== optimisticId)
-        // append the optimistic as "real" (no ID from server for user msg here; just keep local one)
-        const next = [...withoutOpt, { ...userMsg, id: optimisticId }]
-        // tool logs (show collapsed)
-        if (resp.tool_logs && resp.tool_logs.length > 0) {
-          next.push(...resp.tool_logs)
-        }
-        if (resp.message) next.push(resp.message)
-        return next
+      await streamAsk(s.id, text, mode, activeSkillSlug, {
+        onToolCall: (ev) => {
+          setMessages((prev) => {
+            // 기존 placeholder 의 tool_calls 에 추가
+            return prev.map((m) => {
+              if (m.id !== assistantId) return m
+              const tc = { id: ev.tool_id || '', name: ev.tool_name || '' }
+              return { ...m, tool_calls: [...(m.tool_calls ?? []), tc] }
+            })
+          })
+        },
+        onToolResult: (ev) => {
+          // tool 메시지를 placeholder 직전에 끼워넣음
+          const toolMsg: Message = {
+            id: -Date.now() - Math.random(),
+            role: 'tool',
+            content: ev.tool_content || '',
+            tool_call_id: ev.tool_id,
+            created_at: new Date().toISOString(),
+          }
+          setMessages((prev) => {
+            const idx = prev.findIndex((m) => m.id === assistantId)
+            if (idx === -1) return [...prev, toolMsg]
+            return [...prev.slice(0, idx), toolMsg, ...prev.slice(idx)]
+          })
+        },
+        onTextDelta: (delta) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: m.content + delta } : m,
+            ),
+          )
+        },
+        onError: (err) => {
+          toast.error(err)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content: m.content || `❌ ${err}` }
+                : m,
+            ),
+          )
+        },
       })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '답변을 받지 못했습니다.')
-      // keep the user message (don't remove) so they can retry
     } finally {
       setSending(false)
     }
