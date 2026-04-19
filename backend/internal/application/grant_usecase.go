@@ -3,6 +3,7 @@ package application
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/earnlearning/backend/internal/domain/grant"
 	"github.com/earnlearning/backend/internal/domain/notification"
@@ -88,6 +89,9 @@ func (uc *GrantUseCase) ListGrants(status string, page, limit int) ([]*grant.Gra
 }
 
 func (uc *GrantUseCase) ApplyToGrant(grantID int, input ApplyGrantInput, userID int) (*grant.GrantApplication, error) {
+	if strings.TrimSpace(input.Proposal) == "" {
+		return nil, fmt.Errorf("입력된 내용이 없습니다. 내용을 입력해 주세요")
+	}
 	g, err := uc.repo.FindByID(grantID)
 	if err != nil {
 		return nil, err
