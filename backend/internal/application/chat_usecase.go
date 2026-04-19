@@ -41,8 +41,17 @@ type ChatUseCase struct {
 	llm         ChatLLMClient
 	loader      WikiLoader // optional; used for manual reindex
 	wikiRootDir string     // optional; used by admin wiki editor for file write-through
+	notion      NotionFetcher // optional; used by Notion 자동 동기화 (#082)
 	maxToolHops int
 }
+
+// NotionFetcher — Notion API 에서 페이지 markdown 을 가져오는 인터페이스 (test fake 용).
+type NotionFetcher interface {
+	FetchPageMarkdown(ctx context.Context, pageID string) (string, error)
+}
+
+// SetNotion — main.go 에서 Notion client 주입 (NotionToken 있을 때만).
+func (uc *ChatUseCase) SetNotion(n NotionFetcher) { uc.notion = n }
 
 // SetWikiRootDir — main.go 에서 wiki 루트 디렉토리를 주입 (admin 편집기 파일 쓰기용).
 func (uc *ChatUseCase) SetWikiRootDir(dir string) { uc.wikiRootDir = dir }
@@ -233,6 +242,64 @@ func (uc *ChatUseCase) ListWikiDocs() ([]*chat.WikiDocMeta, error) {
 // AdminUpdateWikiDocCallable — handler 가 rootDir 모르고 호출하도록.
 func (uc *ChatUseCase) AdminUpdateWikiDocAt(slug, title, body string) error {
 	return uc.AdminUpdateWikiDoc(slug, title, body, uc.wikiRootDir)
+}
+
+// AdminSyncNotionOne — Notion 에서 한 wiki 문서 fetch → DB + .md 갱신 (#082).
+func (uc *ChatUseCase) AdminSyncNotionOne(ctx context.Context, slug string) error {
+	if uc.notion == nil {
+		return fmt.Errorf("notion 통합이 설정되지 않았습니다 (NOTION_INTEGRATION_TOKEN)")
+	}
+	meta, err := uc.wikiRepo.FindMeta(slug)
+	if err != nil {
+		return err
+	}
+	if meta == nil {
+		return fmt.Errorf("wiki doc not found: %s", slug)
+	}
+	if meta.NotionPageID == "" {
+		return fmt.Errorf("이 문서는 notion_page_id 가 없습니다: %s", slug)
+	}
+	body, err := uc.notion.FetchPageMarkdown(ctx, meta.NotionPageID)
+	if err != nil {
+		return fmt.Errorf("notion fetch: %w", err)
+	}
+	if strings.TrimSpace(body) == "" {
+		return fmt.Errorf("notion 응답이 비어있음 (페이지 권한 / 빈 페이지 확인)")
+	}
+	// 제목은 기존 것 유지 (Notion 제목이 안정적이지 않은 경우 admin 의도가 깨질 수 있음)
+	return uc.AdminUpdateWikiDoc(slug, meta.Title, body, uc.wikiRootDir)
+}
+
+// AdminSyncNotionAll — notion_page_id 가 있는 모든 wiki 문서를 일괄 동기화.
+// 각 문서별 결과 (성공/실패) 반환. 한 개 실패해도 나머지 계속.
+func (uc *ChatUseCase) AdminSyncNotionAll(ctx context.Context) (results []NotionSyncResult, err error) {
+	if uc.notion == nil {
+		return nil, fmt.Errorf("notion 통합이 설정되지 않았습니다 (NOTION_INTEGRATION_TOKEN)")
+	}
+	metas, err := uc.wikiRepo.ListMeta()
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range metas {
+		if m.NotionPageID == "" {
+			results = append(results, NotionSyncResult{Slug: m.Slug, Skipped: true, Error: "no notion_page_id"})
+			continue
+		}
+		if err := uc.AdminSyncNotionOne(ctx, m.Slug); err != nil {
+			results = append(results, NotionSyncResult{Slug: m.Slug, Error: err.Error()})
+			log.Printf("[notion-sync] %s: %v", m.Slug, err)
+		} else {
+			results = append(results, NotionSyncResult{Slug: m.Slug, OK: true})
+		}
+	}
+	return results, nil
+}
+
+type NotionSyncResult struct {
+	Slug    string `json:"slug"`
+	OK      bool   `json:"ok"`
+	Skipped bool   `json:"skipped,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 
 // AdminGetWikiDoc — admin 전용. meta + body 반환.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, BarChart3, Download, FileText, MessagesSquare, RefreshCw, Search, Sparkles } from 'lucide-react'
+import { ArrowLeft, BarChart3, CloudDownload, Download, FileText, MessagesSquare, RefreshCw, Search, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api } from '@/lib/api'
@@ -184,6 +184,40 @@ export default function AdminChatPage() {
     }
   }
 
+  const [syncingNotion, setSyncingNotion] = useState(false)
+  const [syncingSlug, setSyncingSlug] = useState<string | null>(null)
+
+  const syncNotionOne = async (slug: string) => {
+    setSyncingSlug(slug)
+    try {
+      await api.post(`/admin/chat/wiki/${encodeURIComponent(slug)}/notion-sync`)
+      toast.success(`${slug} 동기화 완료`)
+      await load()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '동기화 실패')
+    } finally {
+      setSyncingSlug(null)
+    }
+  }
+
+  const syncNotionAll = async () => {
+    if (!window.confirm('모든 위키 문서를 Notion 에서 다시 가져옵니다. 진행할까요?')) return
+    setSyncingNotion(true)
+    try {
+      const out = await api.post<{ results: Array<{ slug: string; ok: boolean; error?: string }> }>(
+        '/admin/chat/wiki/notion-sync-all',
+      )
+      const ok = out.results.filter((r) => r.ok).length
+      const fail = out.results.length - ok
+      toast.success(`동기화 완료 — 성공 ${ok}, 실패/스킵 ${fail}`)
+      await load()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '전체 동기화 실패')
+    } finally {
+      setSyncingNotion(false)
+    }
+  }
+
   const toggleEnabled = async (sk: Skill) => {
     try {
       await api.put(`/admin/chat/skills/${sk.id}`, { ...sk, enabled: !sk.enabled })
@@ -264,10 +298,16 @@ export default function AdminChatPage() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>위키 문서 ({wikiDocs.length})</span>
-            <Button size="sm" variant="outline" onClick={() => void reindex()} disabled={reindexing}>
-              <RefreshCw className={`h-4 w-4 ${reindexing ? 'animate-spin' : ''}`} />
-              재인덱싱
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => void syncNotionAll()} disabled={syncingNotion}>
+                <CloudDownload className={`h-4 w-4 ${syncingNotion ? 'animate-pulse' : ''}`} />
+                전체 노션 동기화
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => void reindex()} disabled={reindexing}>
+                <RefreshCw className={`h-4 w-4 ${reindexing ? 'animate-spin' : ''}`} />
+                재인덱싱
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -297,10 +337,24 @@ export default function AdminChatPage() {
                       {new Date(d.updated_at).toLocaleDateString('ko-KR')}
                     </td>
                     <td className="py-2 text-right">
-                      <Button size="sm" variant="ghost" onClick={() => setEditingSlug(d.slug)}>
-                        <FileText className="h-3.5 w-3.5" />
-                        편집
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        {d.notion_page_id && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => void syncNotionOne(d.slug)}
+                            disabled={syncingSlug === d.slug || syncingNotion}
+                            title="이 문서를 Notion 에서 다시 가져옴"
+                          >
+                            <CloudDownload className={`h-3.5 w-3.5 ${syncingSlug === d.slug ? 'animate-pulse' : ''}`} />
+                            동기화
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" onClick={() => setEditingSlug(d.slug)}>
+                          <FileText className="h-3.5 w-3.5" />
+                          편집
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
