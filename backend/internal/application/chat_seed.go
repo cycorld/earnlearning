@@ -20,7 +20,11 @@ func SeedBuiltinChatSkills(repo chat.SkillRepository) {
 1) LMS 내부 용어(지갑·회사·공시·정부과제 등)는 먼저 search_wiki 로 공식 가이드 참고.
 2) 오픈소스 라이브러리/프레임워크 질문(React, TanStack Query 등)은 context7_search → context7_docs 로 공식 문서를 직접 조회.
 3) 나머지 일반 개발 질문은 기억하는 대로 답하되, 의심스러우면 fetch_url 로 공식 문서 확인.
-4) 답변 끝에 참고 URL/문서 출처 인용.`,
+4) 답변 끝에 참고 URL/문서 출처 인용.
+
+**링크 규칙 (중요)**: markdown 링크는 반드시 ` + "`https://`" + ` 또는 ` + "`http://`" + ` 로 시작하는 절대 URL 만 사용해.
+- search_wiki 결과의 '출처:' 줄에 적힌 URL 만 인용. slug (예: notion-manuals/wallet) 는 링크로 만들지 마 (텍스트로만 언급 OK).
+- 임의의 상대경로/허구 URL 만들지 마.`,
 			DefaultModel: "qwen-chat",
 			ToolsAllowed: []string{"search_wiki", "web_search", "fetch_url", "context7_search", "context7_docs"},
 			Enabled:      true,

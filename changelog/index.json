@@ -1019,5 +1019,16 @@
       "nginx",
       "Mixed Content"
     ]
+  },
+  {
+    "slug": "086-chatbot-wiki-citation",
+    "title": "챗봇 출처 링크가 PWA 메인으로 가던 문제 수정",
+    "date": "2026-04-19",
+    "tags": [
+      "챗봇",
+      "위키",
+      "PWA",
+      "버그수정"
+    ]
   }
 ]

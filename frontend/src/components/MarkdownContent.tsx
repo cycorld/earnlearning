@@ -45,6 +45,19 @@ export function MarkdownContent({
             ),
             a: ({ href, children }) => {
               const isUpload = href?.startsWith('/uploads/')
+              const isAbsolute = !!href && /^(https?:|mailto:|tel:|\/uploads\/)/i.test(href)
+              // 안전장치 (#086): 챗봇이 가끔 상대경로 링크를 만들 때, 그대로 두면
+              // SPA 라우터 fallback 이 메인 페이지를 띄움. 링크 비활성화하고 텍스트만.
+              if (!isAbsolute && href) {
+                return (
+                  <span
+                    className="underline decoration-dotted text-muted-foreground"
+                    title={`유효하지 않은 링크: ${href}`}
+                  >
+                    {typeof children === 'string' ? decodeURIComponent(children) : children}
+                  </span>
+                )
+              }
               return (
                 <a
                   href={href}
