@@ -5,11 +5,13 @@ services:
     volumes:
       - prod_db:/data/db
       - prod_uploads:/data/uploads
+      - prod_wiki:/data/wiki
       - ../tasks:/data/tasks:ro
     environment:
       - DB_PATH=/data/db/earnlearning.db
       - UPLOAD_PATH=/data/uploads
       - TASKS_PATH=/data/tasks
+      - LLM_WIKI_DIR=/data/wiki
     env_file: .env.prod
     # 호스트의 PG 서버(포트 5432)에 DDL 용 admin 연결을 하기 위해 host-gateway 추가
     extra_hosts:
@@ -43,6 +45,8 @@ volumes:
   prod_uploads:
     name: earnlearning-prod_prod_uploads
     external: true
+  prod_wiki:
+    name: earnlearning-prod_prod_wiki
 
 networks:
   blue:

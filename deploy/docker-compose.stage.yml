@@ -5,11 +5,13 @@ services:
     volumes:
       - stage_db:/data/db
       - stage_uploads:/data/uploads
+      - stage_wiki:/data/wiki
       - ../tasks:/data/tasks:ro
     environment:
       - DB_PATH=/data/db/earnlearning.db
       - UPLOAD_PATH=/data/uploads
       - TASKS_PATH=/data/tasks
+      - LLM_WIKI_DIR=/data/wiki
     env_file: .env.stage
     # 호스트의 PG 서버(포트 5432)에 DDL 용 admin 연결을 하기 위해 host-gateway 추가
     extra_hosts:
@@ -39,6 +41,7 @@ services:
 volumes:
   stage_db:
   stage_uploads:
+  stage_wiki:
 
 networks:
   stage:

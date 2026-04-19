@@ -332,6 +332,27 @@ func (h *ChatHandler) AdminGetSession(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(s))
 }
 
+// AdminSyncNotionOne — POST /admin/chat/wiki/:slug/notion-sync — 단일 문서 노션 동기화 (#082).
+func (h *ChatHandler) AdminSyncNotionOne(c echo.Context) error {
+	slug := c.Param("slug")
+	if slug == "" {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "slug required"))
+	}
+	if err := h.uc.AdminSyncNotionOne(c.Request().Context(), slug); err != nil {
+		return c.JSON(http.StatusInternalServerError, errorResp("NOTION_SYNC", err.Error()))
+	}
+	return c.JSON(http.StatusOK, successResp(map[string]string{"status": "synced"}))
+}
+
+// AdminSyncNotionAll — POST /admin/chat/wiki/notion-sync-all — 전체 일괄 동기화.
+func (h *ChatHandler) AdminSyncNotionAll(c echo.Context) error {
+	results, err := h.uc.AdminSyncNotionAll(c.Request().Context())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, errorResp("NOTION_SYNC", err.Error()))
+	}
+	return c.JSON(http.StatusOK, successResp(map[string]any{"results": results}))
+}
+
 // AdminGetWikiDoc — GET /admin/chat/wiki/:slug — body + meta 반환 (admin 편집용).
 func (h *ChatHandler) AdminGetWikiDoc(c echo.Context) error {
 	slug := c.Param("slug")
