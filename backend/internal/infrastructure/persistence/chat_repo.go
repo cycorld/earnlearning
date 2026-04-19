@@ -42,6 +42,18 @@ func (r *ChatSessionRepo) FindByID(id int) (*chat.Session, error) {
 	return scanSession(row)
 }
 
+// FindByIDWithUser — admin 전용. user_name 까지 채워서 반환.
+func (r *ChatSessionRepo) FindByIDWithUser(id int) (*chat.Session, error) {
+	row := r.db.QueryRow(`
+		SELECT s.id, s.user_id, s.title, s.active_skill_id, s.tokens_used,
+			s.created_at, s.last_message_at,
+			COALESCE(u.name, '') AS user_name
+		FROM chat_sessions s
+		LEFT JOIN users u ON u.id = s.user_id
+		WHERE s.id = ?`, id)
+	return scanSessionWithUser(row)
+}
+
 func (r *ChatSessionRepo) ListByUser(userID, page, limit int) ([]*chat.Session, int, error) {
 	if page < 1 {
 		page = 1
@@ -73,29 +85,51 @@ func (r *ChatSessionRepo) ListByUser(userID, page, limit int) ([]*chat.Session, 
 	return out, total, rows.Err()
 }
 
-func (r *ChatSessionRepo) ListAll(page, limit int) ([]*chat.Session, int, error) {
+// ListAll — admin 전용. userID > 0 이면 해당 유저로 필터, query 가 있으면 title LIKE.
+// 결과에 user_name 포함 (LEFT JOIN users).
+func (r *ChatSessionRepo) ListAll(userID int, query string, page, limit int) ([]*chat.Session, int, error) {
 	if page < 1 {
 		page = 1
 	}
 	if limit < 1 || limit > 200 {
 		limit = 50
 	}
+	where := []string{"1=1"}
+	args := []any{}
+	if userID > 0 {
+		where = append(where, "s.user_id = ?")
+		args = append(args, userID)
+	}
+	q := strings.TrimSpace(query)
+	if q != "" {
+		where = append(where, "(s.title LIKE ? OR EXISTS (SELECT 1 FROM chat_messages m WHERE m.session_id = s.id AND m.content LIKE ?))")
+		like := "%" + q + "%"
+		args = append(args, like, like)
+	}
+	whereSQL := strings.Join(where, " AND ")
+
 	var total int
-	if err := r.db.QueryRow(`SELECT COUNT(*) FROM chat_sessions`).Scan(&total); err != nil {
+	if err := r.db.QueryRow(`SELECT COUNT(*) FROM chat_sessions s WHERE `+whereSQL, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
+	listArgs := append([]any{}, args...)
+	listArgs = append(listArgs, limit, (page-1)*limit)
 	rows, err := r.db.Query(`
-		SELECT id, user_id, title, active_skill_id, tokens_used, created_at, last_message_at
-		FROM chat_sessions
-		ORDER BY COALESCE(last_message_at, created_at) DESC
-		LIMIT ? OFFSET ?`, limit, (page-1)*limit)
+		SELECT s.id, s.user_id, s.title, s.active_skill_id, s.tokens_used,
+			s.created_at, s.last_message_at,
+			COALESCE(u.name, '') AS user_name
+		FROM chat_sessions s
+		LEFT JOIN users u ON u.id = s.user_id
+		WHERE `+whereSQL+`
+		ORDER BY COALESCE(s.last_message_at, s.created_at) DESC
+		LIMIT ? OFFSET ?`, listArgs...)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
 	var out []*chat.Session
 	for rows.Next() {
-		s, err := scanSessionRows(rows)
+		s, err := scanSessionRowsWithUser(rows)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -502,6 +536,38 @@ func (r *ChatUsageRepo) SumForRange(from, to time.Time) ([]*chat.UsageDay, error
 	return out, rows.Err()
 }
 
+// TopUsersForRange — 비용 기준 내림차순 상위 N명. user_name 조인.
+func (r *ChatUsageRepo) TopUsersForRange(from, to time.Time, limit int) ([]*chat.UserUsageTotal, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 20
+	}
+	rows, err := r.db.Query(`
+		SELECT cu.user_id, COALESCE(u.name, '') AS user_name,
+			SUM(cu.requests), SUM(cu.prompt_tokens), SUM(cu.completion_tokens),
+			SUM(cu.cache_tokens), SUM(cu.cost_krw)
+		FROM chat_usage cu
+		LEFT JOIN users u ON u.id = cu.user_id
+		WHERE cu.usage_date >= ? AND cu.usage_date <= ?
+		GROUP BY cu.user_id
+		ORDER BY SUM(cu.cost_krw) DESC
+		LIMIT ?`,
+		from.Format("2006-01-02"), to.Format("2006-01-02"), limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*chat.UserUsageTotal
+	for rows.Next() {
+		t := &chat.UserUsageTotal{}
+		if err := rows.Scan(&t.UserID, &t.UserName, &t.Requests, &t.PromptTokens,
+			&t.CompletionTokens, &t.CacheTokens, &t.CostKRW); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
 func (r *ChatUsageRepo) SumForMonth(year int, month time.Month) (*chat.UsageDay, error) {
 	from := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
 	to := from.AddDate(0, 1, -1)
@@ -548,6 +614,47 @@ func scanSessionRows(rows *sql.Rows) (*chat.Session, error) {
 	var lastAt sql.NullTime
 	err := rows.Scan(&sess.ID, &sess.UserID, &sess.Title, &activeSkill, &sess.TokensUsed,
 		&sess.CreatedAt, &lastAt)
+	if err != nil {
+		return nil, err
+	}
+	if activeSkill.Valid {
+		v := int(activeSkill.Int64)
+		sess.ActiveSkillID = &v
+	}
+	if lastAt.Valid {
+		sess.LastMessageAt = lastAt.Time
+	}
+	return sess, nil
+}
+
+func scanSessionWithUser(s scanner) (*chat.Session, error) {
+	sess := &chat.Session{}
+	var activeSkill sql.NullInt64
+	var lastAt sql.NullTime
+	err := s.Scan(&sess.ID, &sess.UserID, &sess.Title, &activeSkill, &sess.TokensUsed,
+		&sess.CreatedAt, &lastAt, &sess.UserName)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, chat.ErrSessionNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if activeSkill.Valid {
+		v := int(activeSkill.Int64)
+		sess.ActiveSkillID = &v
+	}
+	if lastAt.Valid {
+		sess.LastMessageAt = lastAt.Time
+	}
+	return sess, nil
+}
+
+func scanSessionRowsWithUser(rows *sql.Rows) (*chat.Session, error) {
+	sess := &chat.Session{}
+	var activeSkill sql.NullInt64
+	var lastAt sql.NullTime
+	err := rows.Scan(&sess.ID, &sess.UserID, &sess.Title, &activeSkill, &sess.TokensUsed,
+		&sess.CreatedAt, &lastAt, &sess.UserName)
 	if err != nil {
 		return nil, err
 	}

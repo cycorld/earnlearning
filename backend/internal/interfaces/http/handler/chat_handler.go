@@ -223,11 +223,12 @@ func (h *ChatHandler) AdminDeleteSkill(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]string{"status": "deleted"}))
 }
 
-// AdminListSessions — 모든 유저의 세션 목록. ?user_id=N 필터 가능.
+// AdminListSessions — 모든 유저의 세션 목록. ?user_id=N 필터, ?q=keyword 검색.
 func (h *ChatHandler) AdminListSessions(c echo.Context) error {
 	userID, _ := strconv.Atoi(c.QueryParam("user_id"))
 	page, _ := strconv.Atoi(c.QueryParam("page"))
-	items, total, err := h.uc.AdminListAllSessions(userID, page)
+	query := c.QueryParam("q")
+	items, total, err := h.uc.AdminListAllSessions(userID, query, page)
 	if err != nil {
 		return chatErrorResponse(c, err)
 	}
@@ -237,6 +238,17 @@ func (h *ChatHandler) AdminListSessions(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(map[string]any{
 		"items": items, "total": total,
 	}))
+}
+
+// AdminUsageDashboard — 챗봇 비용 대시보드 (일별 합계 + 상위 지출 학생).
+// GET /admin/chat/usage?days=30
+func (h *ChatHandler) AdminUsageDashboard(c echo.Context) error {
+	days, _ := strconv.Atoi(c.QueryParam("days"))
+	out, err := h.uc.AdminUsageDashboard(days)
+	if err != nil {
+		return chatErrorResponse(c, err)
+	}
+	return c.JSON(http.StatusOK, successResp(out))
 }
 
 // AdminGetSession — 임의 유저의 세션 + 전체 메시지 열람.
