@@ -1008,5 +1008,16 @@
       "SSE",
       "버그수정"
     ]
+  },
+  {
+    "slug": "085-chatbot-nginx-trailing-slash",
+    "title": "챗봇 failed to fetch 핫픽스 — host nginx trailing slash 301 → Mixed Content",
+    "date": "2026-04-19",
+    "tags": [
+      "챗봇",
+      "핫픽스",
+      "nginx",
+      "Mixed Content"
+    ]
   }
 ]
