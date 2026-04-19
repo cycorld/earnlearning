@@ -1116,5 +1116,17 @@
       "admin",
       "정합성"
     ]
+  },
+  {
+    "slug": "097-oauth-spec-typed-responses",
+    "title": "OAuth API 스펙 typed response wrapper (바운티 후속)",
+    "date": "2026-04-19",
+    "tags": [
+      "API",
+      "OAuth",
+      "OpenAPI",
+      "문서",
+      "바운티"
+    ]
   }
 ]
