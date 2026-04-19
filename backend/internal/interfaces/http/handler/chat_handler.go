@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -114,6 +116,62 @@ func (h *ChatHandler) Ask(c echo.Context) error {
 		return chatErrorResponse(c, err)
 	}
 	return c.JSON(http.StatusOK, successResp(out))
+}
+
+// AskStream — POST /api/chat/sessions/:id/ask/stream — SSE 스트리밍 응답.
+//
+// 응답 포맷: 매 event 는 `data: {<json>}\n\n` 형식.
+// event types: tool_call, tool_result, text_delta, done, error, close.
+//
+// 클라(브라우저 EventSource 는 GET 만 지원하므로 fetch+ReadableStream 사용).
+func (h *ChatHandler) AskStream(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	isAdmin := middleware.GetUserRole(c) == "admin"
+	id, err := intParam(c, "id")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
+	}
+	var in askInput
+	if err := c.Bind(&in); err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 요청"))
+	}
+	if strings.TrimSpace(in.Message) == "" {
+		return c.JSON(http.StatusBadRequest, errorResp("EMPTY_MESSAGE", "메시지를 입력해주세요"))
+	}
+
+	stream, err := h.uc.AskStream(c.Request().Context(), application.AskInput{
+		SessionID: id,
+		UserID:    userID,
+		IsAdmin:   isAdmin,
+		Message:   in.Message,
+		Mode:      chat.AskMode(in.Mode),
+		SkillSlug: in.SkillSlug,
+	})
+	if err != nil {
+		return chatErrorResponse(c, err)
+	}
+
+	res := c.Response()
+	res.Header().Set("Content-Type", "text/event-stream")
+	res.Header().Set("Cache-Control", "no-cache, no-transform")
+	res.Header().Set("Connection", "keep-alive")
+	res.Header().Set("X-Accel-Buffering", "no") // nginx: SSE 버퍼링 끄기
+	res.WriteHeader(http.StatusOK)
+	res.Flush()
+
+	for ev := range stream {
+		payload, err := json.Marshal(ev)
+		if err != nil {
+			continue
+		}
+		if _, err := fmt.Fprintf(res, "data: %s\n\n", payload); err != nil {
+			return nil
+		}
+		res.Flush()
+	}
+	_, _ = fmt.Fprintf(res, "data: {\"type\":\"close\"}\n\n")
+	res.Flush()
+	return nil
 }
 
 func (h *ChatHandler) DeleteSession(c echo.Context) error {

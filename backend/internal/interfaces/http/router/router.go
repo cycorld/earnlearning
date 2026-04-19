@@ -228,6 +228,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		approved.GET("/chat/sessions", h.Chat.ListSessions)
 		approved.GET("/chat/sessions/:id", h.Chat.GetSession)
 		approved.POST("/chat/sessions/:id/ask", h.Chat.Ask)
+		approved.POST("/chat/sessions/:id/ask/stream", h.Chat.AskStream)
 		approved.DELETE("/chat/sessions/:id", h.Chat.DeleteSession)
 		approved.GET("/chat/skills", h.Chat.ListSkills)
 	}
