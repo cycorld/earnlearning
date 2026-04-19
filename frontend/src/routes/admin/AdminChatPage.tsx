@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, MessagesSquare, RefreshCw, Sparkles } from 'lucide-react'
+import { ArrowLeft, BarChart3, Download, MessagesSquare, RefreshCw, Search, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api } from '@/lib/api'
@@ -34,11 +34,38 @@ interface WikiMeta {
 
 interface Session {
   id: number
+  user_id?: number
+  user_name?: string
   title: string
   active_skill_id?: number
   tokens_used: number
   created_at: string
   last_message_at: string
+}
+
+interface UsageDay {
+  date: string
+  requests: number
+  prompt_tokens: number
+  completion_tokens: number
+  cache_tokens: number
+  cost_krw: number
+}
+
+interface UserUsageTotal {
+  user_id: number
+  user_name: string
+  requests: number
+  prompt_tokens: number
+  completion_tokens: number
+  cache_tokens: number
+  cost_krw: number
+}
+
+interface UsageDashboard {
+  days: number
+  daily: UsageDay[]
+  top_users: UserUsageTotal[]
 }
 
 interface Message {
@@ -56,28 +83,47 @@ interface Message {
 
 interface FullSession extends Session {
   messages?: Message[]
-  user_id?: number
 }
 
 export default function AdminChatPage() {
   const [skills, setSkills] = useState<Skill[]>([])
   const [wikiDocs, setWikiDocs] = useState<WikiMeta[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
+  const [usage, setUsage] = useState<UsageDashboard | null>(null)
   const [openSession, setOpenSession] = useState<FullSession | null>(null)
   const [loading, setLoading] = useState(true)
   const [reindexing, setReindexing] = useState(false)
+  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [searching, setSearching] = useState(false)
+
+  const loadSessions = useCallback(async (q: string) => {
+    setSearching(true)
+    try {
+      const ss = await api.get<{ items: Session[]; total: number }>(
+        `/admin/chat/sessions${q ? `?q=${encodeURIComponent(q)}` : ''}`,
+      )
+      setSessions(ss?.items ?? [])
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '세션 조회 실패')
+    } finally {
+      setSearching(false)
+    }
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [s, w, ss] = await Promise.all([
+      const [s, w, ss, u] = await Promise.all([
         api.get<Skill[]>('/chat/skills'),
         api.get<WikiMeta[]>('/admin/chat/wiki'),
         api.get<{ items: Session[]; total: number }>('/admin/chat/sessions'),
+        api.get<UsageDashboard>('/admin/chat/usage?days=30'),
       ])
       setSkills(s ?? [])
       setWikiDocs(w ?? [])
       setSessions(ss?.items ?? [])
+      setUsage(u ?? null)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '불러오기 실패')
     } finally {
@@ -92,6 +138,12 @@ export default function AdminChatPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '세션 조회 실패')
     }
+  }
+
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    setSearch(searchInput.trim())
+    void loadSessions(searchInput.trim())
   }
 
   useEffect(() => {
@@ -231,6 +283,8 @@ export default function AdminChatPage() {
         </CardContent>
       </Card>
 
+      {usage && <UsageCard usage={usage} />}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -242,8 +296,39 @@ export default function AdminChatPage() {
           <p className="mb-3 text-sm text-muted-foreground">
             최근 50 개 세션. 세션을 클릭하면 전체 메시지와 도구 호출 내역을 볼 수 있어요.
           </p>
+          <form onSubmit={submitSearch} className="mb-3 flex gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="제목 또는 메시지 내용 검색…"
+                className="w-full rounded-md border bg-background py-1.5 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <Button size="sm" type="submit" disabled={searching}>
+              {searching ? <Spinner className="h-3 w-3" /> : '검색'}
+            </Button>
+            {search && (
+              <Button
+                size="sm"
+                variant="ghost"
+                type="button"
+                onClick={() => { setSearch(''); setSearchInput(''); void loadSessions('') }}
+              >
+                초기화
+              </Button>
+            )}
+          </form>
+          {search && (
+            <p className="mb-2 text-xs text-muted-foreground">
+              "{search}" 검색 결과 — {sessions.length}개
+            </p>
+          )}
           {sessions.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">아직 대화가 없습니다.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              {search ? '검색 결과가 없습니다.' : '아직 대화가 없습니다.'}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -261,8 +346,8 @@ export default function AdminChatPage() {
                     <tr key={s.id} className="cursor-pointer border-b hover:bg-accent/40"
                         onClick={() => void openSessionDetail(s.id)}>
                       <td className="py-2 pr-3 font-mono text-[11px]">#{s.id}</td>
-                      <td className="py-2 pr-3 text-[11px] text-muted-foreground">
-                        user_id={(s as FullSession).user_id ?? '?'}
+                      <td className="py-2 pr-3 text-xs">
+                        {s.user_name || `user_id=${s.user_id ?? '?'}`}
                       </td>
                       <td className="py-2 pr-3">{s.title || '(제목 없음)'}</td>
                       <td className="py-2 pr-3 text-right tabular-nums">{s.tokens_used}</td>
@@ -285,7 +370,106 @@ export default function AdminChatPage() {
   )
 }
 
+function UsageCard({ usage }: { usage: UsageDashboard }) {
+  const totalCost = usage.daily.reduce((s, d) => s + d.cost_krw, 0)
+  const totalReq = usage.daily.reduce((s, d) => s + d.requests, 0)
+  const totalPrompt = usage.daily.reduce((s, d) => s + d.prompt_tokens, 0)
+  const totalCompletion = usage.daily.reduce((s, d) => s + d.completion_tokens, 0)
+  const maxDailyCost = Math.max(1, ...usage.daily.map((d) => d.cost_krw))
+  const maxUserCost = Math.max(1, ...usage.top_users.map((u) => u.cost_krw))
+  const krw = (n: number) => `₩${n.toLocaleString('ko-KR')}`
+  const recent14 = [...usage.daily].slice(0, 14).reverse()
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4" />
+          비용 대시보드 — 최근 {usage.days}일
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+          <Stat label="총 비용" value={krw(totalCost)} />
+          <Stat label="요청 수" value={totalReq.toLocaleString()} />
+          <Stat label="프롬프트 토큰" value={totalPrompt.toLocaleString()} />
+          <Stat label="응답 토큰" value={totalCompletion.toLocaleString()} />
+        </div>
+
+        <div className="mb-4">
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">일별 비용 (최근 14일)</p>
+          {recent14.length === 0 ? (
+            <p className="py-2 text-xs text-muted-foreground">데이터가 없습니다.</p>
+          ) : (
+            <div className="flex h-24 items-end gap-1">
+              {recent14.map((d) => {
+                const h = Math.max(2, Math.round((d.cost_krw / maxDailyCost) * 100))
+                return (
+                  <div
+                    key={d.date}
+                    className="group relative flex-1 cursor-help rounded-t bg-primary/70 hover:bg-primary"
+                    style={{ height: `${h}%` }}
+                    title={`${new Date(d.date).toLocaleDateString('ko-KR')} · ${krw(d.cost_krw)} · ${d.requests} req`}
+                  />
+                )
+              })}
+            </div>
+          )}
+          <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+            <span>{recent14[0] ? new Date(recent14[0].date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }) : ''}</span>
+            <span>{recent14[recent14.length - 1] ? new Date(recent14[recent14.length - 1].date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }) : ''}</span>
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">상위 지출 학생 (최대 20명)</p>
+          {usage.top_users.length === 0 ? (
+            <p className="py-2 text-xs text-muted-foreground">데이터가 없습니다.</p>
+          ) : (
+            <div className="space-y-1">
+              {usage.top_users.map((u) => {
+                const w = Math.round((u.cost_krw / maxUserCost) * 100)
+                return (
+                  <div key={u.user_id} className="flex items-center gap-2 text-xs">
+                    <span className="w-32 truncate">{u.user_name || `#${u.user_id}`}</span>
+                    <div className="relative h-4 flex-1 rounded bg-muted">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded bg-primary/70"
+                        style={{ width: `${w}%` }}
+                      />
+                    </div>
+                    <span className="w-20 text-right tabular-nums">{krw(u.cost_krw)}</span>
+                    <span className="w-16 text-right tabular-nums text-muted-foreground">{u.requests} req</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border p-2">
+      <p className="text-[10px] uppercase text-muted-foreground">{label}</p>
+      <p className="text-sm font-semibold tabular-nums">{value}</p>
+    </div>
+  )
+}
+
 function SessionDetailModal({ session, onClose }: { session: FullSession; onClose: () => void }) {
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(session, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `chat-session-${session.id}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
@@ -296,10 +480,15 @@ function SessionDetailModal({ session, onClose }: { session: FullSession; onClos
           <div>
             <h3 className="font-semibold">{session.title || `세션 #${session.id}`}</h3>
             <p className="text-[11px] text-muted-foreground">
-              user_id={session.user_id ?? '?'} · 토큰 {session.tokens_used}
+              {session.user_name || `user_id=${session.user_id ?? '?'}`} · 토큰 {session.tokens_used}
             </p>
           </div>
-          <Button size="sm" variant="ghost" onClick={onClose}>닫기</Button>
+          <div className="flex items-center gap-1">
+            <Button size="sm" variant="outline" onClick={exportJSON} title="JSON 다운로드">
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onClose}>닫기</Button>
+          </div>
         </div>
         <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
           {session.messages?.map((m) => (

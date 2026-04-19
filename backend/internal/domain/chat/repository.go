@@ -5,8 +5,11 @@ import "time"
 type SessionRepository interface {
 	Create(s *Session) (int, error)
 	FindByID(id int) (*Session, error)
+	FindByIDWithUser(id int) (*Session, error) // admin: user_name 포함
 	ListByUser(userID, page, limit int) ([]*Session, int, error)
-	ListAll(page, limit int) ([]*Session, int, error) // admin 전용
+	// ListAll — admin 전용. query 가 있으면 title LIKE 필터.
+	// userID > 0 이면 해당 유저로 필터, 아니면 전체.
+	ListAll(userID int, query string, page, limit int) ([]*Session, int, error)
 	UpdateTitle(id int, title string) error
 	UpdateActiveSkill(id int, skillID *int) error
 	UpdateLastMessageAt(id int, at time.Time, addTokens int) error
@@ -48,4 +51,6 @@ type UsageRepository interface {
 	AddUsage(userID int, day time.Time, requests, prompt, completion, cache, costKRW int) error
 	SumForRange(from, to time.Time) ([]*UsageDay, error)
 	SumForMonth(year int, month time.Month) (*UsageDay, error)
+	// TopUsersForRange — 비용 기준 내림차순 상위 N명. user_name 조인.
+	TopUsersForRange(from, to time.Time, limit int) ([]*UserUsageTotal, error)
 }
