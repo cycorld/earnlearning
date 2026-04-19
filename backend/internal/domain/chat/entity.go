@@ -7,6 +7,7 @@ import "time"
 type Session struct {
 	ID            int       `json:"id"`
 	UserID        int       `json:"user_id"` // 학생은 자기 값만 보고, 관리자는 임의 유저 조회 가능
+	UserName      string    `json:"user_name,omitempty"` // admin 조회 시에만 채워짐
 	Title         string    `json:"title"`
 	ActiveSkillID *int      `json:"active_skill_id,omitempty"`
 	TokensUsed    int       `json:"tokens_used"`
@@ -16,6 +17,17 @@ type Session struct {
 	// Nested
 	ActiveSkill *Skill     `json:"active_skill,omitempty"`
 	Messages    []*Message `json:"messages,omitempty"`
+}
+
+// UserUsageTotal 은 관리자 비용 대시보드용 학생별 누적 집계.
+type UserUsageTotal struct {
+	UserID           int    `json:"user_id"`
+	UserName         string `json:"user_name"`
+	Requests         int    `json:"requests"`
+	PromptTokens     int    `json:"prompt_tokens"`
+	CompletionTokens int    `json:"completion_tokens"`
+	CacheTokens      int    `json:"cache_tokens"`
+	CostKRW          int    `json:"cost_krw"`
 }
 
 // Role 은 챗 메시지 역할 (OpenAI chat completions 과 일치).

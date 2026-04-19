@@ -111,17 +111,42 @@ func (uc *ChatUseCase) ListSessions(userID, page int) ([]*chat.Session, int, err
 	return uc.sessionRepo.ListByUser(userID, page, 20)
 }
 
-// AdminListAllSessions — 관리자 전용. userID 필터 옵션 (0 이면 전체).
-func (uc *ChatUseCase) AdminListAllSessions(userID, page int) ([]*chat.Session, int, error) {
-	if userID > 0 {
-		return uc.sessionRepo.ListByUser(userID, page, 50)
-	}
-	return uc.sessionRepo.ListAll(page, 50)
+// AdminListAllSessions — 관리자 전용. userID 필터 옵션 (0 이면 전체), query 는 title LIKE.
+func (uc *ChatUseCase) AdminListAllSessions(userID int, query string, page int) ([]*chat.Session, int, error) {
+	return uc.sessionRepo.ListAll(userID, query, page, 50)
 }
 
-// AdminGetSession — 관리자 전용. 다른 유저의 세션도 열람 가능.
+// AdminUsageDashboard — 관리자 비용 대시보드. days 일치 일별 합계 + 상위 지출 학생.
+func (uc *ChatUseCase) AdminUsageDashboard(days int) (map[string]any, error) {
+	if days <= 0 || days > 365 {
+		days = 30
+	}
+	to := time.Now().UTC()
+	from := to.AddDate(0, 0, -days+1)
+	daily, err := uc.usageRepo.SumForRange(from, to)
+	if err != nil {
+		return nil, err
+	}
+	top, err := uc.usageRepo.TopUsersForRange(from, to, 20)
+	if err != nil {
+		return nil, err
+	}
+	if daily == nil {
+		daily = []*chat.UsageDay{}
+	}
+	if top == nil {
+		top = []*chat.UserUsageTotal{}
+	}
+	return map[string]any{
+		"days":     days,
+		"daily":    daily,
+		"top_users": top,
+	}, nil
+}
+
+// AdminGetSession — 관리자 전용. 다른 유저의 세션도 열람 가능. user_name 포함.
 func (uc *ChatUseCase) AdminGetSession(sessionID int) (*chat.Session, error) {
-	s, err := uc.sessionRepo.FindByID(sessionID)
+	s, err := uc.sessionRepo.FindByIDWithUser(sessionID)
 	if err != nil {
 		return nil, err
 	}
