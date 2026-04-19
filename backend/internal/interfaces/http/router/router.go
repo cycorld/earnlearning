@@ -286,6 +286,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		admin.GET("/chat/sessions", h.Chat.AdminListSessions)
 		admin.GET("/chat/sessions/:id", h.Chat.AdminGetSession)
 		admin.GET("/chat/usage", h.Chat.AdminUsageDashboard)
+		admin.GET("/chat/llm/stats", h.Chat.AdminLLMStats)
 	}
 
 	// ================================================================

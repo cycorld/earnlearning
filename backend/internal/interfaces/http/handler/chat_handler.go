@@ -298,6 +298,16 @@ func (h *ChatHandler) AdminListSessions(c echo.Context) error {
 	}))
 }
 
+// AdminLLMStats — GET /admin/chat/llm/stats — 현재 LLM 동시 호출 메트릭.
+func (h *ChatHandler) AdminLLMStats(c echo.Context) error {
+	s := h.uc.AdminLLMStats()
+	return c.JSON(http.StatusOK, successResp(map[string]any{
+		"in_flight": s.InFlight,
+		"waiting":   s.Waiting,
+		"cap":       s.Cap,
+	}))
+}
+
 // AdminUsageDashboard — 챗봇 비용 대시보드 (일별 합계 + 상위 지출 학생).
 // GET /admin/chat/usage?days=30
 func (h *ChatHandler) AdminUsageDashboard(c echo.Context) error {

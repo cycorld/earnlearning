@@ -68,6 +68,12 @@ interface UsageDashboard {
   top_users: UserUsageTotal[]
 }
 
+interface LLMStats {
+  in_flight: number
+  waiting: number
+  cap: number
+}
+
 interface Message {
   id: number
   role: 'user' | 'assistant' | 'tool' | 'system'
@@ -90,6 +96,7 @@ export default function AdminChatPage() {
   const [wikiDocs, setWikiDocs] = useState<WikiMeta[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
   const [usage, setUsage] = useState<UsageDashboard | null>(null)
+  const [llmStats, setLlmStats] = useState<LLMStats | null>(null)
   const [openSession, setOpenSession] = useState<FullSession | null>(null)
   const [editingSlug, setEditingSlug] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -150,6 +157,19 @@ export default function AdminChatPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  // LLM stats live polling (5s) — #089
+  useEffect(() => {
+    let cancelled = false
+    const fetchStats = () => {
+      api.get<LLMStats>('/admin/chat/llm/stats')
+        .then((s) => { if (!cancelled) setLlmStats(s) })
+        .catch(() => { /* silent */ })
+    }
+    fetchStats()
+    const id = setInterval(fetchStats, 5000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [])
 
   const reindex = async () => {
     setReindexing(true)
@@ -289,6 +309,8 @@ export default function AdminChatPage() {
           </div>
         </CardContent>
       </Card>
+
+      {llmStats && <LLMStatsBadge stats={llmStats} />}
 
       {usage && <UsageCard usage={usage} />}
 
@@ -457,6 +479,24 @@ function WikiEditorModal({ slug, onClose, onSaved }: { slug: string; onClose: ()
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function LLMStatsBadge({ stats }: { stats: LLMStats }) {
+  const inFlightPct = Math.min(100, Math.round((stats.in_flight / stats.cap) * 100))
+  const statusColor =
+    stats.waiting > 0
+      ? 'bg-destructive/10 text-destructive border-destructive/30'
+      : inFlightPct >= 80
+        ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+        : 'bg-muted text-muted-foreground'
+  return (
+    <div className={`flex items-center gap-3 rounded-lg border p-3 text-sm ${statusColor}`}>
+      <span className="font-semibold">⚡ LLM 동시성</span>
+      <span className="tabular-nums">처리 중: <strong>{stats.in_flight}</strong> / {stats.cap}</span>
+      <span className="tabular-nums">대기: <strong>{stats.waiting}</strong>명</span>
+      <span className="ml-auto text-[10px] opacity-70">5초마다 갱신</span>
     </div>
   )
 }

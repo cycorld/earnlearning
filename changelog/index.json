@@ -1062,5 +1062,16 @@
       "핫픽스",
       "race-condition"
     ]
+  },
+  {
+    "slug": "092-llm-stats-endpoint",
+    "title": "LLM 동시성 메트릭 endpoint + 어드민 위젯",
+    "date": "2026-04-19",
+    "tags": [
+      "챗봇",
+      "LLM",
+      "모니터링",
+      "운영"
+    ]
   }
 ]
