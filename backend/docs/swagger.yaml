@@ -17,6 +17,11 @@ definitions:
       state:
         type: string
     type: object
+  github_com_earnlearning_backend_internal_application.CreateUserDBInput:
+    properties:
+      project_name:
+        type: string
+    type: object
   github_com_earnlearning_backend_internal_application.RegisterClientInput:
     properties:
       description:
@@ -308,6 +313,95 @@ definitions:
         example: password123
         type: string
     type: object
+  internal_interfaces_http_handler.OAuthTokenData:
+    properties:
+      access_token:
+        example: a1b2c3...
+        type: string
+      expires_in:
+        example: 3600
+        type: integer
+      refresh_token:
+        example: d4e5f6...
+        type: string
+      scopes:
+        example:
+        - read:profile
+        - read:wallet
+        items:
+          type: string
+        type: array
+      token_type:
+        example: Bearer
+        type: string
+    type: object
+  internal_interfaces_http_handler.OAuthTokenRequest:
+    properties:
+      client_id:
+        example: abcd1234
+        type: string
+      client_secret:
+        example: (PKCE 사용 시 생략 가능)
+        type: string
+      code:
+        example: a1b2c3...
+        type: string
+      code_verifier:
+        example: (PKCE 사용 시 필수)
+        type: string
+      grant_type:
+        enum:
+        - authorization_code
+        - refresh_token
+        example: authorization_code
+        type: string
+      redirect_uri:
+        example: https://myapp.com/callback
+        type: string
+      refresh_token:
+        example: d4e5f6...
+        type: string
+    type: object
+  internal_interfaces_http_handler.OAuthTokenResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_interfaces_http_handler.OAuthTokenData'
+      error:
+        $ref: '#/definitions/internal_interfaces_http_handler.APIError'
+      success:
+        example: true
+        type: boolean
+    type: object
+  internal_interfaces_http_handler.OAuthUserInfoData:
+    properties:
+      avatar_url:
+        example: /uploads/avatar.png
+        type: string
+      bio:
+        type: string
+      department:
+        example: 행정학과
+        type: string
+      email:
+        example: student@ewha.ac.kr
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: 홍길동
+        type: string
+    type: object
+  internal_interfaces_http_handler.OAuthUserInfoResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_interfaces_http_handler.OAuthUserInfoData'
+      error:
+        $ref: '#/definitions/internal_interfaces_http_handler.APIError'
+      success:
+        example: true
+        type: boolean
+    type: object
   internal_interfaces_http_handler.PlaceOrderRequest:
     properties:
       company_id:
@@ -473,6 +567,33 @@ paths:
       summary: 전체 회사 목록
       tags:
       - Admin
+  /admin/force-reload:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        관리자용: WebSocket 으로 모든 클라이언트에 force_reload 이벤트를 브로드캐스트해
+        구버전 PWA 를 새 버전으로 강제 전환시킨다. Rate limit: 1회/분.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "429":
+          description: 1분 간격 제한
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "503":
+          description: WS hub 미설정
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 전체 접속 클라이언트 강제 새로고침 (#027)
+      tags:
+      - Admin
   /admin/grants:
     post:
       consumes:
@@ -542,6 +663,32 @@ paths:
       security:
       - BearerAuth: []
       summary: 정부과제 종료
+      tags:
+      - Admin
+  /admin/grants/{id}/revoke/{appId}:
+    post:
+      description: '관리자용: 승인된 지원을 취소하고 보상금을 회수'
+      parameters:
+      - description: 과제 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 지원 ID
+        in: path
+        name: appId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 정부과제 승인 취소
       tags:
       - Admin
   /admin/loans:
@@ -866,6 +1013,23 @@ paths:
       summary: 과제 제출
       tags:
       - Assignment
+  /auth/avatar:
+    put:
+      consumes:
+      - application/json
+      description: 본인의 프로필 아바타 URL 변경 (빈 문자열이면 기본 아바타로 초기화)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 아바타 변경
+      tags:
+      - Auth
   /auth/login:
     post:
       consumes:
@@ -1013,6 +1177,30 @@ paths:
       summary: 게시물 작성
       tags:
       - Feed
+  /chat/sessions:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: 새 챗봇 세션 시작
+      tags:
+      - Chat
+  /chat/sessions/{id}/ask:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: 챗봇에 질문 (non-streaming)
+      tags:
+      - Chat
   /classrooms:
     get:
       description: 내가 속한 클래스룸 목록 조회
@@ -1126,6 +1314,20 @@ paths:
       tags:
       - Classroom
   /companies:
+    get:
+      description: 모든 학생의 회사 목록 (소유자 정보 포함). 학생 본인 회사 + 타 학생 회사 모두 노출.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 전체 기업 둘러보기
+      tags:
+      - Company
     post:
       consumes:
       - application/json
@@ -1764,6 +1966,65 @@ paths:
       summary: 정부과제 상세
       tags:
       - Grant
+  /grants/{id}/applications/{appId}:
+    delete:
+      description: 본인의 지원서 삭제 (승인 전에만 가능)
+      parameters:
+      - description: 과제 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 지원 ID
+        in: path
+        name: appId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 지원서 삭제
+      tags:
+      - Grant
+    put:
+      consumes:
+      - application/json
+      description: 본인의 지원서 내용 수정 (승인 전에만 가능)
+      parameters:
+      - description: 과제 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 지원 ID
+        in: path
+        name: appId
+        required: true
+        type: integer
+      - description: 수정 내용
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.ApplyGrantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 지원서 수정
+      tags:
+      - Grant
   /grants/{id}/apply:
     post:
       consumes:
@@ -1949,6 +2210,69 @@ paths:
       summary: 투자 라운드 생성
       tags:
       - Investment
+  /investment/rounds/{id}:
+    get:
+      description: 특정 라운드의 상세 정보 (누적 금액, 남은 주식 등)
+      parameters:
+      - description: 라운드 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 투자 라운드 상세
+      tags:
+      - Investment
+  /investment/rounds/{id}/cancel:
+    post:
+      description: 진행 중인 라운드를 취소하고 모든 투자자에게 환불
+      parameters:
+      - description: 라운드 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 라운드 취소 + 환불 (owner)
+      tags:
+      - Investment
+  /investment/rounds/{id}/close:
+    post:
+      description: 목표 미달 상태에서 현재까지 유치된 금액으로 라운드 확정
+      parameters:
+      - description: 라운드 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 라운드 조기 마감 (owner)
+      tags:
+      - Investment
   /investment/rounds/{id}/invest:
     post:
       description: 투자 라운드에 투자
@@ -1970,6 +2294,73 @@ paths:
       summary: 투자하기
       tags:
       - Investment
+  /llm/me:
+    get:
+      description: LLM proxy (llm.cycorld.com) 용 API 키. 최초 호출 시 자동으로 발급됨. 평문 키는 최초
+        1회에만 포함됨.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 LLM API 키 조회 (자동 발급)
+      tags:
+      - LLM
+  /llm/me/rotate:
+    post:
+      description: 기존 키를 즉시 폐기하고 새 키를 발급. 평문 키는 이 응답에 1회만 포함됨.
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 LLM API 키 재발급
+      tags:
+      - LLM
+  /llm/me/usage:
+    get:
+      description: 최근 N일 일별 사용량 + 누적 청구액 + 최근 7일 청구액. days 쿼리 파라미터 (default 30).
+      parameters:
+      - default: 30
+        description: 일수
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 LLM 사용량 + 과금 내역
+      tags:
+      - LLM
+  /llm/status:
+    get:
+      description: llm.cycorld.com 의 서비스 상태 (upstream 모델, 지연, 슬롯 사용률). 학생도 조회 가능.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: LLM 서비스 상태
+      tags:
+      - LLM
   /loans:
     post:
       consumes:
@@ -2363,22 +2754,26 @@ paths:
     post:
       consumes:
       - application/json
-      description: 인가 코드 → 액세스 토큰 교환, 또는 리프레시 토큰으로 갱신
+      description: |-
+        인가 코드 → 액세스 토큰 교환, 또는 리프레시 토큰으로 갱신.
+
+        **PKCE (RFC 7636) 퍼블릭 클라이언트** 는 `client_secret` 없이 `code_verifier` 만으로 교환 가능.
+        **refresh_token** grant 도 PKCE 로 발급된 토큰이면 `client_secret` 옵셔널.
+        응답 (RFC 6749 §5.1): `access_token`, `refresh_token`, `token_type` (Bearer), `expires_in` (초), `scopes`.
       parameters:
-      - description: grant_type, code, client_id, client_secret, redirect_uri, code_verifier,
-          refresh_token
+      - description: 토큰 교환/갱신 요청
         in: body
         name: body
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/internal_interfaces_http_handler.OAuthTokenRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+            $ref: '#/definitions/internal_interfaces_http_handler.OAuthTokenResponse'
         "400":
           description: Bad Request
           schema:
@@ -2388,14 +2783,15 @@ paths:
       - OAuth
   /oauth/userinfo:
     get:
-      description: OAuth 액세스 토큰으로 사용자 정보 조회
+      description: 'OAuth 액세스 토큰으로 사용자 정보 조회. 응답: id, email, name, department, bio,
+        avatar_url'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+            $ref: '#/definitions/internal_interfaces_http_handler.OAuthUserInfoResponse'
       security:
       - BearerAuth: []
       summary: 사용자 정보 (OAuth)
@@ -2440,6 +2836,50 @@ paths:
       tags:
       - Feed
   /posts/{id}:
+    delete:
+      description: 본인 또는 관리자가 게시물 삭제
+      parameters:
+      - description: 게시물 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 게시물 삭제
+      tags:
+      - Feed
+    get:
+      description: ID로 단일 게시물을 조회한다. 알림·외부 공유 링크에서 진입하는 /post/:id 에 대응.
+      parameters:
+      - description: 게시물 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 게시물 단건 조회 (딥링크용)
+      tags:
+      - Feed
     put:
       consumes:
       - application/json
@@ -2515,6 +2955,32 @@ paths:
       security:
       - BearerAuth: []
       summary: 댓글 작성
+      tags:
+      - Feed
+  /posts/{id}/comments/{commentId}:
+    delete:
+      description: 본인 또는 관리자가 댓글 삭제 (보상 회수 포함)
+      parameters:
+      - description: 게시물 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 댓글 ID
+        in: path
+        name: commentId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 댓글 삭제
       tags:
       - Feed
   /posts/{id}/like:
@@ -2607,6 +3073,27 @@ paths:
       summary: 파일 업로드
       tags:
       - Upload
+  /users/{id}/activity:
+    get:
+      description: 특정 사용자의 포스트, 프리랜서 잡, 정부과제 지원 내역
+      parameters:
+      - description: 사용자 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 사용자 활동 조회
+      tags:
+      - Auth
   /users/{id}/profile:
     get:
       description: 특정 사용자의 공개 프로필 조회
@@ -2632,6 +3119,94 @@ paths:
       summary: 사용자 프로필 조회
       tags:
       - Auth
+  /users/me/databases:
+    get:
+      description: 내가 프로비저닝 한 학생용 PostgreSQL DB 목록
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 내 데이터베이스 목록
+      tags:
+      - UserDB
+    post:
+      consumes:
+      - application/json
+      description: 학생 개인용 PostgreSQL DB 프로비저닝. 비밀번호는 응답에 1회만 포함.
+      parameters:
+      - description: 프로젝트명
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_earnlearning_backend_internal_application.CreateUserDBInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 새 데이터베이스 생성
+      tags:
+      - UserDB
+  /users/me/databases/{id}:
+    delete:
+      description: 학생 DB 와 PG 계정을 완전히 삭제합니다 (복구 불가)
+      parameters:
+      - description: DB ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 데이터베이스 삭제
+      tags:
+      - UserDB
+  /users/me/databases/{id}/rotate:
+    post:
+      description: 데이터베이스 비밀번호 재발급 (기존 비번은 즉시 무효)
+      parameters:
+      - description: DB ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_interfaces_http_handler.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 비밀번호 재발급
+      tags:
+      - UserDB
   /wallet:
     get:
       description: 내 지갑 잔액 및 정보 조회
@@ -2758,6 +3333,8 @@ paths:
       summary: 송금
       tags:
       - Wallet
+schemes:
+- https
 securityDefinitions:
   BearerAuth:
     in: header
