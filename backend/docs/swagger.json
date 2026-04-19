@@ -1,4 +1,7 @@
 {
+    "schemes": [
+        "https"
+    ],
     "swagger": "2.0",
     "info": {
         "description": "이화여대 창업 교육 LMS API",
@@ -8,7 +11,6 @@
     },
     "host": "earnlearning.com",
     "basePath": "/api",
-    "schemes": ["https"],
     "paths": {
         "/admin/classrooms/{id}/dashboard": {
             "get": {
@@ -62,6 +64,46 @@
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/force-reload": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "관리자용: WebSocket 으로 모든 클라이언트에 force_reload 이벤트를 브로드캐스트해\n구버전 PWA 를 새 버전으로 강제 전환시킨다. Rate limit: 1회/분.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "전체 접속 클라이언트 강제 새로고침 (#027)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "1분 간격 제한",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "WS hub 미설정",
                         "schema": {
                             "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
                         }
@@ -169,6 +211,47 @@
                         "type": "integer",
                         "description": "과제 ID",
                         "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/grants/{id}/revoke/{appId}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "관리자용: 승인된 지원을 취소하고 보상금을 회수",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "정부과제 승인 취소",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "과제 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "지원 ID",
+                        "name": "appId",
                         "in": "path",
                         "required": true
                     }
@@ -702,6 +785,34 @@
                 }
             }
         },
+        "/auth/avatar": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "본인의 프로필 아바타 URL 변경 (빈 문자열이면 기본 아바타로 초기화)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "아바타 변경",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "이메일/비밀번호로 로그인하여 JWT 토큰 발급",
@@ -935,6 +1046,46 @@
                 }
             }
         },
+        "/chat/sessions": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "새 챗봇 세션 시작",
+                "responses": {}
+            }
+        },
+        "/chat/sessions/{id}/ask": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "챗봇에 질문 (non-streaming)",
+                "responses": {}
+            }
+        },
         "/classrooms": {
             "get": {
                 "security": [
@@ -1117,6 +1268,29 @@
             }
         },
         "/companies": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "모든 학생의 회사 목록 (소유자 정보 포함). 학생 본인 회사 + 타 학생 회사 모두 노출.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Company"
+                ],
+                "summary": "전체 기업 둘러보기",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -2134,6 +2308,98 @@
                 }
             }
         },
+        "/grants/{id}/applications/{appId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "본인의 지원서 내용 수정 (승인 전에만 가능)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Grant"
+                ],
+                "summary": "지원서 수정",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "과제 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "지원 ID",
+                        "name": "appId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "수정 내용",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.ApplyGrantRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "본인의 지원서 삭제 (승인 전에만 가능)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Grant"
+                ],
+                "summary": "지원서 삭제",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "과제 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "지원 ID",
+                        "name": "appId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/grants/{id}/apply": {
             "post": {
                 "security": [
@@ -2433,6 +2699,108 @@
                 }
             }
         },
+        "/investment/rounds/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "특정 라운드의 상세 정보 (누적 금액, 남은 주식 등)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Investment"
+                ],
+                "summary": "투자 라운드 상세",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "라운드 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/investment/rounds/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "진행 중인 라운드를 취소하고 모든 투자자에게 환불",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Investment"
+                ],
+                "summary": "라운드 취소 + 환불 (owner)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "라운드 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/investment/rounds/{id}/close": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "목표 미달 상태에서 현재까지 유치된 금액으로 라운드 확정",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Investment"
+                ],
+                "summary": "라운드 조기 마감 (owner)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "라운드 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/investment/rounds/{id}/invest": {
             "post": {
                 "security": [
@@ -2460,6 +2828,115 @@
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/llm/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "LLM proxy (llm.cycorld.com) 용 API 키. 최초 호출 시 자동으로 발급됨. 평문 키는 최초 1회에만 포함됨.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LLM"
+                ],
+                "summary": "내 LLM API 키 조회 (자동 발급)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/llm/me/rotate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "기존 키를 즉시 폐기하고 새 키를 발급. 평문 키는 이 응답에 1회만 포함됨.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LLM"
+                ],
+                "summary": "내 LLM API 키 재발급",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/llm/me/usage": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "최근 N일 일별 사용량 + 누적 청구액 + 최근 7일 청구액. days 쿼리 파라미터 (default 30).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LLM"
+                ],
+                "summary": "내 LLM 사용량 + 과금 내역",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 30,
+                        "description": "일수",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/llm/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "llm.cycorld.com 의 서비스 상태 (upstream 모델, 지연, 슬롯 사용률). 학생도 조회 가능.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LLM"
+                ],
+                "summary": "LLM 서비스 상태",
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
                         }
@@ -3095,7 +3572,7 @@
         },
         "/oauth/token": {
             "post": {
-                "description": "인가 코드 → 액세스 토큰 교환, 또는 리프레시 토큰으로 갱신",
+                "description": "인가 코드 → 액세스 토큰 교환, 또는 리프레시 토큰으로 갱신.\n\n**PKCE (RFC 7636) 퍼블릭 클라이언트** 는 `client_secret` 없이 `code_verifier` 만으로 교환 가능.\n**refresh_token** grant 도 PKCE 로 발급된 토큰이면 `client_secret` 옵셔널.\n응답 (RFC 6749 §5.1): `access_token`, `refresh_token`, `token_type` (Bearer), `expires_in` (초), `scopes`.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3108,12 +3585,12 @@
                 "summary": "토큰 교환",
                 "parameters": [
                     {
-                        "description": "grant_type, code, client_id, client_secret, redirect_uri, code_verifier, refresh_token",
+                        "description": "토큰 교환/갱신 요청",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/internal_interfaces_http_handler.OAuthTokenRequest"
                         }
                     }
                 ],
@@ -3121,7 +3598,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                            "$ref": "#/definitions/internal_interfaces_http_handler.OAuthTokenResponse"
                         }
                     },
                     "400": {
@@ -3140,7 +3617,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "OAuth 액세스 토큰으로 사용자 정보 조회",
+                "description": "OAuth 액세스 토큰으로 사용자 정보 조회. 응답: id, email, name, department, bio, avatar_url",
                 "produces": [
                     "application/json"
                 ],
@@ -3152,7 +3629,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                            "$ref": "#/definitions/internal_interfaces_http_handler.OAuthUserInfoResponse"
                         }
                     }
                 }
@@ -3218,6 +3695,44 @@
             }
         },
         "/posts/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ID로 단일 게시물을 조회한다. 알림·외부 공유 링크에서 진입하는 /post/:id 에 대응.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Feed"
+                ],
+                "summary": "게시물 단건 조회 (딥링크용)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "게시물 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            },
             "put": {
                 "security": [
                     {
@@ -3251,6 +3766,38 @@
                         "schema": {
                             "$ref": "#/definitions/internal_interfaces_http_handler.UpdatePostRequest"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "본인 또는 관리자가 게시물 삭제",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Feed"
+                ],
+                "summary": "게시물 삭제",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "게시물 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -3334,6 +3881,47 @@
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/{id}/comments/{commentId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "본인 또는 관리자가 댓글 삭제 (보상 회수 포함)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Feed"
+                ],
+                "summary": "댓글 삭제",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "게시물 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "댓글 ID",
+                        "name": "commentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
                         }
@@ -3477,6 +4065,182 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/databases": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "내가 프로비저닝 한 학생용 PostgreSQL DB 목록",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserDB"
+                ],
+                "summary": "내 데이터베이스 목록",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "학생 개인용 PostgreSQL DB 프로비저닝. 비밀번호는 응답에 1회만 포함.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserDB"
+                ],
+                "summary": "새 데이터베이스 생성",
+                "parameters": [
+                    {
+                        "description": "프로젝트명",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_earnlearning_backend_internal_application.CreateUserDBInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/databases/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "학생 DB 와 PG 계정을 완전히 삭제합니다 (복구 불가)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserDB"
+                ],
+                "summary": "데이터베이스 삭제",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "DB ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/databases/{id}/rotate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "데이터베이스 비밀번호 재발급 (기존 비번은 즉시 무효)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "UserDB"
+                ],
+                "summary": "비밀번호 재발급",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "DB ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{id}/activity": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "특정 사용자의 포스트, 프리랜서 잡, 정부과제 지원 내역",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "사용자 활동 조회",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "사용자 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_interfaces_http_handler.APIResponse"
                         }
@@ -3750,6 +4514,14 @@
                     }
                 },
                 "state": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_earnlearning_backend_internal_application.CreateUserDBInput": {
+            "type": "object",
+            "properties": {
+                "project_name": {
                     "type": "string"
                 }
             }
@@ -4171,6 +4943,132 @@
                 "password": {
                     "type": "string",
                     "example": "password123"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.OAuthTokenData": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "a1b2c3..."
+                },
+                "expires_in": {
+                    "type": "integer",
+                    "example": 3600
+                },
+                "refresh_token": {
+                    "type": "string",
+                    "example": "d4e5f6..."
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "read:profile",
+                        "read:wallet"
+                    ]
+                },
+                "token_type": {
+                    "type": "string",
+                    "example": "Bearer"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.OAuthTokenRequest": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string",
+                    "example": "abcd1234"
+                },
+                "client_secret": {
+                    "type": "string",
+                    "example": "(PKCE 사용 시 생략 가능)"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "a1b2c3..."
+                },
+                "code_verifier": {
+                    "type": "string",
+                    "example": "(PKCE 사용 시 필수)"
+                },
+                "grant_type": {
+                    "type": "string",
+                    "enum": [
+                        "authorization_code",
+                        "refresh_token"
+                    ],
+                    "example": "authorization_code"
+                },
+                "redirect_uri": {
+                    "type": "string",
+                    "example": "https://myapp.com/callback"
+                },
+                "refresh_token": {
+                    "type": "string",
+                    "example": "d4e5f6..."
+                }
+            }
+        },
+        "internal_interfaces_http_handler.OAuthTokenResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_interfaces_http_handler.OAuthTokenData"
+                },
+                "error": {
+                    "$ref": "#/definitions/internal_interfaces_http_handler.APIError"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "internal_interfaces_http_handler.OAuthUserInfoData": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string",
+                    "example": "/uploads/avatar.png"
+                },
+                "bio": {
+                    "type": "string"
+                },
+                "department": {
+                    "type": "string",
+                    "example": "행정학과"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "student@ewha.ac.kr"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "홍길동"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.OAuthUserInfoResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_interfaces_http_handler.OAuthUserInfoData"
+                },
+                "error": {
+                    "$ref": "#/definitions/internal_interfaces_http_handler.APIError"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },

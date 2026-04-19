@@ -260,6 +260,54 @@ type AcceptApplicationRequest struct {
 	ApplicationID int `json:"application_id" example:"1"`
 }
 
+// --- OAuth response models (typed wrappers, RFC 6749 §5.1 호환) ---
+
+// OAuthTokenData is the data payload of /oauth/token (success).
+type OAuthTokenData struct {
+	AccessToken  string   `json:"access_token" example:"a1b2c3..."`
+	RefreshToken string   `json:"refresh_token" example:"d4e5f6..."`
+	TokenType    string   `json:"token_type" example:"Bearer"`
+	ExpiresIn    int      `json:"expires_in" example:"3600"`
+	Scopes       []string `json:"scopes" example:"read:profile,read:wallet"`
+}
+
+// OAuthTokenResponse — POST /oauth/token success envelope.
+type OAuthTokenResponse struct {
+	Success bool            `json:"success" example:"true"`
+	Data    *OAuthTokenData `json:"data"`
+	Error   *APIError       `json:"error"`
+}
+
+// OAuthUserInfoData is the data payload of /oauth/userinfo.
+type OAuthUserInfoData struct {
+	ID         int    `json:"id" example:"1"`
+	Email      string `json:"email" example:"student@ewha.ac.kr"`
+	Name       string `json:"name" example:"홍길동"`
+	Department string `json:"department" example:"행정학과"`
+	Bio        string `json:"bio"`
+	AvatarURL  string `json:"avatar_url" example:"/uploads/avatar.png"`
+}
+
+// OAuthUserInfoResponse — GET /oauth/userinfo success envelope.
+type OAuthUserInfoResponse struct {
+	Success bool               `json:"success" example:"true"`
+	Data    *OAuthUserInfoData `json:"data"`
+	Error   *APIError          `json:"error"`
+}
+
+// OAuthTokenRequest documents POST /oauth/token body.
+// PKCE 퍼블릭 클라이언트는 client_secret 없이 code_verifier 만으로도 가능.
+// refresh_token grant 또한 PKCE 발급 토큰은 client_secret 옵셔널.
+type OAuthTokenRequest struct {
+	GrantType    string `json:"grant_type" example:"authorization_code" enums:"authorization_code,refresh_token"`
+	Code         string `json:"code,omitempty" example:"a1b2c3..."`
+	ClientID     string `json:"client_id" example:"abcd1234"`
+	ClientSecret string `json:"client_secret,omitempty" example:"(PKCE 사용 시 생략 가능)"`
+	RedirectURI  string `json:"redirect_uri,omitempty" example:"https://myapp.com/callback"`
+	CodeVerifier string `json:"code_verifier,omitempty" example:"(PKCE 사용 시 필수)"`
+	RefreshToken string `json:"refresh_token,omitempty" example:"d4e5f6..."`
+}
+
 // BusinessCardRequest represents a business card creation request.
 type BusinessCardRequest struct {
 	Name     string `json:"name" example:"홍길동"`

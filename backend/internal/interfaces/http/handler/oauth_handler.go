@@ -133,12 +133,16 @@ func (h *OAuthHandler) Authorize(c echo.Context) error {
 // Token godoc
 //
 //	@Summary		토큰 교환
-//	@Description	인가 코드 → 액세스 토큰 교환, 또는 리프레시 토큰으로 갱신
+//	@Description	인가 코드 → 액세스 토큰 교환, 또는 리프레시 토큰으로 갱신.
+//	@Description
+//	@Description	**PKCE (RFC 7636) 퍼블릭 클라이언트** 는 `client_secret` 없이 `code_verifier` 만으로 교환 가능.
+//	@Description	**refresh_token** grant 도 PKCE 로 발급된 토큰이면 `client_secret` 옵셔널.
+//	@Description	응답 (RFC 6749 §5.1): `access_token`, `refresh_token`, `token_type` (Bearer), `expires_in` (초), `scopes`.
 //	@Tags			OAuth
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		object	true	"grant_type, code, client_id, client_secret, redirect_uri, code_verifier, refresh_token"
-//	@Success		200		{object}	APIResponse
+//	@Param			body	body		OAuthTokenRequest	true	"토큰 교환/갱신 요청"
+//	@Success		200		{object}	OAuthTokenResponse
 //	@Failure		400		{object}	APIResponse
 //	@Router			/oauth/token [post]
 func (h *OAuthHandler) Token(c echo.Context) error {
@@ -210,11 +214,11 @@ func (h *OAuthHandler) Revoke(c echo.Context) error {
 // UserInfo godoc
 //
 //	@Summary		사용자 정보 (OAuth)
-//	@Description	OAuth 액세스 토큰으로 사용자 정보 조회
+//	@Description	OAuth 액세스 토큰으로 사용자 정보 조회. 응답: id, email, name, department, bio, avatar_url
 //	@Tags			OAuth
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Success		200	{object}	APIResponse
+//	@Success		200	{object}	OAuthUserInfoResponse
 //	@Router			/oauth/userinfo [get]
 func (h *OAuthHandler) UserInfo(c echo.Context) error {
 	userID, ok := c.Get("oauth_user_id").(int)
