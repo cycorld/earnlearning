@@ -51,7 +51,7 @@ interface AskResponse {
 type Mode = 'fast' | 'deep'
 
 interface StreamEvent {
-  type: 'tool_call' | 'tool_result' | 'text_delta' | 'done' | 'error' | 'close'
+  type: 'tool_call' | 'tool_result' | 'text_delta' | 'done' | 'error' | 'close' | 'queued'
   delta?: string
   tool_name?: string
   tool_id?: string
@@ -60,6 +60,7 @@ interface StreamEvent {
   message_id?: number
   tokens?: number
   error?: string
+  queue_waiting?: number
 }
 
 interface StreamHandlers {
@@ -68,6 +69,7 @@ interface StreamHandlers {
   onTextDelta?: (delta: string) => void
   onError?: (err: string) => void
   onDone?: (ev: StreamEvent) => void
+  onQueued?: (waiting: number) => void
 }
 
 // streamAsk — POST /chat/sessions/:id/ask/stream 을 fetch + ReadableStream 으로 소비.
@@ -135,6 +137,9 @@ function processSseEvent(event: string, handlers: StreamHandlers): void {
       case 'text_delta':
         if (parsed.delta) handlers.onTextDelta?.(parsed.delta)
         break
+      case 'queued':
+        handlers.onQueued?.(parsed.queue_waiting ?? 0)
+        break
       case 'error':
         handlers.onError?.(parsed.error || '알 수 없는 오류')
         break
@@ -159,6 +164,7 @@ export default function ChatDock() {
   const [mode, setMode] = useState<Mode>('fast')
   const [skills, setSkills] = useState<Skill[]>([])
   const [activeSkillSlug, setActiveSkillSlug] = useState<string>('')
+  const [queueWaiting, setQueueWaiting] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const isAdmin = user?.role === 'admin'
@@ -262,11 +268,15 @@ export default function ChatDock() {
           })
         },
         onTextDelta: (delta) => {
+          if (queueWaiting > 0) setQueueWaiting(0)
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId ? { ...m, content: m.content + delta } : m,
             ),
           )
+        },
+        onQueued: (waiting) => {
+          setQueueWaiting(waiting)
         },
         onError: (err) => {
           toast.error(err)
@@ -283,6 +293,7 @@ export default function ChatDock() {
       toast.error(err instanceof Error ? err.message : '답변을 받지 못했습니다.')
     } finally {
       setSending(false)
+      setQueueWaiting(0)
     }
   }
 
@@ -411,7 +422,11 @@ export default function ChatDock() {
         {sending && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Spinner className="h-3 w-3" />
-            {mode === 'deep' || isAdmin ? '깊이 생각하는 중…' : '답변 생성 중…'}
+            {queueWaiting > 0
+              ? `대기 중… 현재 ${queueWaiting}명이 함께 기다리고 있어요`
+              : mode === 'deep' || isAdmin
+                ? '깊이 생각하는 중…'
+                : '답변 생성 중…'}
           </div>
         )}
       </div>

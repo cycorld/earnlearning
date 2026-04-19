@@ -20,6 +20,14 @@ import (
 type ChatLLMClient interface {
 	ChatComplete(ctx context.Context, req *LLMChatRequest) (*LLMChatResponse, error)
 	ChatCompleteStream(ctx context.Context, req *LLMChatRequest) (<-chan LLMStreamEvent, error)
+	// Stats 는 현재 동시 호출 메트릭 (#088 큐잉 진행률용).
+	Stats() LLMStats
+}
+
+type LLMStats struct {
+	InFlight int
+	Waiting  int
+	Cap      int
 }
 
 // ChatUseCase — 세션 관리 + 메시지 전송 + 도구 실행 루프.
@@ -321,6 +329,7 @@ const (
 	StreamEventTextDelta  StreamEventType = "text_delta"    // 최종 응답 토큰 chunk
 	StreamEventDone       StreamEventType = "done"          // 완료 (총 token / 최종 message id 포함)
 	StreamEventError      StreamEventType = "error"
+	StreamEventQueued     StreamEventType = "queued"        // #088: LLM 큐 대기 중 (waiting 인원)
 )
 
 // AskStreamEvent — handler 가 SSE 로 직렬화해 클라에 push.
@@ -334,6 +343,8 @@ type AskStreamEvent struct {
 	MessageID   int             `json:"message_id,omitempty"`
 	Tokens      int             `json:"tokens,omitempty"`
 	Error       string          `json:"error,omitempty"`
+	// #088 queued: waiting > 0 일 때 현재 대기 인원. 0 이면 큐에서 빠져나옴.
+	QueueWaiting int `json:"queue_waiting,omitempty"`
 }
 
 // Ask 는 한 사용자 질문에 대해 LLM 을 호출하고, 필요시 도구를 실행하고,
@@ -593,7 +604,9 @@ func (uc *ChatUseCase) runAskStream(
 			req.Tools = toolSpecs
 			req.ToolChoice = "auto"
 		}
+		qDone := uc.startQueueProgress(ctx, emit)
 		resp, err := uc.llm.ChatComplete(ctx, req)
+		close(qDone)
 		if err != nil {
 			emit(AskStreamEvent{Type: StreamEventError, Error: fmt.Sprintf("llm: %v", err)})
 			return
@@ -697,6 +710,42 @@ func (uc *ChatUseCase) runAskStream(
 		totalPrompt, totalCompletion, totalCache, emit)
 }
 
+// startQueueProgress — LLM 호출 직전에 시작, 1.5s 안 끝나면 매 2s 마다 현재
+// waiting 인원 push. 끝나면 close(done) 호출.
+func (uc *ChatUseCase) startQueueProgress(ctx context.Context, emit func(AskStreamEvent)) chan<- struct{} {
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-done:
+			return
+		case <-ctx.Done():
+			return
+		case <-time.After(1500 * time.Millisecond):
+		}
+		t := time.NewTicker(2 * time.Second)
+		defer t.Stop()
+		lastWaiting := -1
+		for {
+			select {
+			case <-done:
+				if lastWaiting > 0 {
+					emit(AskStreamEvent{Type: StreamEventQueued, QueueWaiting: 0})
+				}
+				return
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				s := uc.llm.Stats()
+				if s.Waiting != lastWaiting && s.Waiting > 0 {
+					emit(AskStreamEvent{Type: StreamEventQueued, QueueWaiting: s.Waiting})
+					lastWaiting = s.Waiting
+				}
+			}
+		}
+	}()
+	return done
+}
+
 // streamFinalAnswer — 도구 없이 최종 응답만 streaming 으로 받음.
 func (uc *ChatUseCase) streamFinalAnswer(
 	ctx context.Context,
@@ -714,11 +763,14 @@ func (uc *ChatUseCase) streamFinalAnswer(
 		MaxTokens:       pickMaxTokens(model, effort),
 		ReasoningEffort: effort,
 	}
+	qDone := uc.startQueueProgress(ctx, emit)
 	stream, err := uc.llm.ChatCompleteStream(ctx, req)
 	if err != nil {
+		close(qDone)
 		emit(AskStreamEvent{Type: StreamEventError, Error: fmt.Sprintf("stream: %v", err)})
 		return
 	}
+	close(qDone)
 	var contentBuf strings.Builder
 	var thisPrompt, thisCompletion, thisCache int
 	for ev := range stream {
