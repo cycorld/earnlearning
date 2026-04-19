@@ -131,6 +131,9 @@ func (uc *ChatUseCase) AdminListAllSessions(userID int, query string, page int) 
 	return uc.sessionRepo.ListAll(userID, query, page, 50)
 }
 
+// AdminLLMStats — 현재 LLM 동시 호출 메트릭 (#089).
+func (uc *ChatUseCase) AdminLLMStats() LLMStats { return uc.llm.Stats() }
+
 // AdminUsageDashboard — 관리자 비용 대시보드. days 일치 일별 합계 + 상위 지출 학생.
 func (uc *ChatUseCase) AdminUsageDashboard(days int) (map[string]any, error) {
 	if days <= 0 || days > 365 {
