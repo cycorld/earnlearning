@@ -181,7 +181,7 @@ export default function ChatDock() {
       <button
         onClick={() => setOpen(true)}
         className={cn(
-          'fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full',
+          'fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full',
           'bg-primary text-primary-foreground shadow-[0_4px_0_0_var(--primary-shadow)]',
           'transition-transform hover:scale-105 active:translate-y-[2px] active:shadow-[0_2px_0_0_var(--primary-shadow)]',
           'sm:bottom-6',
