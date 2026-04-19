@@ -11,6 +11,16 @@ type ChatAdapter struct{ c *Client }
 
 func NewChatAdapter(c *Client) *ChatAdapter { return &ChatAdapter{c: c} }
 
+// Stats — application.ChatLLMClient.Stats 구현 (#088 큐잉 진행률용).
+func (a *ChatAdapter) Stats() application.LLMStats {
+	s := a.c.ChatStats()
+	return application.LLMStats{
+		InFlight: s.InFlight,
+		Waiting:  s.Waiting,
+		Cap:      s.Cap,
+	}
+}
+
 func (a *ChatAdapter) ChatComplete(ctx context.Context, req *application.LLMChatRequest) (*application.LLMChatResponse, error) {
 	if req == nil {
 		return nil, nil

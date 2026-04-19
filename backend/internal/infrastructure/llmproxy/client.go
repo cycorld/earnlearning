@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
 
@@ -34,6 +35,9 @@ type Client struct {
 	userKey  string
 	http     *http.Client
 	chatSem  chan struct{}
+	// 메트릭 (#088): semaphore 자체는 길이 정보가 부정확해서 별도 atomic 으로 추적.
+	chatInFlight int64 // 실제 LLM 호출 중인 요청 수
+	chatWaiting  int64 // semaphore 큐 대기 중인 요청 수
 }
 
 // defaultChatTimeout — non-streaming 호출의 http.Client.Timeout. (#087: 15s → 60s)
@@ -59,12 +63,24 @@ func New(baseURL, adminKey string) *Client {
 }
 
 // acquireChat / releaseChat — chat completion 호출 동시성 제한.
-// ctx 취소 시 즉시 반환.
+// ctx 취소 시 즉시 반환. waiting/inFlight 카운터 동시 갱신.
 func (c *Client) acquireChat(ctx context.Context) error {
+	// fast path: 즉시 가능
 	select {
 	case c.chatSem <- struct{}{}:
+		atomic.AddInt64(&c.chatInFlight, 1)
+		return nil
+	default:
+	}
+	// slow path: 큐잉
+	atomic.AddInt64(&c.chatWaiting, 1)
+	select {
+	case c.chatSem <- struct{}{}:
+		atomic.AddInt64(&c.chatWaiting, -1)
+		atomic.AddInt64(&c.chatInFlight, 1)
 		return nil
 	case <-ctx.Done():
+		atomic.AddInt64(&c.chatWaiting, -1)
 		return ctx.Err()
 	}
 }
@@ -72,7 +88,24 @@ func (c *Client) acquireChat(ctx context.Context) error {
 func (c *Client) releaseChat() {
 	select {
 	case <-c.chatSem:
+		atomic.AddInt64(&c.chatInFlight, -1)
 	default:
+	}
+}
+
+// ChatStats — 현재 LLM 호출 동시성 상태 (#088 큐잉 진행률 표시용).
+type ChatStats struct {
+	InFlight int
+	Waiting  int
+	Cap      int
+}
+
+// ChatStats 반환. atomic 으로 안전.
+func (c *Client) ChatStats() ChatStats {
+	return ChatStats{
+		InFlight: int(atomic.LoadInt64(&c.chatInFlight)),
+		Waiting:  int(atomic.LoadInt64(&c.chatWaiting)),
+		Cap:      cap(c.chatSem),
 	}
 }
 
