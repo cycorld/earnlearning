@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -333,8 +334,12 @@ func (h *ChatHandler) AdminGetSession(c echo.Context) error {
 }
 
 // AdminSyncNotionOne — POST /admin/chat/wiki/:slug/notion-sync — 단일 문서 노션 동기화 (#082).
+// slug 에 `/` 가 포함될 수 있으므로 (notion-manuals/wallet 등) 명시적으로 URL-decode.
 func (h *ChatHandler) AdminSyncNotionOne(c echo.Context) error {
 	slug := c.Param("slug")
+	if decoded, err := url.PathUnescape(slug); err == nil {
+		slug = decoded
+	}
 	if slug == "" {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "slug required"))
 	}
@@ -356,6 +361,9 @@ func (h *ChatHandler) AdminSyncNotionAll(c echo.Context) error {
 // AdminGetWikiDoc — GET /admin/chat/wiki/:slug — body + meta 반환 (admin 편집용).
 func (h *ChatHandler) AdminGetWikiDoc(c echo.Context) error {
 	slug := c.Param("slug")
+	if decoded, err := url.PathUnescape(slug); err == nil {
+		slug = decoded
+	}
 	if slug == "" {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "slug required"))
 	}
@@ -377,6 +385,9 @@ type adminUpdateWikiInput struct {
 // FTS5 + meta 즉시 반영, 가능하면 .md 파일도 덮어씀 (dev 환경 영구화).
 func (h *ChatHandler) AdminUpdateWikiDoc(c echo.Context) error {
 	slug := c.Param("slug")
+	if decoded, err := url.PathUnescape(slug); err == nil {
+		slug = decoded
+	}
 	if slug == "" {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "slug required"))
 	}
