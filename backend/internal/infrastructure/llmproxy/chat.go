@@ -53,6 +53,20 @@ type ChatRequest struct {
 	ReasoningEffort  string         `json:"reasoning_effort,omitempty"`
 	Tools            []ChatToolSpec `json:"tools,omitempty"`
 	ToolChoice       any            `json:"tool_choice,omitempty"` // "auto" | "none" | {"type":"function","function":{"name":"..."}}
+	Stream           bool           `json:"stream,omitempty"`
+	StreamOptions    *StreamOptions `json:"stream_options,omitempty"`
+}
+
+type StreamOptions struct {
+	IncludeUsage bool `json:"include_usage,omitempty"`
+}
+
+// ChatStreamEvent — SSE chunk 의 추상화. 한 번에 하나만 채워짐.
+type ChatStreamEvent struct {
+	TextDelta    string     // assistant content delta
+	FinishReason string     // "stop" | "length" | ...
+	Usage        *ChatUsage // 마지막 chunk 의 usage 정보 (nil if not yet)
+	Err          error
 }
 
 type ChatUsage struct {
@@ -123,4 +137,139 @@ func truncate(b []byte, n int) string {
 		return string(b)
 	}
 	return string(b[:n]) + "..."
+}
+
+// ChatCompleteStream — /v1/chat/completions 를 stream=true 로 호출.
+// 반환된 채널은 끝나면 close. 호출자는 ctx 로 취소 가능.
+//
+// 본 구현은 tool_calls 가 없는 "최종 응답" 전용 — caller (use case) 가 tool loop
+// 마지막 turn 에서만 호출. tool_calls delta 는 무시.
+func (c *Client) ChatCompleteStream(ctx context.Context, req *ChatRequest) (<-chan ChatStreamEvent, error) {
+	streamReq := *req // shallow copy
+	streamReq.Stream = true
+	streamReq.StreamOptions = &StreamOptions{IncludeUsage: true}
+
+	body, err := json.Marshal(&streamReq)
+	if err != nil {
+		return nil, fmt.Errorf("marshal chat stream request: %w", err)
+	}
+	// stream 은 길게 둠 — Cloudflare free 100s 제한과 별개로 origin 에선 여유롭게
+	streamCtx, cancel := context.WithTimeout(ctx, 180*time.Second)
+
+	httpReq, err := http.NewRequestWithContext(streamCtx, http.MethodPost,
+		c.baseURL+"/v1/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	key := c.userKey
+	if key == "" {
+		key = c.adminKey
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+key)
+	httpReq.Header.Set("Accept", "text/event-stream")
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// stream 전용 클라이언트: HTTP 자체 timeout 끄고 ctx 로만 제어
+	streamHTTP := &http.Client{Timeout: 0}
+	resp, err := streamHTTP.Do(httpReq)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("chat stream http: %w", err)
+	}
+	if resp.StatusCode >= 400 {
+		raw, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		cancel()
+		return nil, fmt.Errorf("chat stream %d: %s", resp.StatusCode, string(raw))
+	}
+
+	out := make(chan ChatStreamEvent, 16)
+	go func() {
+		defer close(out)
+		defer resp.Body.Close()
+		defer cancel()
+		parseSSEStream(resp.Body, out)
+	}()
+	return out, nil
+}
+
+// parseSSEStream — SSE chunked response 를 line 단위로 파싱해 ChatStreamEvent 생성.
+// OpenAI/Qwen 공통 포맷: "data: {...}\n\n" 와 종료 "data: [DONE]\n\n".
+func parseSSEStream(body io.Reader, out chan<- ChatStreamEvent) {
+	buf := make([]byte, 0, 4096)
+	tmp := make([]byte, 4096)
+	for {
+		n, err := body.Read(tmp)
+		if n > 0 {
+			buf = append(buf, tmp[:n]...)
+			for {
+				// SSE event 는 \n\n 로 분리. 일부 서버는 \r\n\r\n 도 사용 → 둘 다 시도
+				idx := bytes.Index(buf, []byte("\n\n"))
+				altIdx := bytes.Index(buf, []byte("\r\n\r\n"))
+				if idx == -1 && altIdx == -1 {
+					break
+				}
+				cut := idx
+				skip := 2
+				if altIdx != -1 && (idx == -1 || altIdx < idx) {
+					cut = altIdx
+					skip = 4
+				}
+				event := buf[:cut]
+				buf = buf[cut+skip:]
+				processSSEEvent(event, out)
+			}
+		}
+		if err == io.EOF {
+			return
+		}
+		if err != nil {
+			out <- ChatStreamEvent{Err: fmt.Errorf("sse read: %w", err)}
+			return
+		}
+	}
+}
+
+func processSSEEvent(event []byte, out chan<- ChatStreamEvent) {
+	// event 는 여러 line 일 수 있음 (data:, event:, id: ...)
+	// 우리는 data: 만 처리.
+	for _, line := range bytes.Split(event, []byte("\n")) {
+		line = bytes.TrimRight(line, "\r")
+		if !bytes.HasPrefix(line, []byte("data:")) {
+			continue
+		}
+		payload := bytes.TrimSpace(line[len("data:"):])
+		if len(payload) == 0 {
+			continue
+		}
+		if bytes.Equal(payload, []byte("[DONE]")) {
+			return
+		}
+		var chunk struct {
+			Choices []struct {
+				Delta struct {
+					Content string `json:"content"`
+				} `json:"delta"`
+				FinishReason *string `json:"finish_reason"`
+			} `json:"choices"`
+			Usage *ChatUsage `json:"usage"`
+		}
+		if err := json.Unmarshal(payload, &chunk); err != nil {
+			// malformed chunk — skip silently (stream 도중 keepalive 등 가능)
+			continue
+		}
+		if len(chunk.Choices) > 0 {
+			ch := chunk.Choices[0]
+			if ch.Delta.Content != "" {
+				out <- ChatStreamEvent{TextDelta: ch.Delta.Content}
+			}
+			if ch.FinishReason != nil && *ch.FinishReason != "" {
+				out <- ChatStreamEvent{FinishReason: *ch.FinishReason}
+			}
+		}
+		if chunk.Usage != nil {
+			out <- ChatStreamEvent{Usage: chunk.Usage}
+		}
+	}
 }

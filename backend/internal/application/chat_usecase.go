@@ -19,6 +19,7 @@ import (
 // 구체 구현은 infrastructure/llmproxy 의 ChatAdapter.
 type ChatLLMClient interface {
 	ChatComplete(ctx context.Context, req *LLMChatRequest) (*LLMChatResponse, error)
+	ChatCompleteStream(ctx context.Context, req *LLMChatRequest) (<-chan LLMStreamEvent, error)
 }
 
 // ChatUseCase — 세션 관리 + 메시지 전송 + 도구 실행 루프.
@@ -311,6 +312,30 @@ type AskOutput struct {
 	ToolLogs []chat.Message `json:"tool_logs"` // 실행된 툴 결과들 (UI 표시용 부가 정보)
 }
 
+// StreamEventType — 프런트로 보내는 SSE event 종류.
+type StreamEventType string
+
+const (
+	StreamEventToolCall   StreamEventType = "tool_call"     // 어시스턴트가 도구 호출 결정 (이름 + args)
+	StreamEventToolResult StreamEventType = "tool_result"   // 도구 실행 결과 (id + content)
+	StreamEventTextDelta  StreamEventType = "text_delta"    // 최종 응답 토큰 chunk
+	StreamEventDone       StreamEventType = "done"          // 완료 (총 token / 최종 message id 포함)
+	StreamEventError      StreamEventType = "error"
+)
+
+// AskStreamEvent — handler 가 SSE 로 직렬화해 클라에 push.
+type AskStreamEvent struct {
+	Type        StreamEventType `json:"type"`
+	Delta       string          `json:"delta,omitempty"`
+	ToolName    string          `json:"tool_name,omitempty"`
+	ToolID      string          `json:"tool_id,omitempty"`
+	ToolArgs    string          `json:"tool_args,omitempty"`
+	ToolContent string          `json:"tool_content,omitempty"`
+	MessageID   int             `json:"message_id,omitempty"`
+	Tokens      int             `json:"tokens,omitempty"`
+	Error       string          `json:"error,omitempty"`
+}
+
 // Ask 는 한 사용자 질문에 대해 LLM 을 호출하고, 필요시 도구를 실행하고,
 // 최종 어시스턴트 응답을 DB 에 저장하여 반환.
 //
@@ -483,6 +508,280 @@ func (uc *ChatUseCase) Ask(ctx context.Context, in AskInput) (*AskOutput, error)
 	}
 
 	return &AskOutput{Message: finalAssistant, ToolLogs: toolLogs}, nil
+}
+
+// AskStream — Ask 와 동일한 도구 루프지만 결과를 channel 로 흘려보냄.
+//
+// 설계:
+//   - 도구 호출 hop 은 기존처럼 non-streaming (단일 호출 → 도구 실행 → tool_result event 발행)
+//   - tool_calls 가 없는 "최종 응답" turn 만 ChatCompleteStream 으로 전환
+//   - 각 text delta 를 channel 에 push
+//   - 마지막에 assistant 메시지 DB 저장 후 "done" event
+//
+// channel 은 끝나면 close. 호출자(handler)가 ctx 로 취소.
+func (uc *ChatUseCase) AskStream(ctx context.Context, in AskInput) (<-chan AskStreamEvent, error) {
+	if in.UserID <= 0 || in.SessionID <= 0 || strings.TrimSpace(in.Message) == "" {
+		return nil, fmt.Errorf("invalid ask input")
+	}
+	sess, err := uc.sessionRepo.FindByID(in.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	if sess.UserID != in.UserID {
+		return nil, chat.ErrForbidden
+	}
+	skill, err := uc.resolveSkill(sess, in.SkillSlug, in.IsAdmin)
+	if err != nil {
+		return nil, err
+	}
+	userMsg := &chat.Message{
+		SessionID: sess.ID,
+		Role:      chat.RoleUser,
+		Content:   in.Message,
+		CreatedAt: time.Now(),
+	}
+	if _, err := uc.messageRepo.Create(userMsg); err != nil {
+		return nil, err
+	}
+	model, effort := uc.resolveModelAndEffort(skill, in.Mode, in.IsAdmin)
+	history, err := uc.messageRepo.ListBySession(sess.ID, 50)
+	if err != nil {
+		return nil, err
+	}
+	messages := buildChatMessages(skill, history)
+	allowedTools := uc.tools.Filter(skill.ToolsAllowed, in.IsAdmin)
+	toolSpecs := buildToolSpecs(allowedTools)
+	toolCtx := ChatToolCtx{UserID: in.UserID, IsAdmin: in.IsAdmin, SessionID: sess.ID}
+
+	out := make(chan AskStreamEvent, 64)
+	go func() {
+		defer close(out)
+		uc.runAskStream(ctx, sess, skill, model, effort, messages, toolSpecs, toolCtx, in, out)
+	}()
+	return out, nil
+}
+
+// runAskStream — AskStream 의 내부 루프. 채널 close 는 caller 에서.
+func (uc *ChatUseCase) runAskStream(
+	ctx context.Context,
+	sess *chat.Session,
+	skill *chat.Skill,
+	model, effort string,
+	messages []LLMChatMessage,
+	toolSpecs []LLMChatToolSpec,
+	toolCtx ChatToolCtx,
+	in AskInput,
+	out chan<- AskStreamEvent,
+) {
+	totalPrompt, totalCompletion, totalCache := 0, 0, 0
+	emit := func(ev AskStreamEvent) {
+		select {
+		case out <- ev:
+		case <-ctx.Done():
+		}
+	}
+
+	// 도구 호출 hop (non-streaming)
+	for hop := 0; hop < uc.maxToolHops; hop++ {
+		req := &LLMChatRequest{
+			Model:           model,
+			Messages:        messages,
+			MaxTokens:       pickMaxTokens(model, effort),
+			ReasoningEffort: effort,
+		}
+		if len(toolSpecs) > 0 {
+			req.Tools = toolSpecs
+			req.ToolChoice = "auto"
+		}
+		resp, err := uc.llm.ChatComplete(ctx, req)
+		if err != nil {
+			emit(AskStreamEvent{Type: StreamEventError, Error: fmt.Sprintf("llm: %v", err)})
+			return
+		}
+		totalPrompt += resp.Usage.PromptTokens
+		totalCompletion += resp.Usage.CompletionTokens
+		totalCache += resp.Usage.PromptCachedTokens
+		if len(resp.Choices) == 0 {
+			emit(AskStreamEvent{Type: StreamEventError, Error: "empty choices"})
+			return
+		}
+		choice := resp.Choices[0]
+
+		// 도구 호출 없으면 → streaming 으로 최종 응답 다시 받기
+		if len(choice.Message.ToolCalls) == 0 {
+			// content 가 이미 채워져 있다면 (도구 없이 바로 답한 케이스) — 그대로 emit
+			if choice.Message.Content != "" && len(messages) == len(req.Messages) {
+				// 위 경우엔 streaming 안 하고 한 번에 보냄 (이미 받았으니 재호출 낭비)
+				uc.finalizeStreamFromText(sess, in, choice.Message.Content, model,
+					resp.Usage.PromptTokens, resp.Usage.CompletionTokens, resp.Usage.PromptCachedTokens,
+					totalPrompt, totalCompletion, totalCache, emit)
+				return
+			}
+			// 도구 결과 후 첫 hop 에서 답이 나온 케이스 — 다시 streaming 호출
+			uc.streamFinalAnswer(ctx, sess, skill, model, effort, messages, in,
+				totalPrompt, totalCompletion, totalCache, emit)
+			return
+		}
+
+		// assistant 메시지 저장 (tool_calls 포함, content 가 있다면 함께)
+		assistantMsg := &chat.Message{
+			SessionID:        sess.ID,
+			Role:             chat.RoleAssistant,
+			Content:          choice.Message.Content,
+			Model:            resp.Model,
+			PromptTokens:     resp.Usage.PromptTokens,
+			CompletionTokens: resp.Usage.CompletionTokens,
+			CacheTokens:      resp.Usage.PromptCachedTokens,
+			CreatedAt:        time.Now(),
+		}
+		for _, tc := range choice.Message.ToolCalls {
+			var parsed map[string]any
+			_ = json.Unmarshal([]byte(tc.Function.Arguments), &parsed)
+			assistantMsg.ToolCalls = append(assistantMsg.ToolCalls, chat.ToolCall{
+				ID:      tc.ID,
+				Name:    tc.Function.Name,
+				Args:    parsed,
+				RawArgs: tc.Function.Arguments,
+			})
+			emit(AskStreamEvent{
+				Type:     StreamEventToolCall,
+				ToolID:   tc.ID,
+				ToolName: tc.Function.Name,
+				ToolArgs: tc.Function.Arguments,
+			})
+		}
+		if _, err := uc.messageRepo.Create(assistantMsg); err != nil {
+			emit(AskStreamEvent{Type: StreamEventError, Error: err.Error()})
+			return
+		}
+		messages = append(messages, LLMChatMessage{
+			Role:      "assistant",
+			Content:   choice.Message.Content,
+			ToolCalls: choice.Message.ToolCalls,
+		})
+
+		// 각 도구 실행 → tool message 저장 + tool_result event
+		for _, tc := range choice.Message.ToolCalls {
+			result, tErr := uc.runTool(ctx, tc.Function.Name, tc.Function.Arguments, toolCtx, skill)
+			if tErr != nil {
+				result = fmt.Sprintf(`{"error": %q}`, tErr.Error())
+			}
+			toolMsg := &chat.Message{
+				SessionID:  sess.ID,
+				Role:       chat.RoleTool,
+				Content:    result,
+				ToolCallID: tc.ID,
+				CreatedAt:  time.Now(),
+			}
+			if _, err := uc.messageRepo.Create(toolMsg); err != nil {
+				emit(AskStreamEvent{Type: StreamEventError, Error: err.Error()})
+				return
+			}
+			emit(AskStreamEvent{
+				Type:        StreamEventToolResult,
+				ToolID:      tc.ID,
+				ToolName:    tc.Function.Name,
+				ToolContent: result,
+			})
+			messages = append(messages, LLMChatMessage{
+				Role:       "tool",
+				Content:    result,
+				ToolCallID: tc.ID,
+				Name:       tc.Function.Name,
+			})
+		}
+	}
+	// maxToolHops 도달 — 마지막 응답을 streaming 으로 한 번 더 시도
+	uc.streamFinalAnswer(ctx, sess, nil, model, effort, messages, in,
+		totalPrompt, totalCompletion, totalCache, emit)
+}
+
+// streamFinalAnswer — 도구 없이 최종 응답만 streaming 으로 받음.
+func (uc *ChatUseCase) streamFinalAnswer(
+	ctx context.Context,
+	sess *chat.Session,
+	_ *chat.Skill,
+	model, effort string,
+	messages []LLMChatMessage,
+	in AskInput,
+	prevPrompt, prevCompletion, prevCache int,
+	emit func(AskStreamEvent),
+) {
+	req := &LLMChatRequest{
+		Model:           model,
+		Messages:        messages,
+		MaxTokens:       pickMaxTokens(model, effort),
+		ReasoningEffort: effort,
+	}
+	stream, err := uc.llm.ChatCompleteStream(ctx, req)
+	if err != nil {
+		emit(AskStreamEvent{Type: StreamEventError, Error: fmt.Sprintf("stream: %v", err)})
+		return
+	}
+	var contentBuf strings.Builder
+	var thisPrompt, thisCompletion, thisCache int
+	for ev := range stream {
+		if ev.Err != nil {
+			emit(AskStreamEvent{Type: StreamEventError, Error: ev.Err.Error()})
+			return
+		}
+		if ev.TextDelta != "" {
+			contentBuf.WriteString(ev.TextDelta)
+			emit(AskStreamEvent{Type: StreamEventTextDelta, Delta: ev.TextDelta})
+		}
+		if ev.Usage != nil {
+			thisPrompt = ev.Usage.PromptTokens
+			thisCompletion = ev.Usage.CompletionTokens
+			thisCache = ev.Usage.PromptCachedTokens
+		}
+	}
+	final := contentBuf.String()
+	uc.finalizeStreamFromText(sess, in, final, model,
+		thisPrompt, thisCompletion, thisCache,
+		prevPrompt+thisPrompt, prevCompletion+thisCompletion, prevCache+thisCache, emit)
+}
+
+// finalizeStreamFromText — 최종 텍스트가 결정된 후 DB/usage 저장 + done event.
+func (uc *ChatUseCase) finalizeStreamFromText(
+	sess *chat.Session,
+	in AskInput,
+	finalText, model string,
+	thisPrompt, thisCompletion, thisCache int,
+	totalPrompt, totalCompletion, totalCache int,
+	emit func(AskStreamEvent),
+) {
+	assistantMsg := &chat.Message{
+		SessionID:        sess.ID,
+		Role:             chat.RoleAssistant,
+		Content:          finalText,
+		Model:            model,
+		PromptTokens:     thisPrompt,
+		CompletionTokens: thisCompletion,
+		CacheTokens:      thisCache,
+		CreatedAt:        time.Now(),
+	}
+	if _, err := uc.messageRepo.Create(assistantMsg); err != nil {
+		emit(AskStreamEvent{Type: StreamEventError, Error: err.Error()})
+		return
+	}
+	now := time.Now()
+	totalTokens := totalPrompt + totalCompletion
+	if err := uc.sessionRepo.UpdateLastMessageAt(sess.ID, now, totalTokens); err != nil {
+		log.Printf("[chat-stream] update session: %v", err)
+	}
+	if strings.TrimSpace(sess.Title) == "" || sess.Title == "새 대화" {
+		title := truncateForTitle(in.Message)
+		_ = uc.sessionRepo.UpdateTitle(sess.ID, title)
+	}
+	cost := llm.CostKRW(totalPrompt, totalCompletion, totalCache)
+	if err := uc.usageRepo.AddUsage(in.UserID, now, 1, totalPrompt, totalCompletion, totalCache, cost); err != nil {
+		log.Printf("[chat-stream] usage: %v", err)
+	}
+	emit(AskStreamEvent{
+		Type:      StreamEventDone,
+		MessageID: assistantMsg.ID,
+		Tokens:    totalTokens,
+	})
 }
 
 // ============================================================================
