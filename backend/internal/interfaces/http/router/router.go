@@ -280,6 +280,8 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		admin.DELETE("/chat/skills/:id", h.Chat.AdminDeleteSkill)
 		admin.GET("/chat/wiki", h.Chat.AdminListWiki)
 		admin.POST("/chat/wiki/reindex", h.Chat.AdminReindexWiki)
+		admin.GET("/chat/wiki/:slug", h.Chat.AdminGetWikiDoc)
+		admin.PUT("/chat/wiki/:slug", h.Chat.AdminUpdateWikiDoc)
 		admin.GET("/chat/sessions", h.Chat.AdminListSessions)
 		admin.GET("/chat/sessions/:id", h.Chat.AdminGetSession)
 		admin.GET("/chat/usage", h.Chat.AdminUsageDashboard)

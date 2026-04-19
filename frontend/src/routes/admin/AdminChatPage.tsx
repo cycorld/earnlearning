@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, BarChart3, Download, MessagesSquare, RefreshCw, Search, Sparkles } from 'lucide-react'
+import { ArrowLeft, BarChart3, Download, FileText, MessagesSquare, RefreshCw, Search, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api } from '@/lib/api'
@@ -91,6 +91,7 @@ export default function AdminChatPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [usage, setUsage] = useState<UsageDashboard | null>(null)
   const [openSession, setOpenSession] = useState<FullSession | null>(null)
+  const [editingSlug, setEditingSlug] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [reindexing, setReindexing] = useState(false)
   const [search, setSearch] = useState('')
@@ -272,8 +273,14 @@ export default function AdminChatPage() {
                     <td className="py-2 pr-3 text-[11px] text-muted-foreground">
                       {d.notion_page_id ? d.notion_page_id.slice(0, 8) + '…' : '—'}
                     </td>
-                    <td className="py-2 text-right text-[11px] text-muted-foreground">
+                    <td className="py-2 pr-2 text-right text-[11px] text-muted-foreground">
                       {new Date(d.updated_at).toLocaleDateString('ko-KR')}
+                    </td>
+                    <td className="py-2 text-right">
+                      <Button size="sm" variant="ghost" onClick={() => setEditingSlug(d.slug)}>
+                        <FileText className="h-3.5 w-3.5" />
+                        편집
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -366,6 +373,90 @@ export default function AdminChatPage() {
       {openSession && (
         <SessionDetailModal session={openSession} onClose={() => setOpenSession(null)} />
       )}
+
+      {editingSlug && (
+        <WikiEditorModal
+          slug={editingSlug}
+          onClose={() => setEditingSlug(null)}
+          onSaved={() => { setEditingSlug(null); void load() }}
+        />
+      )}
+    </div>
+  )
+}
+
+function WikiEditorModal({ slug, onClose, onSaved }: { slug: string; onClose: () => void; onSaved: () => void }) {
+  const [body, setBody] = useState('')
+  const [title, setTitle] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    api.get<{ body: string; meta: { title: string } }>(`/admin/chat/wiki/${encodeURIComponent(slug)}`)
+      .then((res) => {
+        if (cancelled) return
+        setBody(res?.body ?? '')
+        setTitle(res?.meta?.title ?? '')
+      })
+      .catch((err) => toast.error(err instanceof Error ? err.message : '본문 조회 실패'))
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [slug])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await api.put(`/admin/chat/wiki/${encodeURIComponent(slug)}`, { title, body })
+      toast.success('저장됨 (영구 반영은 git 커밋 필요)')
+      onSaved()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '저장 실패')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div
+        className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-background shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b p-3">
+          <div>
+            <h3 className="font-semibold">위키 편집 — <code className="text-xs">{slug}</code></h3>
+            <p className="text-[11px] text-muted-foreground">
+              저장 시 즉시 챗봇 답변에 반영. 영구화는 .md 파일을 git 에 커밋해야 합니다.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => void save()} disabled={loading || saving}>
+              {saving ? <Spinner className="h-3 w-3" /> : '저장'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onClose}>닫기</Button>
+          </div>
+        </div>
+        {loading ? (
+          <div className="flex flex-1 items-center justify-center p-6"><Spinner /></div>
+        ) : (
+          <div className="flex flex-1 flex-col gap-2 overflow-hidden p-3">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="제목"
+              className="rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="마크다운 본문…"
+              className="flex-1 resize-none rounded-md border bg-muted/30 p-2 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              spellCheck={false}
+            />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
