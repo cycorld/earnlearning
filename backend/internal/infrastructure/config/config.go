@@ -23,6 +23,8 @@ type Config struct {
 	LLMAffiliation  string
 	// Context7 (#071 follow-up)
 	Context7APIKey string
+	// Notion 자동 동기화 (#082)
+	NotionToken string
 }
 
 func Load() *Config {
@@ -44,6 +46,7 @@ func Load() *Config {
 		LLMAdminAPIKey:     getEnv("LLM_ADMIN_API_KEY", ""),
 		LLMAffiliation:     getEnv("LLM_AFFILIATION", "이화여대"),
 		Context7APIKey:     getEnv("CONTEXT7_API_KEY", ""),
+		NotionToken:        getEnv("NOTION_INTEGRATION_TOKEN", ""),
 	}
 }
 
