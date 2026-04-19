@@ -10,7 +10,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -20,20 +23,56 @@ import (
 //   - adminKey: `/admin/api/*` 용. admin-* 로 시작하는 관리자 키.
 //   - userKey:  `/v1/*` (chat completions 등) 용. sk-stu-* 학생 키.
 //     비어있으면 adminKey fallback 이지만 chat API 는 401 반환.
+//
+// 동시성 제한 (#087):
+//   - chatSem 으로 ChatComplete / ChatCompleteStream 의 in-flight 호출 cap
+//   - 기본 8, env LLM_PROXY_MAX_CONCURRENT 로 조정
+//   - cap 초과 시 우리 백엔드에서 큐잉 (블로킹) → llm.cycorld.com 자체 과부하 방지
 type Client struct {
 	baseURL  string
 	adminKey string
 	userKey  string
 	http     *http.Client
+	chatSem  chan struct{}
 }
+
+// defaultChatTimeout — non-streaming 호출의 http.Client.Timeout. (#087: 15s → 60s)
+// llm.cycorld.com 이 큐잉할 때 첫 바이트가 늦게 오는 케이스를 흡수.
+const defaultChatTimeout = 60 * time.Second
 
 // New 는 새 클라이언트를 만든다. baseURL 은 `https://llm.cycorld.com` 같이
 // 스킴+호스트까지. 후행 슬래시는 붙여도/안 붙여도 무관.
 func New(baseURL, adminKey string) *Client {
+	max := 8
+	if v := os.Getenv("LLM_PROXY_MAX_CONCURRENT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			max = n
+		}
+	}
+	log.Printf("[llmproxy] chat in-flight cap = %d", max)
 	return &Client{
 		baseURL:  baseURL,
 		adminKey: adminKey,
-		http:     &http.Client{Timeout: 15 * time.Second},
+		http:     &http.Client{Timeout: defaultChatTimeout},
+		chatSem:  make(chan struct{}, max),
+	}
+}
+
+// acquireChat / releaseChat — chat completion 호출 동시성 제한.
+// ctx 취소 시 즉시 반환.
+func (c *Client) acquireChat(ctx context.Context) error {
+	select {
+	case c.chatSem <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (c *Client) releaseChat() {
+	select {
+	case <-c.chatSem:
+	default:
 	}
 }
 
