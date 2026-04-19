@@ -607,17 +607,18 @@ func (uc *ChatUseCase) runAskStream(
 		}
 		choice := resp.Choices[0]
 
-		// 도구 호출 없으면 → streaming 으로 최종 응답 다시 받기
+		// 도구 호출 없으면 → 최종 응답
 		if len(choice.Message.ToolCalls) == 0 {
-			// content 가 이미 채워져 있다면 (도구 없이 바로 답한 케이스) — 그대로 emit
-			if choice.Message.Content != "" && len(messages) == len(req.Messages) {
-				// 위 경우엔 streaming 안 하고 한 번에 보냄 (이미 받았으니 재호출 낭비)
+			if choice.Message.Content != "" {
+				// 첫 hop 에서 도구 없이 바로 답한 경우 — 전체 content 를 한 번의 text_delta 로
+				// 흘려보냄 (재호출하지 않음). UX 차원에서 "한 번에 도착" 하지만 정확한 정보.
+				emit(AskStreamEvent{Type: StreamEventTextDelta, Delta: choice.Message.Content})
 				uc.finalizeStreamFromText(sess, in, choice.Message.Content, model,
 					resp.Usage.PromptTokens, resp.Usage.CompletionTokens, resp.Usage.PromptCachedTokens,
 					totalPrompt, totalCompletion, totalCache, emit)
 				return
 			}
-			// 도구 결과 후 첫 hop 에서 답이 나온 케이스 — 다시 streaming 호출
+			// content 가 비었으면 → 도구 결과 후 후속 응답이 필요한 상황. streaming 으로 재호출
 			uc.streamFinalAnswer(ctx, sess, skill, model, effort, messages, in,
 				totalPrompt, totalCompletion, totalCache, emit)
 			return
