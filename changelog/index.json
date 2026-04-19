@@ -1052,5 +1052,15 @@
       "UX",
       "대기열"
     ]
+  },
+  {
+    "slug": "091-queue-progress-panic",
+    "title": "챗봇 큐 진행률 panic 핫픽스 — startQueueProgress race",
+    "date": "2026-04-19",
+    "tags": [
+      "챗봇",
+      "핫픽스",
+      "race-condition"
+    ]
   }
 ]

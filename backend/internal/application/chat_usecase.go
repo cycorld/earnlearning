@@ -604,9 +604,9 @@ func (uc *ChatUseCase) runAskStream(
 			req.Tools = toolSpecs
 			req.ToolChoice = "auto"
 		}
-		qDone := uc.startQueueProgress(ctx, emit)
+		qStop := uc.startQueueProgress(ctx, emit)
 		resp, err := uc.llm.ChatComplete(ctx, req)
-		close(qDone)
+		qStop()
 		if err != nil {
 			emit(AskStreamEvent{Type: StreamEventError, Error: fmt.Sprintf("llm: %v", err)})
 			return
@@ -711,10 +711,13 @@ func (uc *ChatUseCase) runAskStream(
 }
 
 // startQueueProgress — LLM 호출 직전에 시작, 1.5s 안 끝나면 매 2s 마다 현재
-// waiting 인원 push. 끝나면 close(done) 호출.
-func (uc *ChatUseCase) startQueueProgress(ctx context.Context, emit func(AskStreamEvent)) chan<- struct{} {
+// waiting 인원 push. 반환된 stop() 은 goroutine 이 완전히 종료할 때까지 블로킹 —
+// caller 가 emit 채널을 close 하기 전에 호출해야 race-free.
+func (uc *ChatUseCase) startQueueProgress(ctx context.Context, emit func(AskStreamEvent)) func() {
 	done := make(chan struct{})
+	exited := make(chan struct{})
 	go func() {
+		defer close(exited)
 		select {
 		case <-done:
 			return
@@ -743,7 +746,10 @@ func (uc *ChatUseCase) startQueueProgress(ctx context.Context, emit func(AskStre
 			}
 		}
 	}()
-	return done
+	return func() {
+		close(done)
+		<-exited
+	}
 }
 
 // streamFinalAnswer — 도구 없이 최종 응답만 streaming 으로 받음.
@@ -763,14 +769,14 @@ func (uc *ChatUseCase) streamFinalAnswer(
 		MaxTokens:       pickMaxTokens(model, effort),
 		ReasoningEffort: effort,
 	}
-	qDone := uc.startQueueProgress(ctx, emit)
+	qStop := uc.startQueueProgress(ctx, emit)
 	stream, err := uc.llm.ChatCompleteStream(ctx, req)
 	if err != nil {
-		close(qDone)
+		qStop()
 		emit(AskStreamEvent{Type: StreamEventError, Error: fmt.Sprintf("stream: %v", err)})
 		return
 	}
-	close(qDone)
+	qStop()
 	var contentBuf strings.Builder
 	var thisPrompt, thisCompletion, thisCache int
 	for ev := range stream {
