@@ -1030,5 +1030,16 @@
       "PWA",
       "버그수정"
     ]
+  },
+  {
+    "slug": "087-llm-concurrency-cap",
+    "title": "LLM proxy 동시 호출 cap + timeout 상향 (15s→60s, in-flight 8)",
+    "date": "2026-04-19",
+    "tags": [
+      "챗봇",
+      "LLM",
+      "부하",
+      "안정성"
+    ]
   }
 ]
