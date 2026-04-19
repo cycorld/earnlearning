@@ -1105,5 +1105,16 @@
       "위키",
       "핫픽스"
     ]
+  },
+  {
+    "slug": "096-userdb-admin-reconcile",
+    "title": "학생 DB 고아 행 정리 admin API (#016)",
+    "date": "2026-04-19",
+    "tags": [
+      "운영",
+      "userdb",
+      "admin",
+      "정합성"
+    ]
   }
 ]
