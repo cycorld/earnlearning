@@ -211,6 +211,7 @@ func main() {
 			chatSessionRepo, chatMessageRepo, chatSkillRepo,
 			chatWikiRepo, chatUsageRepo, chatTools, chatLLM, loader,
 		)
+		chatUC.SetWikiRootDir(wikiDir)
 		log.Printf("Chatbot TA initialized (wiki=%s)", wikiDir)
 	} else {
 		log.Printf("LLM_ADMIN_API_KEY not set — LLM key provisioning + chatbot disabled")

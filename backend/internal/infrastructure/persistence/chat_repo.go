@@ -439,6 +439,19 @@ func (r *ChatWikiRepo) DeleteDoc(slug string) error {
 	return err
 }
 
+// GetDoc — admin 편집기용. FTS5 가상 테이블에서 title + body 직접 조회.
+func (r *ChatWikiRepo) GetDoc(slug string) (string, string, error) {
+	var title, body string
+	err := r.db.QueryRow(`SELECT title, body FROM chat_wiki_docs WHERE slug = ?`, slug).Scan(&title, &body)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", "", nil
+	}
+	if err != nil {
+		return "", "", err
+	}
+	return title, body, nil
+}
+
 func (r *ChatWikiRepo) Reset() error {
 	_, err := r.db.Exec(`DELETE FROM chat_wiki_docs`)
 	return err
