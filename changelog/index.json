@@ -1161,5 +1161,16 @@
       "강의자료",
       "스킬"
     ]
+  },
+  {
+    "slug": "101-wiki-incremental-seed",
+    "title": "wiki seed — 디렉토리 단위 incremental 복사 (#100 후속)",
+    "date": "2026-04-20",
+    "tags": [
+      "인프라",
+      "챗봇",
+      "위키",
+      "운영"
+    ]
   }
 ]
