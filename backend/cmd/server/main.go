@@ -183,8 +183,10 @@ func main() {
 			wikiDir = "./docs/llm-wiki"
 		}
 		// #082 (B2): wiki volume mount 시 LLM_WIKI_DIR 가 빈 디렉토리일 수 있음 →
-		// image 의 ./docs/llm-wiki 에서 seed (한 번만, 비어 있을 때).
-		seedWikiDirIfEmpty(wikiDir, "./docs/llm-wiki")
+		// image 의 ./docs/llm-wiki 에서 seed.
+		// #101: 매 부팅마다 image 에 있고 volume 에 없는 파일만 추가 복사 (incremental).
+		// 운영자/Notion sync 가 수정한 파일은 절대 덮어쓰지 않음.
+		seedWikiDir(wikiDir, "./docs/llm-wiki")
 		loader := ragindex.NewLoader(chatWikiRepo, wikiDir)
 		if n, err := loader.Sync(); err != nil {
 			log.Printf("chatbot wiki sync: %v", err)
@@ -278,35 +280,26 @@ func main() {
 	e.Logger.Fatal(e.Start(":" + cfg.Port))
 }
 
-// seedWikiDirIfEmpty — #082 (B2): wiki 디렉토리가 비어있으면 image 의 시드 디렉토리에서
-// .md 파일들을 한 번 복사. docker volume 첫 부팅 시 사용. dst == src 면 noop.
-// 실패는 log 만 — 부팅을 막지 않음.
-func seedWikiDirIfEmpty(dst, src string) {
+// seedWikiDir — #082 (B2) + #101: image 의 src 에서 dst 로 .md 파일들을 incremental seed.
+// dst 에 이미 존재하는 파일은 절대 덮어쓰지 않음 (운영자/Notion sync 수정 보호).
+// docker volume 마운트 + 신규 파일 추가 (예: 새 강의 노트 디렉토리) 양쪽 다 안전.
+// dst == src 면 noop. 실패는 log 만 — 부팅을 막지 않음.
+func seedWikiDir(dst, src string) {
 	if dst == src {
 		return
 	}
-	dstStat, err := os.Stat(dst)
-	if err != nil || !dstStat.IsDir() {
-		// dst 가 아예 없으면 만들어 봄
+	if _, err := os.Stat(dst); err != nil {
 		if err := os.MkdirAll(dst, 0o755); err != nil {
 			log.Printf("[wiki-seed] mkdir %s: %v", dst, err)
 			return
 		}
-	}
-	entries, err := os.ReadDir(dst)
-	if err != nil {
-		log.Printf("[wiki-seed] read %s: %v", dst, err)
-		return
-	}
-	if len(entries) > 0 {
-		return // 이미 데이터 있음 → 건드리지 않음
 	}
 	srcStat, err := os.Stat(src)
 	if err != nil || !srcStat.IsDir() {
 		log.Printf("[wiki-seed] src %s missing — skip seed", src)
 		return
 	}
-	count := 0
+	added, skipped := 0, 0
 	walkErr := filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -319,6 +312,10 @@ func seedWikiDirIfEmpty(dst, src string) {
 			return nil
 		}
 		dstPath := filepath.Join(dst, rel)
+		if _, err := os.Stat(dstPath); err == nil {
+			skipped++
+			return nil // 이미 있음 → 건드리지 않음
+		}
 		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
 			log.Printf("[wiki-seed] mkdir %s: %v", filepath.Dir(dstPath), err)
 			return nil
@@ -332,13 +329,13 @@ func seedWikiDirIfEmpty(dst, src string) {
 			log.Printf("[wiki-seed] write %s: %v", dstPath, err)
 			return nil
 		}
-		count++
+		added++
 		return nil
 	})
 	if walkErr != nil {
 		log.Printf("[wiki-seed] walk: %v", walkErr)
 	}
-	log.Printf("[wiki-seed] seeded %d files: %s → %s", count, src, dst)
+	log.Printf("[wiki-seed] %s → %s: added %d new, skipped %d existing", src, dst, added, skipped)
 }
 
 // atoiDefault 는 빈 문자열이나 파싱 실패 시 기본값을 돌려준다.
