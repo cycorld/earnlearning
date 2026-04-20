@@ -1226,5 +1226,15 @@
       "멀티모달",
       "admin"
     ]
+  },
+  {
+    "slug": "107-pwa-pull-to-refresh",
+    "title": "PWA 당겨 내려 리프레시 (pull-to-refresh)",
+    "date": "2026-04-20",
+    "tags": [
+      "PWA",
+      "프론트엔드",
+      "UX"
+    ]
   }
 ]
