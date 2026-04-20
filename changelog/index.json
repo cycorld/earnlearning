@@ -1183,5 +1183,16 @@
       "PII",
       "공개저장소"
     ]
+  },
+  {
+    "slug": "103-history-rewrite-pii",
+    "title": "history rewrite — 학생 PII 전체 git 히스토리에서 제거 (#102 후속)",
+    "date": "2026-04-20",
+    "tags": [
+      "보안",
+      "PII",
+      "운영",
+      "history-rewrite"
+    ]
   }
 ]
