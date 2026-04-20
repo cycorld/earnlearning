@@ -3,6 +3,7 @@ import Header from './Header'
 import BottomNav from './BottomNav'
 import { PWAPrompt } from '@/components/PWAPrompt'
 import ChatDock from '@/components/chat/ChatDock'
+import { PullToRefresh } from '@/components/PullToRefresh'
 import { useVersionCheck } from '@/hooks/use-version-check'
 import { useForceReload } from '@/hooks/use-force-reload'
 
@@ -11,14 +12,16 @@ export default function MainLayout() {
   useForceReload()
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="pb-16">
-        <Outlet />
-      </main>
-      <BottomNav />
-      <PWAPrompt />
-      <ChatDock />
-    </div>
+    <PullToRefresh>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="pb-16">
+          <Outlet />
+        </main>
+        <BottomNav />
+        <PWAPrompt />
+        <ChatDock />
+      </div>
+    </PullToRefresh>
   )
 }
