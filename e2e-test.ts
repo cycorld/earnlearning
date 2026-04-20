@@ -5,6 +5,10 @@ const BASE = 'http://localhost:5173';
 const API = 'http://localhost:8090/api';
 const SCREENSHOT_DIR = path.resolve(__dirname, 'screenshots');
 
+// 로컬 dev 기본값 — 실제 prod/stage 비번은 절대 여기 넣지 말 것 (#102).
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@ewha.ac.kr';
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'admin1234';
+
 let browser: Browser;
 let page: Page;
 
@@ -77,7 +81,7 @@ async function main() {
     const adminResp = await fetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@ewha.ac.kr', password: 'admin1234' }),
+      body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
     });
     const adminData = await adminResp.json();
     adminToken = adminData.data?.token || '';
