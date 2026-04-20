@@ -4,7 +4,7 @@
 **태그**: API, OAuth, OpenAPI, 문서, 바운티
 
 ## 배경
-[4주차] OAuth 연동 버그바운티 (grant 9) 신청 4건을 검토하면서, **김나연** 학생의
+[4주차] OAuth 연동 버그바운티 (grant 9) 신청 4건을 검토하면서, **Student-#267** 학생의
 지적 중 하나가 실제 코드 레벨 결함이었다:
 
 > OpenAPI 스펙의 모든 응답 `data` 필드가 빈 객체 `{}` 로만 정의되어 있어
@@ -39,10 +39,10 @@ swag 재생성. 이제 `/oauth/token` 200 응답이:
 
 ## 검증 결과 (false positive 들)
 바운티 신청에서 false 였던 항목들 (참고용):
-- **expires_in 누락** (김나연 #2): `oauth_usecase.go:382` 에 `ExpiresIn: 3600` 존재 ✅
-- **refresh_token PKCE 시 client_secret 필수** (김나연 #4): `oauth_usecase.go:299`
+- **expires_in 누락** (Student-#267 #2): `oauth_usecase.go:382` 에 `ExpiresIn: 3600` 존재 ✅
+- **refresh_token PKCE 시 client_secret 필수** (Student-#267 #4): `oauth_usecase.go:299`
   `if input.ClientSecret != ""` 옵셔널 처리 존재 ✅. (문서 표현 명확화 됨)
-- **/oauth/token CORS 차단** (우해든): `access-control-allow-origin: *` 정상.
+- **/oauth/token CORS 차단** (Student-#271): `access-control-allow-origin: *` 정상.
   preflight 204 + 헤더 정상 확인 ✅. (claude.ai HTML 위젯 자체 제약 추정)
 
 ## 미포함 (의도)
@@ -50,9 +50,9 @@ swag 재생성. 이제 `/oauth/token` 200 응답이:
 - Swagger UI/Redoc 정적 페이지 — 별도 티켓 권장.
 
 ## 보상금 처리
-- 266 임서원 (approved, 5 bugs, 500k 지급 완료)
-- 267 김나연 (approved, 4 bugs 그 중 1 valid, 500k 지급 완료)
-- **271 우해든 (이번 approve)** — 1 bug 클레임 false 였으나 OAuth 등록/인가 코드 플로우 완료, 노력 인정으로 500k
-- **276 이서현 (이번 approve)** — 2 bug 리포트 (1 자체앱 매핑 추정 + 1 silent fail UX 피드백 valid), 500k
+- 266 Student-#266 (approved, 5 bugs, 500k 지급 완료)
+- 267 Student-#267 (approved, 4 bugs 그 중 1 valid, 500k 지급 완료)
+- **271 Student-#271 (이번 approve)** — 1 bug 클레임 false 였으나 OAuth 등록/인가 코드 플로우 완료, 노력 인정으로 500k
+- **276 Student-#276 (이번 approve)** — 2 bug 리포트 (1 자체앱 매핑 추정 + 1 silent fail UX 피드백 valid), 500k
 
 총 4명 × 500,000 KRW = 2,000,000 KRW 집행 완료.

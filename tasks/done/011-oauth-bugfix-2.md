@@ -1,14 +1,14 @@
 ---
 id: 011
-title: OAuth 버그바운티 2차 제보 수정 (김나연)
+title: OAuth 버그바운티 2차 제보 수정 (Student-#267)
 priority: high
 type: fix
 branch: fix/oauth-bugfix-2
 created: 2026-04-03
 ---
 
-## 제보자: 김나연 (grant_application #267)
-앱: Swipe2Eat (음식점 매칭 서비스)
+## 제보자: Student-#267 (grant_application #267)
+앱: App-#267 (음식점 매칭 서비스)
 
 ## 유효 버그 4건
 

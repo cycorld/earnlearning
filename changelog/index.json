@@ -431,7 +431,7 @@
       "버그바운티"
     ],
     "github": "https://github.com/cycorld/earnlearning/pull/42",
-    "contributor": "임서원"
+    "contributor": "Student-#266"
   },
   {
     "slug": "035-post-delete",
@@ -477,7 +477,7 @@
       "버그바운티"
     ],
     "github": "https://github.com/cycorld/earnlearning/pull/49",
-    "contributor": "김나연"
+    "contributor": "Student-#267"
   },
   {
     "slug": "039-postgres-server-setup",
@@ -1171,6 +1171,17 @@
       "챗봇",
       "위키",
       "운영"
+    ]
+  },
+  {
+    "slug": "102-public-repo-security-audit",
+    "title": "공개 저장소 보안 점검 + 학생 PII redact",
+    "date": "2026-04-20",
+    "tags": [
+      "보안",
+      "운영",
+      "PII",
+      "공개저장소"
     ]
   }
 ]

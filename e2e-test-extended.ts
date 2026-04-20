@@ -5,6 +5,10 @@ const BASE = 'http://localhost:5173';
 const API = 'http://localhost:8090/api';
 const SCREENSHOT_DIR = path.resolve(__dirname, 'screenshots');
 
+// 로컬 dev 기본값 — 실제 prod/stage 비번은 절대 여기 넣지 말 것 (#102).
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@ewha.ac.kr';
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'admin1234';
+
 let browser: Browser;
 let page: Page;
 
@@ -149,15 +153,15 @@ async function main() {
     console.log('\n━━━━ PHASE 2: 관리자 흐름 ━━━━');
 
     // Get admin token
-    const adminData = await apiPost('/auth/login', { email: 'admin@ewha.ac.kr', password: 'admin1234' });
+    const adminData = await apiPost('/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
     adminToken = adminData.data?.token || '';
 
     // 2.1 관리자 로그인
     console.log('\n🧪 2.1: 관리자 로그인');
     await page.goto(BASE + '/login');
     await page.waitForSelector('input[type="email"]', { timeout: 5000 });
-    await page.fill('input[type="email"]', 'admin@ewha.ac.kr');
-    await page.fill('input[type="password"]', 'admin1234');
+    await page.fill('input[type="email"]', ADMIN_EMAIL);
+    await page.fill('input[type="password"]', ADMIN_PASSWORD);
     await page.click('button[type="submit"]');
     await sleep(2000);
 
@@ -510,8 +514,8 @@ async function main() {
     await page.evaluate(() => localStorage.clear());
     await page.goto(BASE + '/login');
     await page.waitForSelector('input[type="email"]', { timeout: 5000 });
-    await page.fill('input[type="email"]', 'admin@ewha.ac.kr');
-    await page.fill('input[type="password"]', 'admin1234');
+    await page.fill('input[type="email"]', ADMIN_EMAIL);
+    await page.fill('input[type="password"]', ADMIN_PASSWORD);
     await page.click('button[type="submit"]');
     await sleep(2000);
     await page.goto(BASE + '/admin/loans');

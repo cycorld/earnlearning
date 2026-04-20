@@ -106,6 +106,15 @@ created: YYYY-MM-DD
 - **브랜치 생성 시**: `tasks/in-progress/`에 티켓이 있어야 허용 (PreToolUse 훅)
 - **PR 생성 시**: changelog + 활성 티켓이 있어야 허용 (PreToolUse 훅)
 
+## 공개 저장소 보안 규칙 (#102)
+이 저장소는 **public** (`github.com/cycorld/earnlearning`). 커밋·PR·changelog·tasks 어디든:
+
+- **학생 실명·학번·이메일 금지**: `Student-#266` (= grant_application id) 같은 익명 ID 만 사용. 앱 이름도 익명화 권장.
+- **API 키·시크릿·비밀번호 금지**: `.env*` 는 `.gitignore` 에 있어야 하며, 테스트/예시 코드의 admin 비번은 `process.env.E2E_ADMIN_PASSWORD ?? '<dev-default>'` 패턴.
+- **DB 덤프 (`.sql`/`.db`/`.sqlite`) 금지**: 마이그레이션 SQL 만 `backend/internal/infrastructure/persistence/migrations/` 에 둠.
+- **챗봇 캡처 로그 (`docs/prompts/`) 추가 시**: 학생 발화 또는 토큰·키 포함 여부 직접 확인 후 추가.
+- 사고 발견 시: 즉시 redact 새 커밋 → 사용자에게 history rewrite (force push) 여부 확인.
+
 ## 개발 워크플로우 (PR 기반)
 > 📋 상세 브랜치 전략은 Claude memory `feedback_pr_workflow.md` 참조
 
