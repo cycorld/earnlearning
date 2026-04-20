@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MessageCircle, Send, Sparkles, Trash2, X, ZapOff, Zap } from 'lucide-react'
+import { MessageCircle, Paperclip, Send, Sparkles, Trash2, X, ZapOff, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api, ApiError } from '@/lib/api'
@@ -30,6 +30,7 @@ interface Message {
   content: string
   tool_calls?: ToolCall[]
   tool_call_id?: string
+  attachments?: string[] // #106 학생 첨부 이미지 URL
   created_at: string
 }
 
@@ -79,6 +80,7 @@ async function streamAsk(
   message: string,
   mode: Mode,
   skillSlug: string,
+  attachments: string[],
   handlers: StreamHandlers,
 ): Promise<void> {
   const token = getToken()
@@ -91,7 +93,12 @@ async function streamAsk(
   const resp = await fetch(`/api/chat/sessions/${sessionID}/ask/stream`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ message, mode, skill_slug: skillSlug || undefined }),
+    body: JSON.stringify({
+      message,
+      mode,
+      skill_slug: skillSlug || undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
+    }),
   })
   if (!resp.ok) {
     const text = await resp.text().catch(() => '')
@@ -165,6 +172,9 @@ export default function ChatDock() {
   const [skills, setSkills] = useState<Skill[]>([])
   const [activeSkillSlug, setActiveSkillSlug] = useState<string>('')
   const [queueWaiting, setQueueWaiting] = useState(0)
+  const [attachments, setAttachments] = useState<string[]>([]) // #106 첨부 이미지 URL
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const isAdmin = user?.role === 'admin'
@@ -214,9 +224,50 @@ export default function ChatDock() {
     }
   }, [session, activeSkillSlug])
 
+  const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = '' // reset so picking the same file again triggers change
+    if (files.length === 0) return
+    setUploadingFile(true)
+    try {
+      const newURLs: string[] = []
+      for (const f of files) {
+        if (!f.type.startsWith('image/')) {
+          toast.error(`이미지 파일만 첨부할 수 있어요: ${f.name}`)
+          continue
+        }
+        if (f.size > 5 * 1024 * 1024) {
+          toast.error(`이미지가 너무 큽니다 (5MB 이하): ${f.name}`)
+          continue
+        }
+        const fd = new FormData()
+        fd.append('file', f)
+        const token = getToken()
+        const resp = await fetch('/api/upload', {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: fd,
+        })
+        if (!resp.ok) throw new Error(`업로드 실패: ${resp.status}`)
+        const j = await resp.json()
+        const url = j?.data?.url
+        if (typeof url === 'string') newURLs.push(url)
+      }
+      if (newURLs.length > 0) setAttachments((prev) => [...prev, ...newURLs])
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '이미지 업로드 실패')
+    } finally {
+      setUploadingFile(false)
+    }
+  }
+
+  const removeAttachment = (url: string) => {
+    setAttachments((prev) => prev.filter((u) => u !== url))
+  }
+
   const send = async () => {
     const text = input.trim()
-    if (!text || sending) return
+    if ((!text && attachments.length === 0) || sending) return
     const s = await ensureSession()
     if (!s) return
 
@@ -226,6 +277,7 @@ export default function ChatDock() {
       id: optimisticId,
       role: 'user',
       content: text,
+      attachments: attachments.length > 0 ? [...attachments] : undefined,
       created_at: new Date().toISOString(),
     }
     // assistant placeholder — streaming 으로 채워짐
@@ -237,11 +289,13 @@ export default function ChatDock() {
       created_at: new Date().toISOString(),
     }
     setMessages((prev) => [...prev, userMsg, assistantPlaceholder])
+    const sentAttachments = [...attachments]
     setInput('')
+    setAttachments([])
     setSending(true)
 
     try {
-      await streamAsk(s.id, text, mode, activeSkillSlug, {
+      await streamAsk(s.id, text, mode, activeSkillSlug, sentAttachments, {
         onToolCall: (ev) => {
           setMessages((prev) => {
             // 기존 placeholder 의 tool_calls 에 추가
@@ -433,6 +487,36 @@ export default function ChatDock() {
 
       {/* Composer */}
       <div className="border-t p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        {/* #106 첨부 이미지 미리보기 chips */}
+        {attachments.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {attachments.map((url) => (
+              <div key={url} className="relative">
+                <img
+                  src={url}
+                  alt="첨부"
+                  className="h-16 w-16 rounded-md border object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(url)}
+                  aria-label="첨부 제거"
+                  className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-background text-muted-foreground shadow ring-1 ring-border hover:text-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => void handleFilePick(e)}
+        />
         <div className="relative">
           <textarea
             value={input}
@@ -452,12 +536,21 @@ export default function ChatDock() {
             placeholder="질문을 입력하세요…"
             rows={1}
             // text-base (16px) — iOS focus auto-zoom 방지 (WCAG 호환, viewport meta 안 건드림)
-            className="w-full resize-none rounded-md border bg-background py-2 pl-3 pr-12 text-base leading-6 focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full resize-none rounded-md border bg-background py-2 pl-12 pr-12 text-base leading-6 focus:outline-none focus:ring-1 focus:ring-ring"
           />
           <button
             type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending || uploadingFile}
+            aria-label="이미지 첨부"
+            className="absolute bottom-1.5 left-1.5 inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          >
+            {uploadingFile ? <Spinner className="h-4 w-4" /> : <Paperclip className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
             onClick={() => void send()}
-            disabled={sending || !input.trim()}
+            disabled={sending || (!input.trim() && attachments.length === 0)}
             aria-label="전송"
             className="absolute bottom-1.5 right-1.5 inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
           >
@@ -519,7 +612,16 @@ function MessageBubble({ message }: { message: Message }) {
     return (
       <div className="flex justify-end">
         <div className="max-w-[85%] rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground">
-          {message.content}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {message.attachments.map((url) => (
+                <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                  <img src={url} alt="첨부" className="h-20 w-20 rounded-md object-cover" />
+                </a>
+              ))}
+            </div>
+          )}
+          {message.content && <span className="whitespace-pre-wrap">{message.content}</span>}
         </div>
       </div>
     )

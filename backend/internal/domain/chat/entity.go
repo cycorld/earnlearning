@@ -61,6 +61,7 @@ type Message struct {
 	CacheTokens      int        `json:"cache_tokens,omitempty"`
 	ToolCalls        []ToolCall `json:"tool_calls,omitempty"`
 	ToolCallID       string     `json:"tool_call_id,omitempty"` // role=tool 일 때 어떤 호출에 대한 응답인지
+	Attachments      []string   `json:"attachments,omitempty"`  // #106 학생 첨부 이미지 URL
 	CreatedAt        time.Time  `json:"created_at"`
 }
 

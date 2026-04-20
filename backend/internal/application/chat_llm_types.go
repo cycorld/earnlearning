@@ -4,11 +4,19 @@ package application
 // 피한다. llmproxy 는 이 타입을 구현하는 어댑터를 제공한다.
 
 type LLMChatMessage struct {
-	Role       string             `json:"role"`
-	Content    string             `json:"content,omitempty"`
-	ToolCalls  []LLMChatToolCall  `json:"tool_calls,omitempty"`
-	ToolCallID string             `json:"tool_call_id,omitempty"`
-	Name       string             `json:"name,omitempty"`
+	Role         string             `json:"role"`
+	Content      string             `json:"content,omitempty"`
+	ContentParts []LLMContentBlock  `json:"-"` // #106 vision: 비어있지 않으면 adapter 에서 multimodal content 사용
+	ToolCalls    []LLMChatToolCall  `json:"tool_calls,omitempty"`
+	ToolCallID   string             `json:"tool_call_id,omitempty"`
+	Name         string             `json:"name,omitempty"`
+}
+
+// LLMContentBlock — OpenAI vision 호환 content block (#106).
+type LLMContentBlock struct {
+	Type     string // "text" | "image_url"
+	Text     string
+	ImageURL string
 }
 
 type LLMChatToolCall struct {

@@ -168,6 +168,7 @@ func main() {
 	// LLM API keys + daily billing (#068)
 	var llmUC *application.LLMUseCase
 	var chatUC *application.ChatUseCase
+	var chatProposalUC *application.ChatProposalUseCase // #106
 	if cfg.LLMAdminAPIKey != "" {
 		proxy := llmproxy.New(cfg.LLMProxyBaseURL, cfg.LLMAdminAPIKey)
 		llmUC = application.NewLLMUseCase(
@@ -211,8 +212,11 @@ func main() {
 		} else {
 			log.Printf("CONTEXT7_API_KEY not set — context7_search/context7_docs tools disabled")
 		}
+		// #106 Proposal UC (학생이 챗봇으로 정리한 교수님께의 제안)
+		proposalRepo := persistence.NewProposalRepo(db)
+		chatProposalUC = application.NewChatProposalUseCase(proposalRepo, userRepo, notifUC, 1)
 		chatTools := application.BuildChatTools(walletRepo, userRepo, companyRepo, grantRepo,
-			llmRepo, chatWikiRepo, chatSkillRepo, webClient, ctx7Client)
+			llmRepo, chatWikiRepo, chatSkillRepo, chatMessageRepo, chatProposalUC, webClient, ctx7Client)
 		chatLLM := llmproxy.NewChatAdapter(proxy)
 		chatUC = application.NewChatUseCase(
 			chatSessionRepo, chatMessageRepo, chatSkillRepo,
@@ -264,6 +268,10 @@ func main() {
 	}
 	if chatUC != nil {
 		handlers.Chat = handler.NewChatHandler(chatUC)
+	}
+	// #106 챗봇 제안 — chatProposalUC 는 chatUC 와 같이 부팅된 경우만 등록
+	if chatProposalUC != nil {
+		handlers.ChatProposal = handler.NewChatProposalHandler(chatProposalUC)
 	}
 
 	// Echo server

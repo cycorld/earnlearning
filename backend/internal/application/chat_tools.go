@@ -81,6 +81,8 @@ func BuildChatTools(
 	llmRepo llm.Repository,
 	wikiRepo chat.WikiRepository,
 	skillRepo chat.SkillRepository,
+	messageRepo chat.MessageRepository,
+	proposalUC *ChatProposalUseCase,
 	webClient *websearch.Client,
 	ctx7Client *context7.Client,
 ) *ChatToolRegistry {
@@ -130,6 +132,100 @@ func BuildChatTools(
 			return sb.String(), nil
 		},
 	})
+
+	// #106 — save_proposal & get_my_proposals
+	if proposalUC != nil && messageRepo != nil {
+		r.Register(&ChatTool{
+			Name: "save_proposal",
+			Description: "학생이 정리한 교수님께의 제안을 저장합니다. 호출 전에 학생과 충분히 대화해 카테고리/제목/본문을 정리한 뒤, 마지막에 학생 확인을 받고 호출하세요. 첨부 이미지는 자동으로 수집됩니다.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"category": map[string]any{
+						"type":        "string",
+						"description": "feature(기능제안) | bug(버그신고) | general(일반의견)",
+						"enum":        []string{"feature", "bug", "general"},
+					},
+					"title": map[string]any{"type": "string", "description": "1줄 요약 제목 (50자 이내)"},
+					"body":  map[string]any{"type": "string", "description": "정리된 본문. bug 면 재현방법/기대동작/실제동작 포함."},
+				},
+				"required": []string{"category", "title", "body"},
+			},
+			Run: func(ctx context.Context, tctx ChatToolCtx, argsJSON string) (string, error) {
+				var args struct {
+					Category string `json:"category"`
+					Title    string `json:"title"`
+					Body     string `json:"body"`
+				}
+				if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+					return "", err
+				}
+				// 세션의 모든 학생 메시지 첨부 자동 수집 (중복 제거)
+				var attachments []string
+				if tctx.SessionID > 0 {
+					msgs, _ := messageRepo.ListBySession(tctx.SessionID, 200)
+					seen := map[string]bool{}
+					for _, m := range msgs {
+						if m.Role != chat.RoleUser {
+							continue
+						}
+						for _, u := range m.Attachments {
+							if !seen[u] {
+								seen[u] = true
+								attachments = append(attachments, u)
+							}
+						}
+					}
+				}
+				p, err := proposalUC.Create(tctx.UserID, CreateChatProposalInput{
+					Category:    args.Category,
+					Title:       args.Title,
+					Body:        args.Body,
+					Attachments: attachments,
+				})
+				if err != nil {
+					return "", err
+				}
+				return fmt.Sprintf(`{"id": %d, "status": "open", "attachments_count": %d, "message": "교수님께 전달됐어요. 상태는 본인 챗봇에서 get_my_proposals 로 확인 가능합니다."}`,
+					p.ID, len(attachments)), nil
+			},
+		})
+		r.Register(&ChatTool{
+			Name:        "get_my_proposals",
+			Description: "학생 본인이 제출한 제안 목록과 현재 상태를 조회합니다.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"limit": map[string]any{"type": "integer", "default": 10},
+				},
+			},
+			Run: func(ctx context.Context, tctx ChatToolCtx, argsJSON string) (string, error) {
+				var args struct {
+					Limit int `json:"limit"`
+				}
+				_ = json.Unmarshal([]byte(argsJSON), &args)
+				if args.Limit <= 0 {
+					args.Limit = 10
+				}
+				list, err := proposalUC.ListMine(tctx.UserID, args.Limit)
+				if err != nil {
+					return "", err
+				}
+				if len(list) == 0 {
+					return "(아직 제출한 제안이 없습니다)", nil
+				}
+				var sb strings.Builder
+				for _, p := range list {
+					sb.WriteString(fmt.Sprintf("- #%d [%s/%s] %s (제출: %s)\n",
+						p.ID, p.Category, p.Status, p.Title, p.CreatedAt.Format("01-02")))
+					if p.AdminNote != "" {
+						sb.WriteString(fmt.Sprintf("    교수님 메모: %s\n", p.AdminNote))
+					}
+				}
+				return sb.String(), nil
+			},
+		})
+	}
 
 	r.Register(&ChatTool{
 		Name:        "get_my_wallet_balance",

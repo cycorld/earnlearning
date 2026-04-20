@@ -33,6 +33,7 @@ type Handlers struct {
 	UserDB       *handler.UserDBHandler
 	LLM          *handler.LLMHandler
 	Chat         *handler.ChatHandler
+	ChatProposal *handler.ChatProposalHandler
 }
 
 // Setup registers all routes on the given Echo instance.
@@ -233,6 +234,12 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		approved.GET("/chat/skills", h.Chat.ListSkills)
 	}
 
+	// #106 챗봇 제안 (학생이 챗봇으로 정리한 교수님께의 제안)
+	if h.ChatProposal != nil {
+		approved.GET("/chat/proposals/mine", h.ChatProposal.ListMine)
+		approved.GET("/chat/proposals/:id", h.ChatProposal.Get)
+	}
+
 	// Notifications (OAuth: read:notifications)
 	approved.GET("/notifications", h.Notification.GetNotifications, middleware.RequireScope("read:notifications"))
 	approved.PUT("/notifications/:id/read", h.Notification.MarkRead, middleware.RequireScope("read:notifications"))
@@ -289,6 +296,13 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		admin.GET("/chat/sessions/:id", h.Chat.AdminGetSession)
 		admin.GET("/chat/usage", h.Chat.AdminUsageDashboard)
 		admin.GET("/chat/llm/stats", h.Chat.AdminLLMStats)
+	}
+
+	// #106 챗봇 제안 admin
+	if h.ChatProposal != nil {
+		admin.GET("/proposals", h.ChatProposal.AdminList)
+		admin.GET("/proposals/:id", h.ChatProposal.Get)
+		admin.PATCH("/proposals/:id", h.ChatProposal.AdminUpdate)
 	}
 
 	// User Databases admin reconcile (#016)

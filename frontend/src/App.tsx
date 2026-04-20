@@ -65,6 +65,7 @@ import AdminClassroomPage from '@/routes/admin/AdminClassroomPage'
 import AdminLoansPage from '@/routes/admin/AdminLoansPage'
 import AdminKpiPage from '@/routes/admin/AdminKpiPage'
 import AdminAnnouncePage from '@/routes/admin/AdminAnnouncePage'
+import AdminProposalsPage from '@/routes/admin/AdminProposalsPage'
 import AdminTasksPage from '@/routes/admin/AdminTasksPage'
 import AdminDisclosuresPage from '@/routes/admin/AdminDisclosuresPage'
 import AdminClassroomDetailPage from '@/routes/admin/AdminClassroomDetailPage'
@@ -134,6 +135,7 @@ export default function App() {
                 <Route path="/admin/loans" element={<AdminLoansPage />} />
                 <Route path="/admin/kpi" element={<AdminKpiPage />} />
                 <Route path="/admin/announce" element={<AdminAnnouncePage />} />
+                <Route path="/admin/proposals" element={<AdminProposalsPage />} />
                 <Route path="/admin/tasks" element={<AdminTasksPage />} />
                 <Route path="/admin/disclosures" element={<AdminDisclosuresPage />} />
                 <Route path="/admin/chat" element={<AdminChatPage />} />

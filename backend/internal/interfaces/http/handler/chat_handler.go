@@ -78,9 +78,10 @@ func (h *ChatHandler) GetSession(c echo.Context) error {
 }
 
 type askInput struct {
-	Message   string `json:"message"`
-	Mode      string `json:"mode"`       // "fast" | "deep"
-	SkillSlug string `json:"skill_slug"` // optional override
+	Message     string   `json:"message"`
+	Mode        string   `json:"mode"`        // "fast" | "deep"
+	SkillSlug   string   `json:"skill_slug"`  // optional override
+	Attachments []string `json:"attachments"` // #106 첨부 이미지 URL ([]/uploads/xxx.png)
 }
 
 // Ask godoc
@@ -109,9 +110,10 @@ func (h *ChatHandler) Ask(c echo.Context) error {
 		SessionID: id,
 		UserID:    userID,
 		IsAdmin:   isAdmin,
-		Message:   in.Message,
-		Mode:      chat.AskMode(in.Mode),
-		SkillSlug: in.SkillSlug,
+		Message:     in.Message,
+		Mode:        chat.AskMode(in.Mode),
+		SkillSlug:   in.SkillSlug,
+		Attachments: in.Attachments,
 	})
 	if err != nil {
 		return chatErrorResponse(c, err)
@@ -144,9 +146,10 @@ func (h *ChatHandler) AskStream(c echo.Context) error {
 		SessionID: id,
 		UserID:    userID,
 		IsAdmin:   isAdmin,
-		Message:   in.Message,
-		Mode:      chat.AskMode(in.Mode),
-		SkillSlug: in.SkillSlug,
+		Message:     in.Message,
+		Mode:        chat.AskMode(in.Mode),
+		SkillSlug:   in.SkillSlug,
+		Attachments: in.Attachments,
 	})
 	if err != nil {
 		return chatErrorResponse(c, err)

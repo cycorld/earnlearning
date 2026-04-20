@@ -377,12 +377,13 @@ func composeMarkdown(path, title, body string) string {
 // ============================================================================
 
 type AskInput struct {
-	SessionID int
-	UserID    int
-	IsAdmin   bool
-	Message   string
-	Mode      chat.AskMode // "fast" | "deep", 빈 값이면 skill default
-	SkillSlug string       // 선택적으로 이 세션의 스킬 override
+	SessionID   int
+	UserID      int
+	IsAdmin     bool
+	Message     string
+	Mode        chat.AskMode // "fast" | "deep", 빈 값이면 skill default
+	SkillSlug   string       // 선택적으로 이 세션의 스킬 override
+	Attachments []string     // #106 학생 첨부 이미지 URL (uploads/xxx.png)
 }
 
 type AskOutput struct {
@@ -439,12 +440,13 @@ func (uc *ChatUseCase) Ask(ctx context.Context, in AskInput) (*AskOutput, error)
 		return nil, err
 	}
 
-	// 사용자 입력 메시지 저장
+	// 사용자 입력 메시지 저장 (#106 첨부 이미지 포함)
 	userMsg := &chat.Message{
-		SessionID: sess.ID,
-		Role:      chat.RoleUser,
-		Content:   in.Message,
-		CreatedAt: time.Now(),
+		SessionID:   sess.ID,
+		Role:        chat.RoleUser,
+		Content:     in.Message,
+		Attachments: in.Attachments,
+		CreatedAt:   time.Now(),
 	}
 	if _, err := uc.messageRepo.Create(userMsg); err != nil {
 		return nil, err
@@ -454,6 +456,7 @@ func (uc *ChatUseCase) Ask(ctx context.Context, in AskInput) (*AskOutput, error)
 	model, effort := uc.resolveModelAndEffort(skill, in.Mode, in.IsAdmin)
 
 	// OpenAI-format 메시지 배열 조립 — system + 과거 히스토리 + 이번 user
+	// (이번 user 는 위에서 저장됐으니 history 에 포함됨)
 	history, err := uc.messageRepo.ListBySession(sess.ID, 50)
 	if err != nil {
 		return nil, err
@@ -1006,6 +1009,26 @@ func (uc *ChatUseCase) runTool(ctx context.Context, name, argsJSON string, tctx 
 	return tool.Run(ctx, tctx, argsJSON)
 }
 
+// absoluteImageURL — /uploads/xxx.png 같은 상대 path 를 absolute URL 로 변환.
+// llama-server vision 은 외부 호출 가능한 http(s) URL 또는 data: URI 만 허용.
+// PUBLIC_BASE_URL env (예: https://earnlearning.com) 가 있으면 그걸 prefix.
+func absoluteImageURL(u string) string {
+	if u == "" {
+		return ""
+	}
+	if strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://") || strings.HasPrefix(u, "data:") {
+		return u
+	}
+	base := os.Getenv("PUBLIC_BASE_URL")
+	if base == "" {
+		base = "https://earnlearning.com"
+	}
+	if !strings.HasPrefix(u, "/") {
+		u = "/" + u
+	}
+	return strings.TrimRight(base, "/") + u
+}
+
 func buildChatMessages(skill *chat.Skill, history []*chat.Message) []LLMChatMessage {
 	out := make([]LLMChatMessage, 0, len(history)+2)
 	// 시스템 프롬프트: skill 프롬프트 + 공통 보조 지침
@@ -1029,7 +1052,18 @@ func buildChatMessages(skill *chat.Skill, history []*chat.Message) []LLMChatMess
 	for _, m := range history {
 		switch m.Role {
 		case chat.RoleUser:
-			out = append(out, LLMChatMessage{Role: "user", Content: m.Content})
+			msg := LLMChatMessage{Role: "user", Content: m.Content}
+			// #106 vision: 첨부 이미지 있으면 OpenAI multimodal content array 로 변환
+			if len(m.Attachments) > 0 {
+				msg.ContentParts = []LLMContentBlock{{Type: "text", Text: m.Content}}
+				for _, u := range m.Attachments {
+					msg.ContentParts = append(msg.ContentParts, LLMContentBlock{
+						Type:     "image_url",
+						ImageURL: absoluteImageURL(u),
+					})
+				}
+			}
+			out = append(out, msg)
 		case chat.RoleAssistant:
 			msg := LLMChatMessage{Role: "assistant", Content: m.Content}
 			for _, tc := range m.ToolCalls {

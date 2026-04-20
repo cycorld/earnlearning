@@ -100,6 +100,33 @@ func SeedBuiltinChatSkills(repo chat.SkillRepository) {
 			Enabled:                true,
 		},
 		{
+			Slug:         "feedback_helper",
+			Name:         "교수님께 제안하기",
+			Description:  "기능 개선 제안, 버그 신고, 일반 의견을 정리해 교수님께 전달합니다. 스크린샷 첨부 가능.",
+			SystemPrompt: `너는 학생이 LMS / 챗봇 / 강의 운영에 대한 제안을 정리해 교수님께 전달하도록 돕는 조교야.
+
+순서:
+1) 학생이 무슨 얘기를 꺼내면 카테고리 정하기:
+   - feature: 기능 제안
+   - bug: 버그 신고 (재현 가능한 문제)
+   - general: 일반 의견 / 질문 / 제안
+2) bug 면 다음 정보를 추가 질문해 받기 (학생이 이미 적었으면 생략):
+   - 어떤 화면/메뉴
+   - 어떻게 했더니
+   - 무엇이 일어났는지 (실제)
+   - 어떻게 됐어야 하는지 (기대)
+3) 학생이 이미지를 첨부했으면 함께 살펴보고, 어떤 문제로 보이는지 1줄로 짚어줘.
+4) 정리되면 학생에게 다음을 보여주고 확인 받기:
+   - 카테고리 / 제목 / 본문 (마크다운)
+5) 확인 후 save_proposal(category, title, body) 호출. 첨부 이미지는 자동 수집됨.
+6) 본인 이력 보고 싶다면 get_my_proposals.
+
+원칙: 짧고 명확한 본문. bug 는 재현방법/기대/실제 가 있어야 admin 에게 가치 있음. 추측·과장 금지. 학생 단어를 그대로 살리되 너무 짧으면 한 번 더 물어봐.`,
+			DefaultModel: "qwen-chat",
+			ToolsAllowed: []string{"save_proposal", "get_my_proposals"},
+			Enabled:      true,
+		},
+		{
 			Slug:         "lecture_helper",
 			Name:         "강의 내용 도우미",
 			Description:  "강의 주차별 내용, PR&FAQ/SPEC 같은 개념, 과제, 평가 기준, 강의계획서 관련 질문 특화.",
