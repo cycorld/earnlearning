@@ -1203,5 +1203,16 @@
       "housekeeping",
       "운영"
     ]
+  },
+  {
+    "slug": "105-chatbot-input-polish",
+    "title": "챗봇 input/전송 버튼 폴리시 + iOS auto-zoom 방지",
+    "date": "2026-04-20",
+    "tags": [
+      "챗봇",
+      "UI",
+      "모바일",
+      "접근성"
+    ]
   }
 ]
