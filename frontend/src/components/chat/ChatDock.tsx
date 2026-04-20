@@ -432,29 +432,41 @@ export default function ChatDock() {
       </div>
 
       {/* Composer */}
-      <div className="border-t p-2">
-        <div className="flex items-end gap-2">
+      <div className="border-t p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="relative">
           <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value)
+              // auto-grow up to 5 lines
+              const el = e.currentTarget
+              el.style.height = 'auto'
+              el.style.height = Math.min(el.scrollHeight, 24 * 5 + 16) + 'px'
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
                 void send()
               }
             }}
-            placeholder="질문을 입력하세요… (Enter 전송, Shift+Enter 줄바꿈)"
-            rows={2}
-            className="flex-1 resize-none rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            placeholder="질문을 입력하세요…"
+            rows={1}
+            // text-base (16px) — iOS focus auto-zoom 방지 (WCAG 호환, viewport meta 안 건드림)
+            className="w-full resize-none rounded-md border bg-background py-2 pl-3 pr-12 text-base leading-6 focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          <Button
-            size="sm"
+          <button
+            type="button"
             onClick={() => void send()}
             disabled={sending || !input.trim()}
+            aria-label="전송"
+            className="absolute bottom-1.5 right-1.5 inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
           >
             <Send className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
+        <p className="mt-1 hidden text-[11px] text-muted-foreground sm:block">
+          Enter 전송 · Shift+Enter 줄바꿈
+        </p>
       </div>
     </div>
   )
