@@ -1194,5 +1194,14 @@
       "운영",
       "history-rewrite"
     ]
+  },
+  {
+    "slug": "104-housekeeping-in-progress",
+    "title": "tasks/in-progress → done 일괄 정리 (20개)",
+    "date": "2026-04-20",
+    "tags": [
+      "housekeeping",
+      "운영"
+    ]
   }
 ]
