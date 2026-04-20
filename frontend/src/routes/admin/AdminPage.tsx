@@ -12,6 +12,7 @@ import {
   Clock,
   ShieldCheck,
   Megaphone,
+  Lightbulb,
   KanbanSquare,
   Sparkles,
   FileText,
@@ -93,6 +94,14 @@ export default function AdminPage() {
       icon: Megaphone,
       href: '/admin/announce',
       color: 'bg-coral/15 text-coral',
+      badge: null,
+    },
+    {
+      title: '학생 제안',
+      description: '챗봇으로 들어온 기능제안·버그신고·의견',
+      icon: Lightbulb,
+      href: '/admin/proposals',
+      color: 'bg-amber-100 text-amber-700',
       badge: null,
     },
     {

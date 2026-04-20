@@ -187,12 +187,19 @@ func (r *ChatMessageRepo) Create(m *chat.Message) (int, error) {
 		}
 		toolCallsJSON = string(b)
 	}
+	attJSON := "[]"
+	if len(m.Attachments) > 0 {
+		b, _ := json.Marshal(m.Attachments)
+		if b != nil {
+			attJSON = string(b)
+		}
+	}
 	res, err := r.db.Exec(`
 		INSERT INTO chat_messages (session_id, role, content, reasoning_content, model,
-			prompt_tokens, completion_tokens, cache_tokens, tool_calls, tool_call_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			prompt_tokens, completion_tokens, cache_tokens, tool_calls, tool_call_id, attachments)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		m.SessionID, string(m.Role), m.Content, m.ReasoningContent, m.Model,
-		m.PromptTokens, m.CompletionTokens, m.CacheTokens, toolCallsJSON, m.ToolCallID)
+		m.PromptTokens, m.CompletionTokens, m.CacheTokens, toolCallsJSON, m.ToolCallID, attJSON)
 	if err != nil {
 		return 0, fmt.Errorf("create chat message: %w", err)
 	}
@@ -210,7 +217,8 @@ func (r *ChatMessageRepo) ListBySession(sessionID, limit int) ([]*chat.Message, 
 	}
 	rows, err := r.db.Query(`
 		SELECT id, session_id, role, content, reasoning_content, model,
-			prompt_tokens, completion_tokens, cache_tokens, tool_calls, tool_call_id, created_at
+			prompt_tokens, completion_tokens, cache_tokens, tool_calls, tool_call_id,
+			COALESCE(attachments, '[]'), created_at
 		FROM chat_messages WHERE session_id = ?
 		ORDER BY id ASC LIMIT ?`, sessionID, limit)
 	if err != nil {
@@ -220,16 +228,19 @@ func (r *ChatMessageRepo) ListBySession(sessionID, limit int) ([]*chat.Message, 
 	var out []*chat.Message
 	for rows.Next() {
 		m := &chat.Message{}
-		var role, toolCallsJSON string
+		var role, toolCallsJSON, attJSON string
 		err := rows.Scan(&m.ID, &m.SessionID, &role, &m.Content, &m.ReasoningContent,
 			&m.Model, &m.PromptTokens, &m.CompletionTokens, &m.CacheTokens,
-			&toolCallsJSON, &m.ToolCallID, &m.CreatedAt)
+			&toolCallsJSON, &m.ToolCallID, &attJSON, &m.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
 		m.Role = chat.Role(role)
 		if toolCallsJSON != "" && toolCallsJSON != "[]" {
 			_ = json.Unmarshal([]byte(toolCallsJSON), &m.ToolCalls)
+		}
+		if attJSON != "" && attJSON != "[]" {
+			_ = json.Unmarshal([]byte(attJSON), &m.Attachments)
 		}
 		out = append(out, m)
 	}

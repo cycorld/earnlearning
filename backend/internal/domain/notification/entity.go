@@ -47,6 +47,9 @@ const (
 
 	// LLM billing (#068)
 	NotifLLMBilled         NotifType = "llm_billed"
+
+	// Proposal (#106) — 학생이 챗봇으로 제출한 교수님께의 제안
+	NotifProposalSubmitted NotifType = "proposal_submitted"
 )
 
 // PushEligibleTypes are notification types that should trigger push notifications.
@@ -79,6 +82,7 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifProposalClosed:     true,
 	NotifLiquidationPayout:  true,
 	NotifLLMBilled:          true,
+	NotifProposalSubmitted:  true,
 }
 
 type Notification struct {

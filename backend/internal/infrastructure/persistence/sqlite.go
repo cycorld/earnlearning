@@ -338,6 +338,34 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// chat_messages.attachments (#106) — 학생이 챗봇에 첨부한 이미지 URL JSON 배열.
+	// save_proposal 시 최근 학생 메시지의 attachments 를 모아 proposal 에 첨부.
+	db.Exec(`ALTER TABLE chat_messages ADD COLUMN attachments TEXT DEFAULT '[]'`)
+
+	// Proposals (#106) — 학생이 챗봇으로 정리한 교수님께의 제안/버그 리포트
+	feedbackTables := []string{
+		`CREATE TABLE IF NOT EXISTS proposals (
+			id          INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id     INTEGER NOT NULL REFERENCES users(id),
+			category    TEXT NOT NULL CHECK (category IN ('feature','bug','general')),
+			title       TEXT NOT NULL,
+			body        TEXT NOT NULL,
+			attachments TEXT NOT NULL DEFAULT '[]',
+			status      TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','reviewing','resolved','wontfix')),
+			admin_note  TEXT NOT NULL DEFAULT '',
+			ticket_link TEXT NOT NULL DEFAULT '',
+			created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_proposals_user ON proposals(user_id, created_at DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status, created_at DESC)`,
+	}
+	for _, stmt := range feedbackTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create proposal tables: %w", err)
+		}
+	}
+
 	// DM tables
 	dmTables := []string{
 		`CREATE TABLE IF NOT EXISTS dm_messages (

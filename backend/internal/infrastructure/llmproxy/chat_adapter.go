@@ -39,12 +39,25 @@ func (a *ChatAdapter) ChatComplete(ctx context.Context, req *application.LLMChat
 				},
 			})
 		}
+		// #106 vision: ContentParts 가 비어있지 않으면 multimodal 메시지로 전송
+		var parts []ContentBlock
+		if len(m.ContentParts) > 0 {
+			parts = make([]ContentBlock, 0, len(m.ContentParts))
+			for _, p := range m.ContentParts {
+				cb := ContentBlock{Type: p.Type, Text: p.Text}
+				if p.ImageURL != "" {
+					cb.ImageURL = &ContentImage{URL: p.ImageURL}
+				}
+				parts = append(parts, cb)
+			}
+		}
 		msgs = append(msgs, ChatMessage{
-			Role:       m.Role,
-			Content:    m.Content,
-			ToolCalls:  tcs,
-			ToolCallID: m.ToolCallID,
-			Name:       m.Name,
+			Role:         m.Role,
+			Content:      m.Content,
+			ContentParts: parts,
+			ToolCalls:    tcs,
+			ToolCallID:   m.ToolCallID,
+			Name:         m.Name,
 		})
 	}
 	tools := make([]ChatToolSpec, 0, len(req.Tools))
@@ -123,12 +136,25 @@ func (a *ChatAdapter) ChatCompleteStream(ctx context.Context, req *application.L
 				},
 			})
 		}
+		// #106 vision: ContentParts 가 비어있지 않으면 multimodal 메시지로 전송
+		var parts []ContentBlock
+		if len(m.ContentParts) > 0 {
+			parts = make([]ContentBlock, 0, len(m.ContentParts))
+			for _, p := range m.ContentParts {
+				cb := ContentBlock{Type: p.Type, Text: p.Text}
+				if p.ImageURL != "" {
+					cb.ImageURL = &ContentImage{URL: p.ImageURL}
+				}
+				parts = append(parts, cb)
+			}
+		}
 		msgs = append(msgs, ChatMessage{
-			Role:       m.Role,
-			Content:    m.Content,
-			ToolCalls:  tcs,
-			ToolCallID: m.ToolCallID,
-			Name:       m.Name,
+			Role:         m.Role,
+			Content:      m.Content,
+			ContentParts: parts,
+			ToolCalls:    tcs,
+			ToolCallID:   m.ToolCallID,
+			Name:         m.Name,
 		})
 	}
 	tools := make([]ChatToolSpec, 0, len(req.Tools))

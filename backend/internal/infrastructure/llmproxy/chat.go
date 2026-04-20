@@ -11,13 +11,79 @@ import (
 )
 
 // ChatMessage 은 OpenAI-compatible chat completion 의 단일 메시지.
-// content 는 string 또는 (vision 용) []ContentBlock. 여기선 텍스트만 노출.
+// content 는 string 또는 (vision 용) []ContentBlock — MarshalJSON 으로 분기.
+// #106: ContentParts 가 있으면 multimodal 메시지로 전송, 없으면 기존 텍스트 단일 string.
 type ChatMessage struct {
-	Role       string            `json:"role"`
-	Content    string            `json:"content,omitempty"`
-	ToolCalls  []ChatToolCall    `json:"tool_calls,omitempty"`
-	ToolCallID string            `json:"tool_call_id,omitempty"`
-	Name       string            `json:"name,omitempty"` // for role=tool
+	Role         string         `json:"-"`
+	Content      string         `json:"-"`
+	ContentParts []ContentBlock `json:"-"`
+	ToolCalls    []ChatToolCall `json:"-"`
+	ToolCallID   string         `json:"-"`
+	Name         string         `json:"-"` // for role=tool
+}
+
+// ContentBlock 은 OpenAI vision 호환 content array 의 한 항목.
+type ContentBlock struct {
+	Type     string         `json:"type"` // "text" | "image_url"
+	Text     string         `json:"text,omitempty"`
+	ImageURL *ContentImage  `json:"image_url,omitempty"`
+}
+
+type ContentImage struct {
+	URL string `json:"url"` // http(s):// or data:image/...;base64,...
+}
+
+// MarshalJSON 은 OpenAI 호환 형식으로 직렬화. ContentParts 가 있으면 array, 없으면 string.
+func (m ChatMessage) MarshalJSON() ([]byte, error) {
+	out := map[string]any{"role": m.Role}
+	if len(m.ContentParts) > 0 {
+		out["content"] = m.ContentParts
+	} else if m.Content != "" {
+		out["content"] = m.Content
+	}
+	if len(m.ToolCalls) > 0 {
+		out["tool_calls"] = m.ToolCalls
+	}
+	if m.ToolCallID != "" {
+		out["tool_call_id"] = m.ToolCallID
+	}
+	if m.Name != "" {
+		out["name"] = m.Name
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalJSON 은 응답 파싱용 — content 가 string 이거나 array 일 수 있음.
+func (m *ChatMessage) UnmarshalJSON(data []byte) error {
+	var aux struct {
+		Role       string          `json:"role"`
+		Content    json.RawMessage `json:"content"`
+		ToolCalls  []ChatToolCall  `json:"tool_calls"`
+		ToolCallID string          `json:"tool_call_id"`
+		Name       string          `json:"name"`
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	m.Role = aux.Role
+	m.ToolCalls = aux.ToolCalls
+	m.ToolCallID = aux.ToolCallID
+	m.Name = aux.Name
+	if len(aux.Content) > 0 && aux.Content[0] == '[' {
+		_ = json.Unmarshal(aux.Content, &m.ContentParts)
+		// 텍스트 추출 — assistant 응답 처리에 편의
+		for _, p := range m.ContentParts {
+			if p.Type == "text" {
+				if m.Content != "" {
+					m.Content += "\n"
+				}
+				m.Content += p.Text
+			}
+		}
+	} else if len(aux.Content) > 0 {
+		_ = json.Unmarshal(aux.Content, &m.Content)
+	}
+	return nil
 }
 
 // ChatToolCall 은 assistant 응답 속 tool_calls[] 항목.

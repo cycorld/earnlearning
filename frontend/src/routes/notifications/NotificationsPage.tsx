@@ -105,7 +105,9 @@ function getReferencePath(refType: string, refId: number): string | null {
     case 'grant':
       return `/grant/${refId}`
     case 'proposal':
-      return `/proposal/${refId}`
+      // #106: 챗봇 학생 제안 알림 → admin 전용 페이지. 일반 학생은 fallback.
+      // shareholder proposal (주주총회) 도 reference_type=proposal 이라 충돌 가능 — 추후 분리 권장.
+      return refId > 0 ? `/admin/proposals` : '/admin/proposals'
     case 'dm':
       return `/messages/${refId}`
     case 'user':
