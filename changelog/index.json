@@ -1236,5 +1236,16 @@
       "프론트엔드",
       "UX"
     ]
+  },
+  {
+    "slug": "108-llm-bounty-followup-325",
+    "title": "LLM 바운티 #325 후속 — 모델명 오기재 + cycorld proxy 개선",
+    "date": "2026-04-21",
+    "tags": [
+      "바운티",
+      "LLM",
+      "proxy",
+      "문서"
+    ]
   }
 ]

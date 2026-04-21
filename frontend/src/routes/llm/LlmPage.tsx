@@ -325,8 +325,8 @@ function PricingCard() {
       </CardHeader>
       <CardContent className="space-y-2 text-sm text-muted-foreground">
         <p>
-          Anthropic Claude <strong className="text-foreground">Opus 4.7</strong> 공식 가격을
-          환율 1 USD = 1,400원 으로 환산:
+          실제 서비스 모델은 <strong className="text-foreground">Qwen3.6-35B-A3B</strong> (무료,
+          강의 GPU 서버 운영). 요금은 <strong className="text-foreground">Anthropic Claude Opus 4.7</strong> 공식 가격을 환율 1 USD = 1,400원 으로 환산해 학습용 과금:
         </p>
         <ul className="ml-4 list-disc space-y-1">
           <li>입력 토큰: <strong className="text-foreground">0.021원/토큰</strong> (21원/1k)</li>
