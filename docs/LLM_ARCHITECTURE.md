@@ -50,5 +50,19 @@ curl -s https://llm.cycorld.com/v1/chat/completions \
 - 기본: `reasoning_content` 필드는 클라이언트 응답에서 strip (#108)
 - 명시적 노출 원할 시: 요청 body 에 `"include_reasoning": true`
 
+## 보조 모델 (비교용 — 운영 X) — #110
+RTX 4090 24GB 한 장에서 운영 모델은 **Qwen3.6-35B-A3B (MoE, 활성 3B)**. 학생 동시성 4 slot 유지가 최우선.
+
+비교·벤치용으로 **Qwen3.6-27B Dense** (Q4_K_XL, ~17GB) 도 보관. Dense 라 같은 VRAM 에선 동시성이 1~2 slot 으로 떨어짐 → 운영 교체 안 함.
+
+- 모델 파일: `cycorld:~/models/Qwen3.6-27B-UD-Q4_K_XL.gguf`
+- 비교용 systemd: `llama-server-27b.service` (port 8098, 평소 stop)
+- swap 스크립트: `~/bin/swap-to-{27b,35b}.sh` (VRAM 공유라 동시 불가, **운영 다운타임 발생**)
+- 벤치 스크립트: `~/bin/compare-llm.sh`
+- LMS proxy `UPSTREAM=:8099` 고정 → 27B 는 외부 노출 X (의도된 격리)
+
+상세: `cycorld:/home/cycorld/llm-proxy/ARCHITECTURE.md` 의 "보조 모델" 섹션.
+
 ## 변경 이력 (LMS 관점)
 - **#108 (2026-04-21)**: model 검증 강화 + reasoning_content strip + Student-#325 바운티 #1~#3 valid
+- **#110 (2026-04-23)**: Qwen3.6-27B Dense 비교 환경 구축 (운영은 35B-A3B 유지)
