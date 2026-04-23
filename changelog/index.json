@@ -1258,5 +1258,17 @@
       "LLM",
       "infra"
     ]
+  },
+  {
+    "slug": "110-qwen-27b-compare-env",
+    "title": "Qwen3.6-27B Dense 비교 환경 구축 (운영은 35B-A3B 유지)",
+    "date": "2026-04-23",
+    "tags": [
+      "운영",
+      "LLM",
+      "모델",
+      "infra",
+      "의사결정"
+    ]
   }
 ]
