@@ -1281,5 +1281,16 @@
       "consent",
       "분석"
     ]
+  },
+  {
+    "slug": "113-ga4-iarguments",
+    "title": "GA4 gtag shim IArguments 복원 (#112 후속 핫픽스)",
+    "date": "2026-05-01",
+    "tags": [
+      "핫픽스",
+      "GA4",
+      "dataLayer",
+      "분석"
+    ]
   }
 ]
