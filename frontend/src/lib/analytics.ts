@@ -47,27 +47,43 @@ export function __resetAnalyticsForTest(): void {
 /**
  * GA 스크립트 주입 + dataLayer/gtag 초기화.
  * SPA 라서 자동 page_view 는 끄고, 라우트 hook 에서 수동 발사.
+ *
+ * ⚠️ Consent Mode v2 (#112) — `consent default` 를 `js`/`config` 보다 **먼저** 호출 필수.
+ * 안 하면 implicit denied 모드로 들어가서 g/collect 비콘이 차단됨 (Realtime 0).
+ * LMS 는 광고 없음 + 로그인 게이트 + ToS 에 분석 사용 명시 → analytics 만 granted.
  */
 export function initAnalytics(): void {
   if (!isAnalyticsEnabled() || initialized) return
   if (typeof window === 'undefined' || typeof document === 'undefined') return
   initialized = true
 
-  const script = document.createElement('script')
-  script.async = true
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`
-  document.head.appendChild(script)
-
+  // dataLayer + gtag shim 을 먼저 정의 — 스크립트 로드 전에 큐잉 가능하도록
   window.dataLayer = window.dataLayer ?? []
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   window.gtag = function gtag(...args: any[]) {
     window.dataLayer.push(args)
   }
+
+  // ★ 반드시 js/config 이전에 — Consent Mode v2 default
+  window.gtag('consent', 'default', {
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    analytics_storage: 'granted',
+    functionality_storage: 'granted',
+    security_storage: 'granted',
+  })
+
   window.gtag('js', new Date())
   window.gtag('config', GA_ID, {
     send_page_view: false, // SPA 라 수동 발사
-    anonymize_ip: true,
   })
+
+  // gtag.js 스크립트는 dataLayer 큐잉 후 비동기 로드 — 큐가 안전하게 처리됨
+  const script = document.createElement('script')
+  script.async = true
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`
+  document.head.appendChild(script)
 }
 
 /** 라우트 이동마다 호출. dev/no-id 환경에선 noop. */

@@ -1270,5 +1270,16 @@
       "dogfooding",
       "강의"
     ]
+  },
+  {
+    "slug": "112-ga4-consent-mode",
+    "title": "GA4 Consent Mode v2 default 누락 수정 (#111 핫픽스)",
+    "date": "2026-05-01",
+    "tags": [
+      "핫픽스",
+      "GA4",
+      "consent",
+      "분석"
+    ]
   }
 ]
