@@ -57,11 +57,15 @@ export function initAnalytics(): void {
   if (typeof window === 'undefined' || typeof document === 'undefined') return
   initialized = true
 
-  // dataLayer + gtag shim 을 먼저 정의 — 스크립트 로드 전에 큐잉 가능하도록
+  // dataLayer + gtag shim 을 먼저 정의 — 스크립트 로드 전에 큐잉 가능하도록.
+  // ⚠️ #112: `dataLayer.push(arguments)` (IArguments) 필수. rest-param `(...args)` 로 push 하면
+  // 진짜 Array 가 되어 gtag.js 가 gtag 명령으로 인식 못 함 (data layer push 로 간주).
+  // 표준 Google 스니펫 패턴 그대로 — 변경 금지.
   window.dataLayer = window.dataLayer ?? []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  window.gtag = function gtag(...args: any[]) {
-    window.dataLayer.push(args)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, prefer-rest-params
+  window.gtag = function () {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer.push(arguments as unknown as unknown[])
   }
 
   // ★ 반드시 js/config 이전에 — Consent Mode v2 default

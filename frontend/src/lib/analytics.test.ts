@@ -77,7 +77,7 @@ describe('analytics', () => {
       m.initAnalytics()
 
       // 첫 entry 가 consent default 인지
-      const first = window.dataLayer[0] as unknown[]
+      const first = window.dataLayer[0] as unknown as { length: number; [k: number]: unknown }
       expect(first[0]).toBe('consent')
       expect(first[1]).toBe('default')
       const consentParams = first[2] as Record<string, string>
@@ -85,13 +85,30 @@ describe('analytics', () => {
       expect(consentParams.ad_storage).toBe('denied') // LMS 광고 없음
 
       // 두 번째 entry 가 'js' (consent → js → config 순서 보장)
-      const second = window.dataLayer[1] as unknown[]
+      const second = window.dataLayer[1] as unknown as { [k: number]: unknown }
       expect(second[0]).toBe('js')
 
       // 세 번째 entry 가 'config'
-      const third = window.dataLayer[2] as unknown[]
+      const third = window.dataLayer[2] as unknown as { [k: number]: unknown }
       expect(third[0]).toBe('config')
       expect(third[1]).toBe('G-TEST12345')
+    })
+
+    // #112 회귀 #2: gtag shim 은 반드시 `arguments` (IArguments) 를 push 해야 함.
+    // `(...args)` rest param 으로 받아 push 하면 진짜 Array 가 되고, gtag.js 는 그걸
+    // gtag 명령이 아닌 generic data layer push 로 처리해서 collect 비콘이 안 나감.
+    // (Playwright 로 prod 직접 검증한 #112 본 핫픽스 시나리오의 핵심 회귀)
+    it('gtag shim 은 IArguments 를 push (Array.isArray=false)', async () => {
+      const m = await loadModule({ PROD: true, VITE_GA_ID: 'G-TEST12345' })
+      m.__resetAnalyticsForTest()
+      m.initAnalytics()
+      const first = window.dataLayer[0]
+      // 진짜 Array 면 안 됨 — IArguments 여야 gtag.js 가 gtag 명령으로 인식
+      expect(Array.isArray(first)).toBe(false)
+      // 그래도 array-like 라서 length·인덱스 접근은 됨
+      const al = first as unknown as { length: number; [k: number]: unknown }
+      expect(al.length).toBe(3)
+      expect(al[0]).toBe('consent')
     })
 
     it('initAnalytics 두 번 호출해도 스크립트 1개만 (idempotent)', async () => {
