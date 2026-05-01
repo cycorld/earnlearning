@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams as useRouteParams } from 'react-router-dom'
+import { GAPageViewTracker } from '@/hooks/use-ga-pageview'
 import { AuthProvider } from '@/hooks/use-auth'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
@@ -81,6 +82,7 @@ export default function App() {
   return (
     <ErrorBoundary>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <GAPageViewTracker />
       <AuthProvider>
         <Routes>
           {/* Public */}

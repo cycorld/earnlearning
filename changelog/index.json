@@ -1258,5 +1258,17 @@
       "LLM",
       "infra"
     ]
+  },
+  {
+    "slug": "111-ga4-tracking",
+    "title": "LMS 프로덕션에 GA4 적용 — 선생님이 먼저 dogfood",
+    "date": "2026-05-01",
+    "tags": [
+      "분석",
+      "GA4",
+      "트래킹",
+      "dogfooding",
+      "강의"
+    ]
   }
 ]
