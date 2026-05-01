@@ -65,8 +65,33 @@ describe('analytics', () => {
 
       expect(window.dataLayer).toBeDefined()
       expect(Array.isArray(window.dataLayer)).toBe(true)
-      // 'js' + 'config' 두 개 이상은 push 됐어야
-      expect(window.dataLayer.length).toBeGreaterThanOrEqual(2)
+      // 'consent default' + 'js' + 'config' 세 개 이상은 push 됐어야
+      expect(window.dataLayer.length).toBeGreaterThanOrEqual(3)
+    })
+
+    // #112 회귀: Consent Mode v2 default 가 js/config 보다 먼저 호출되어야 함.
+    // 이 순서가 깨지면 implicit denied 모드로 g/collect 비콘 0건 → Realtime 0.
+    it('Consent Mode v2 — consent default 가 dataLayer 첫 entry · analytics_storage granted', async () => {
+      const m = await loadModule({ PROD: true, VITE_GA_ID: 'G-TEST12345' })
+      m.__resetAnalyticsForTest()
+      m.initAnalytics()
+
+      // 첫 entry 가 consent default 인지
+      const first = window.dataLayer[0] as unknown[]
+      expect(first[0]).toBe('consent')
+      expect(first[1]).toBe('default')
+      const consentParams = first[2] as Record<string, string>
+      expect(consentParams.analytics_storage).toBe('granted')
+      expect(consentParams.ad_storage).toBe('denied') // LMS 광고 없음
+
+      // 두 번째 entry 가 'js' (consent → js → config 순서 보장)
+      const second = window.dataLayer[1] as unknown[]
+      expect(second[0]).toBe('js')
+
+      // 세 번째 entry 가 'config'
+      const third = window.dataLayer[2] as unknown[]
+      expect(third[0]).toBe('config')
+      expect(third[1]).toBe('G-TEST12345')
     })
 
     it('initAnalytics 두 번 호출해도 스크립트 1개만 (idempotent)', async () => {
