@@ -40,11 +40,15 @@ type InvestmentRound struct {
 }
 
 // RoundCompany is the company slice attached to an InvestmentRound response.
+// #114: Description / ServiceURL added so InvestPage 리스트·상세 가 회사 소개를
+// 충분히 보여줄 수 있도록. Description 은 markdown 원문, 길이 제한 X.
 type RoundCompany struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	Valuation int    `json:"valuation"`
-	LogoURL   string `json:"logo_url"`
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Valuation   int    `json:"valuation"`
+	LogoURL     string `json:"logo_url"`
+	Description string `json:"description,omitempty"`
+	ServiceURL  string `json:"service_url,omitempty"`
 }
 
 // RoundOwner is the company owner slice attached to an InvestmentRound response.

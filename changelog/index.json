@@ -1292,5 +1292,16 @@
       "dataLayer",
       "분석"
     ]
+  },
+  {
+    "slug": "114-invest-show-company-info",
+    "title": "투자 페이지에 회사 정보 노출 (대표자 · 소개 · 서비스 URL)",
+    "date": "2026-05-08",
+    "tags": [
+      "투자",
+      "UX",
+      "회사정보",
+      "dogfood"
+    ]
   }
 ]

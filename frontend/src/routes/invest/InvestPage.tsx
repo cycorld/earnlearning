@@ -15,8 +15,9 @@ import {
   Lightbulb,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
 } from 'lucide-react'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, displayName } from '@/lib/utils'
 import { Spinner } from '@/components/ui/spinner'
 
 // DividendPayment matches backend investment.DividendPayment JSON shape.
@@ -205,6 +206,13 @@ export default function InvestPage() {
                     )
                   : 0
               const pctLabel = (round.offered_percent * 100).toFixed(1)
+              const ownerLabel = round.owner
+                ? displayName(round.owner)
+                : round.owner_name
+              const desc = round.company?.description?.trim()
+              const descSnippet =
+                desc && desc.length > 80 ? desc.slice(0, 80) + '…' : desc
+              const serviceURL = round.company?.service_url?.trim()
               return (
                 <Link key={round.id} to={`/invest/${round.id}`}>
                   <Card className="transition-colors hover:bg-accent/30">
@@ -225,12 +233,42 @@ export default function InvestPage() {
                               모집 중
                             </Badge>
                           </div>
+                          {/* #114: 대표자 이름 — 학생들이 어느 회사인지 빨리 인지하도록 */}
+                          {ownerLabel && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              대표 {ownerLabel}
+                            </p>
+                          )}
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             지분 {pctLabel}% · 주당{' '}
                             {formatMoney(Math.round(round.price_per_share))}
                           </p>
                         </div>
                       </div>
+
+                      {/* #114: 회사 소개 1~2줄 + 서비스 URL */}
+                      {(descSnippet || serviceURL) && (
+                        <div className="mt-3 space-y-1">
+                          {descSnippet && (
+                            <p className="line-clamp-2 text-xs text-muted-foreground">
+                              {descSnippet}
+                            </p>
+                          )}
+                          {serviceURL && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                window.open(serviceURL, '_blank', 'noopener')
+                              }}
+                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              서비스 바로가기
+                            </button>
+                          )}
+                        </div>
+                      )}
 
                       {/* Progress bar */}
                       <div className="mt-3">

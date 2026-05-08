@@ -20,9 +20,11 @@ import {
   Lightbulb,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
 } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
 import { Spinner } from '@/components/ui/spinner'
+import { MarkdownContent } from '@/components/MarkdownContent'
 
 const statusLabels: Record<string, string> = {
   open: '모집 중',
@@ -278,6 +280,18 @@ export default function InvestDetailPage() {
                   대표: {displayName(round.owner)}
                 </p>
               )}
+              {/* #114: 서비스 URL — 회사 헤더에 바로 노출 */}
+              {round.company?.service_url && (
+                <a
+                  href={round.company.service_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {round.company.service_url}
+                </a>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -384,6 +398,21 @@ export default function InvestDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* #114: 회사 소개 — 투자 결정 전 컨텍스트 (markdown 원문) */}
+      {round.company?.description?.trim() && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">회사 소개</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MarkdownContent
+              content={round.company.description}
+              maxLines={20}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Owner-only controls */}
       {isActive && isOwner && (
