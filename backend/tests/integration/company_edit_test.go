@@ -214,3 +214,74 @@ func TestCompanyCreate_DuplicateName_Conflict(t *testing.T) {
 		t.Errorf("expected DUPLICATE_NAME, got %v", r.Error)
 	}
 }
+
+// #115 회귀: service_url 다중 URL 지원 (쉼표 구분)
+func TestCompanyUpdate_ServiceURL_Multi_Success(t *testing.T) {
+	ts := setupTestServer(t)
+	token, cid := createUserWithCompany(t, ts, "url1@test.com", "url1", "20240091", "url1_co")
+
+	r := ts.put("/api/companies/"+itoaUD(cid), map[string]string{
+		"name":         "url1_co",
+		"description":  "set urls",
+		"service_url":  "https://a.example,  https://b.example , https://c.example",
+	}, token)
+	if !r.Success {
+		t.Fatalf("update with multi service_url failed: %v", r.Error)
+	}
+
+	g := ts.get("/api/companies/"+itoaUD(cid), token)
+	if !g.Success {
+		t.Fatalf("get failed: %v", g.Error)
+	}
+	var got struct {
+		ServiceURL string `json:"service_url"`
+	}
+	_ = json.Unmarshal(g.Data, &got)
+	// 정규화 — 공백 제거 + 쉼표 구분 그대로
+	if got.ServiceURL != "https://a.example,https://b.example,https://c.example" {
+		t.Errorf("expected normalized comma-joined urls, got %q", got.ServiceURL)
+	}
+}
+
+func TestCompanyUpdate_ServiceURL_Empty_OK(t *testing.T) {
+	ts := setupTestServer(t)
+	token, cid := createUserWithCompany(t, ts, "url2@test.com", "url2", "20240092", "url2_co")
+
+	// 빈 문자열은 허용 (URL 0개)
+	r := ts.put("/api/companies/"+itoaUD(cid), map[string]string{
+		"name":        "url2_co",
+		"description": "no urls",
+		"service_url": "",
+	}, token)
+	if !r.Success {
+		t.Fatalf("update with empty service_url should succeed: %v", r.Error)
+	}
+}
+
+func TestCompanyUpdate_ServiceURL_Invalid_Reject(t *testing.T) {
+	ts := setupTestServer(t)
+	token, cid := createUserWithCompany(t, ts, "url3@test.com", "url3", "20240093", "url3_co")
+
+	cases := []struct {
+		name string
+		url  string
+	}{
+		{"protocol 없음", "example.com"},
+		{"ftp 거부", "ftp://example.com"},
+		{"javascript 거부", "javascript:alert(1)"},
+		{"한 piece 라도 invalid 면 전부 거부", "https://a.example,not-a-url"},
+		{"호스트 없음", "https://"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := ts.put("/api/companies/"+itoaUD(cid), map[string]string{
+				"name":        "url3_co",
+				"description": tc.name,
+				"service_url": tc.url,
+			}, token)
+			if r.Success {
+				t.Errorf("should reject invalid url %q", tc.url)
+			}
+		})
+	}
+}

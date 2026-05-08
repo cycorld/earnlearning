@@ -1303,5 +1303,16 @@
       "회사정보",
       "dogfood"
     ]
+  },
+  {
+    "slug": "115-multi-service-urls",
+    "title": "회사 service_url 을 쉼표 구분 다중 URL 지원 (#114 후속)",
+    "date": "2026-05-08",
+    "tags": [
+      "투자",
+      "UX",
+      "URL",
+      "회사정보"
+    ]
   }
 ]

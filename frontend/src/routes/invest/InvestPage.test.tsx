@@ -107,6 +107,37 @@ describe('InvestPage — #114 회사 정보 노출', () => {
     })
   })
 
+  // #115 회귀: 다중 URL — 첫 URL 만 "서비스 바로가기" + 추가 URL 개수 +N
+  it('서비스 URL 이 여러 개면 첫 URL + "+N" 표시', async () => {
+    vi.mocked(api.get).mockImplementation((path: string) => {
+      if (path.startsWith('/investment/rounds')) {
+        return Promise.resolve({
+          rounds: [
+            {
+              ...sampleRound,
+              company: {
+                ...sampleRound.company,
+                service_url: 'https://a.example,https://b.example,https://c.example',
+              },
+            },
+          ],
+          total: 1,
+        })
+      }
+      return Promise.resolve([])
+    })
+    render(
+      <MemoryRouter>
+        <InvestPage />
+      </MemoryRouter>,
+    )
+    await waitFor(() => {
+      expect(screen.getByText('서비스 바로가기')).toBeInTheDocument()
+    })
+    // 추가 2개 = "+2"
+    expect(screen.getByText('+2')).toBeInTheDocument()
+  })
+
   it('description / service_url 없으면 해당 영역 안 그림 (안전)', async () => {
     vi.mocked(api.get).mockImplementation((path: string) => {
       if (path.startsWith('/investment/rounds')) {

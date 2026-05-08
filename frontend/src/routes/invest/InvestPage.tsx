@@ -18,6 +18,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
+import { parseServiceUrls } from '@/lib/urls'
 import { Spinner } from '@/components/ui/spinner'
 
 // DividendPayment matches backend investment.DividendPayment JSON shape.
@@ -212,7 +213,10 @@ export default function InvestPage() {
               const desc = round.company?.description?.trim()
               const descSnippet =
                 desc && desc.length > 80 ? desc.slice(0, 80) + '…' : desc
-              const serviceURL = round.company?.service_url?.trim()
+              // #115: 다중 URL — 첫 URL 을 "서비스 바로가기" 로, 추가는 +N 표시
+              const serviceURLs = parseServiceUrls(round.company?.service_url)
+              const primaryURL = serviceURLs[0]
+              const extraURLCount = serviceURLs.length - 1
               return (
                 <Link key={round.id} to={`/invest/${round.id}`}>
                   <Card className="transition-colors hover:bg-accent/30">
@@ -246,25 +250,30 @@ export default function InvestPage() {
                         </div>
                       </div>
 
-                      {/* #114: 회사 소개 1~2줄 + 서비스 URL */}
-                      {(descSnippet || serviceURL) && (
+                      {/* #114·#115: 회사 소개 1~2줄 + 서비스 URL (다중) */}
+                      {(descSnippet || primaryURL) && (
                         <div className="mt-3 space-y-1">
                           {descSnippet && (
                             <p className="line-clamp-2 text-xs text-muted-foreground">
                               {descSnippet}
                             </p>
                           )}
-                          {serviceURL && (
+                          {primaryURL && (
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.preventDefault()
-                                window.open(serviceURL, '_blank', 'noopener')
+                                window.open(primaryURL, '_blank', 'noopener')
                               }}
                               className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                             >
                               <ExternalLink className="h-3 w-3" />
                               서비스 바로가기
+                              {extraURLCount > 0 && (
+                                <span className="ml-1 text-muted-foreground">
+                                  +{extraURLCount}
+                                </span>
+                              )}
                             </button>
                           )}
                         </div>
