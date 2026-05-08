@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner'
 import { CreditCard, ExternalLink, Pencil, Loader2, Plus, Upload, Wallet } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
+import { parseServiceUrls, isValidServiceUrls, shortenUrl } from '@/lib/urls'
 import { Spinner } from '@/components/ui/spinner'
 import { DisclosureSection } from './DisclosureSection'
 import { ProposalSection } from './ProposalSection'
@@ -91,6 +92,13 @@ export default function CompanyDetailPage() {
     e.preventDefault()
     if (!editForm.name.trim()) {
       toast.error('회사 이름을 입력해주세요.')
+      return
+    }
+    // #115: 다중 URL 검증 — 각 piece 가 valid http/https 인지
+    if (!isValidServiceUrls(editForm.service_url)) {
+      toast.error(
+        '서비스 URL 형식이 올바르지 않습니다. 각 URL 은 http:// 또는 https:// 로 시작해야 하고 쉼표(,) 로 구분합니다.',
+      )
       return
     }
 
@@ -165,16 +173,22 @@ export default function CompanyDetailPage() {
             <p className="text-sm text-muted-foreground">
               대표: {displayName(company.owner) || '-'}
             </p>
-            {company.service_url && (
-              <a
-                href={company.service_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                <ExternalLink className="h-3 w-3" />
-                {company.service_url.replace(/^https?:\/\//, '')}
-              </a>
+            {/* #115: 다중 URL — 쉼표 구분 저장값을 각각 링크로 렌더 */}
+            {parseServiceUrls(company.service_url).length > 0 && (
+              <div className="flex flex-col gap-1">
+                {parseServiceUrls(company.service_url).map((url) => (
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    {shortenUrl(url)}
+                  </a>
+                ))}
+              </div>
             )}
           </div>
           {isOwner && (
@@ -398,9 +412,13 @@ export default function CompanyDetailPage() {
                 id="edit-service-url"
                 value={editForm.service_url}
                 onChange={(e) => setEditForm({ ...editForm, service_url: e.target.value })}
-                placeholder="https://my-app.example.com"
-                type="url"
+                placeholder="https://my-app.com, https://instagram.com/myapp"
+                type="text"
               />
+              <p className="text-xs text-muted-foreground">
+                여러 개를 등록하려면 쉼표(,) 로 구분하세요. 각 URL 은 http:// 또는
+                https:// 로 시작해야 합니다.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-desc">회사 소개</Label>

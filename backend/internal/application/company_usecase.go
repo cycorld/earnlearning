@@ -2,13 +2,42 @@ package application
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/earnlearning/backend/internal/domain/company"
 	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/user"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
+
+// validateServiceURLs — #115 다중 URL (쉼표 구분) 검증.
+// 빈 문자열은 OK (URL 0개). 각 piece 가 http/https URL 이어야 함.
+// 정규화된 문자열 (각 piece trim, 빈 piece 제거, 쉼표 join) 반환.
+func validateServiceURLs(raw string) (string, error) {
+	parts := strings.Split(raw, ",")
+	cleaned := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		u, err := url.Parse(p)
+		if err != nil {
+			return "", fmt.Errorf("invalid URL %q: %w", p, err)
+		}
+		if u.Scheme != "http" && u.Scheme != "https" {
+			return "", errors.New("URL must start with http:// or https://: " + p)
+		}
+		if u.Host == "" {
+			return "", errors.New("URL must have a host: " + p)
+		}
+		cleaned = append(cleaned, p)
+	}
+	return strings.Join(cleaned, ","), nil
+}
 
 type CompanyUsecase struct {
 	companyRepo company.CompanyRepository
@@ -210,9 +239,14 @@ func (uc *CompanyUsecase) UpdateCompany(companyID, userID int, input UpdateCompa
 	if input.Name != "" {
 		c.Name = input.Name
 	}
+	// #115: service_url 다중 URL 검증 + 정규화
+	cleanedURLs, err := validateServiceURLs(input.ServiceURL)
+	if err != nil {
+		return fmt.Errorf("service_url: %w", err)
+	}
 	c.Description = input.Description
 	c.LogoURL = input.LogoURL
-	c.ServiceURL = input.ServiceURL
+	c.ServiceURL = cleanedURLs
 	return uc.companyRepo.Update(c)
 }
 

@@ -23,6 +23,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { formatMoney, displayName } from '@/lib/utils'
+import { parseServiceUrls, shortenUrl } from '@/lib/urls'
 import { Spinner } from '@/components/ui/spinner'
 import { MarkdownContent } from '@/components/MarkdownContent'
 
@@ -280,17 +281,22 @@ export default function InvestDetailPage() {
                   대표: {displayName(round.owner)}
                 </p>
               )}
-              {/* #114: 서비스 URL — 회사 헤더에 바로 노출 */}
-              {round.company?.service_url && (
-                <a
-                  href={round.company.service_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  {round.company.service_url}
-                </a>
+              {/* #114·#115: 서비스 URL — 다중 (쉼표 구분) 모두 표시 */}
+              {parseServiceUrls(round.company?.service_url).length > 0 && (
+                <div className="mt-1 flex flex-col gap-0.5">
+                  {parseServiceUrls(round.company?.service_url).map((url) => (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      {shortenUrl(url)}
+                    </a>
+                  ))}
+                </div>
               )}
             </div>
           </div>
