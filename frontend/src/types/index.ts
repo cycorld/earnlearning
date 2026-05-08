@@ -260,7 +260,15 @@ export interface GrantApplication {
 export interface InvestmentRound {
   id: number
   company_id: number
-  company?: { id: number; name: string; valuation: number; logo_url: string }
+  company?: {
+    id: number
+    name: string
+    valuation: number
+    logo_url: string
+    // #114: 투자 페이지에서 회사 소개·서비스 URL 노출
+    description?: string
+    service_url?: string
+  }
   owner?: { id: number; name: string }
   company_name?: string // legacy flat field kept for backward compat
   owner_name?: string

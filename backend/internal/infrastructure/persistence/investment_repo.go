@@ -39,14 +39,16 @@ func (r *InvestmentRepo) FindRoundByID(id int) (*investment.InvestmentRound, err
 	var expiresAt sql.NullTime
 	var fundedAt sql.NullTime
 	var companyValuation int
-	var companyLogoURL string
+	var companyLogoURL, companyDescription, companyServiceURL string
 	var ownerID int
 
 	err := r.db.QueryRow(`
 		SELECT ir.id, ir.company_id, ir.post_id, ir.target_amount, ir.offered_percent,
 			   ir.current_amount, ir.price_per_share, ir.new_shares, ir.status,
 			   ir.expires_at, ir.created_at, ir.funded_at,
-			   c.name, c.valuation, COALESCE(c.logo_url, ''), u.id, u.name
+			   c.name, c.valuation, COALESCE(c.logo_url, ''),
+			   COALESCE(c.description, ''), COALESCE(c.service_url, ''),
+			   u.id, u.name
 		FROM investment_rounds ir
 		JOIN companies c ON c.id = ir.company_id
 		JOIN users u ON u.id = c.owner_id
@@ -54,7 +56,9 @@ func (r *InvestmentRepo) FindRoundByID(id int) (*investment.InvestmentRound, err
 		&round.ID, &round.CompanyID, &postID, &round.TargetAmount, &round.OfferedPercent,
 		&round.CurrentAmount, &round.PricePerShare, &round.NewShares, &round.Status,
 		&expiresAt, &round.CreatedAt, &fundedAt,
-		&round.CompanyName, &companyValuation, &companyLogoURL, &ownerID, &round.OwnerName,
+		&round.CompanyName, &companyValuation, &companyLogoURL,
+		&companyDescription, &companyServiceURL,
+		&ownerID, &round.OwnerName,
 	)
 	if err == sql.ErrNoRows {
 		return nil, investment.ErrRoundNotFound
@@ -75,6 +79,7 @@ func (r *InvestmentRepo) FindRoundByID(id int) (*investment.InvestmentRound, err
 	round.Company = &investment.RoundCompany{
 		ID: round.CompanyID, Name: round.CompanyName,
 		Valuation: companyValuation, LogoURL: companyLogoURL,
+		Description: companyDescription, ServiceURL: companyServiceURL,
 	}
 	round.Owner = &investment.RoundOwner{ID: ownerID, Name: round.OwnerName}
 
@@ -117,7 +122,9 @@ func (r *InvestmentRepo) ListRounds(filter investment.RoundFilter, page, limit i
 		SELECT ir.id, ir.company_id, ir.post_id, ir.target_amount, ir.offered_percent,
 			   ir.current_amount, ir.price_per_share, ir.new_shares, ir.status,
 			   ir.expires_at, ir.created_at, ir.funded_at,
-			   c.name, c.valuation, COALESCE(c.logo_url, ''), u.id, u.name
+			   c.name, c.valuation, COALESCE(c.logo_url, ''),
+			   COALESCE(c.description, ''), COALESCE(c.service_url, ''),
+			   u.id, u.name
 		FROM investment_rounds ir
 		JOIN companies c ON c.id = ir.company_id
 		JOIN users u ON u.id = c.owner_id
@@ -136,14 +143,16 @@ func (r *InvestmentRepo) ListRounds(filter investment.RoundFilter, page, limit i
 		var expiresAt sql.NullTime
 		var fundedAt sql.NullTime
 		var companyValuation int
-		var companyLogoURL string
+		var companyLogoURL, companyDescription, companyServiceURL string
 		var ownerID int
 
 		if err := rows.Scan(
 			&round.ID, &round.CompanyID, &postID, &round.TargetAmount, &round.OfferedPercent,
 			&round.CurrentAmount, &round.PricePerShare, &round.NewShares, &round.Status,
 			&expiresAt, &round.CreatedAt, &fundedAt,
-			&round.CompanyName, &companyValuation, &companyLogoURL, &ownerID, &round.OwnerName,
+			&round.CompanyName, &companyValuation, &companyLogoURL,
+			&companyDescription, &companyServiceURL,
+			&ownerID, &round.OwnerName,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan round: %w", err)
 		}
@@ -160,6 +169,7 @@ func (r *InvestmentRepo) ListRounds(filter investment.RoundFilter, page, limit i
 		round.Company = &investment.RoundCompany{
 			ID: round.CompanyID, Name: round.CompanyName,
 			Valuation: companyValuation, LogoURL: companyLogoURL,
+			Description: companyDescription, ServiceURL: companyServiceURL,
 		}
 		round.Owner = &investment.RoundOwner{ID: ownerID, Name: round.OwnerName}
 		rounds = append(rounds, round)
