@@ -88,6 +88,128 @@ func TestScoreHeuristic_PersonalMarkersReduceScore(t *testing.T) {
 	}
 }
 
+// #121 — 사람이 키보드로 입력 안 하는 유니코드 검출
+
+func TestDetectSuspiciousChars_NormalKoreanZero(t *testing.T) {
+	c := DetectSuspiciousChars(humanEssay)
+	if c.ZeroWidth != 0 || c.MathAlpha != 0 || c.NBSP != 0 {
+		t.Errorf("human essay should have 0 suspicious chars, got %+v", c)
+	}
+}
+
+func TestDetectSuspiciousChars_ZeroWidth(t *testing.T) {
+	// U+200B (ZWSP) 와 U+FEFF (BOM) — escape 로 명시 (소스에 직접 박으면 Go 컴파일러가 거부)
+	text := "안녕하세요\u200B 저는 학생\uFEFF입니다."
+	c := DetectSuspiciousChars(text)
+	if c.ZeroWidth != 2 {
+		t.Errorf("ZeroWidth = %d, want 2", c.ZeroWidth)
+	}
+}
+
+func TestDetectSuspiciousChars_MathAlpha(t *testing.T) {
+	text := "이번 학기를 통해 \U0001D400 학습했다." // 𝐀
+	c := DetectSuspiciousChars(text)
+	if c.MathAlpha != 1 {
+		t.Errorf("MathAlpha = %d, want 1", c.MathAlpha)
+	}
+}
+
+func TestDetectSuspiciousChars_NBSP(t *testing.T) {
+	text := "프로젝트 관리 능력"
+	c := DetectSuspiciousChars(text)
+	if c.NBSP != 2 {
+		t.Errorf("NBSP = %d, want 2", c.NBSP)
+	}
+}
+
+func TestDetectSuspiciousChars_SmartQuotesAndDashes(t *testing.T) {
+	text := `“이번 학기는 의미 있었다” — 결론적으로 ‘성장’ 했다 – 정말.`
+	c := DetectSuspiciousChars(text)
+	if c.SmartQuotes != 4 {
+		t.Errorf("SmartQuotes = %d, want 4 (“”‘’)", c.SmartQuotes)
+	}
+	if c.EmEnDash != 2 {
+		t.Errorf("EmEnDash = %d, want 2", c.EmEnDash)
+	}
+}
+
+func TestScoreHeuristic_ZeroWidthTriggersSignal(t *testing.T) {
+	// 사람 풍 글에 zero-width 1개만 박아도 시그널 발화
+	text := humanEssay + "​"
+	got := ScoreHeuristic(text)
+	found := false
+	for _, s := range got.Signals {
+		if s.Key == "ai_zero_width" {
+			found = true
+			if s.Weight < 25 {
+				t.Errorf("zero-width weight = %d, expected strong (>=25)", s.Weight)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("expected ai_zero_width signal, got %+v", signalKeys(got.Signals))
+	}
+}
+
+func TestScoreHeuristic_MathAlphaTriggersSignal(t *testing.T) {
+	text := humanEssay + "\U0001D400"
+	got := ScoreHeuristic(text)
+	found := false
+	for _, s := range got.Signals {
+		if s.Key == "ai_math_alpha" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected ai_math_alpha signal, got %+v", signalKeys(got.Signals))
+	}
+}
+
+func TestScoreHeuristic_NBSPTriggersSignal(t *testing.T) {
+	text := humanEssay + "\u00A0"
+	got := ScoreHeuristic(text)
+	found := false
+	for _, s := range got.Signals {
+		if s.Key == "ai_nbsp" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected ai_nbsp signal, got %+v", signalKeys(got.Signals))
+	}
+}
+
+func TestScoreHeuristic_EmDashDensityTriggers(t *testing.T) {
+	// 200자 이상 + em dash 밀도 높은 글 (1000자당 3개 이상)
+	text := "한 학기를 마무리하면서 — 이번 학기는 정말 의미 있는 시간이었다. " +
+		"팀워크 — 처음엔 갈등이 있었지만 — 결국 화해했다. " +
+		"새로운 도전 — 실패도 했지만 — 그만큼 배움도 컸다. " +
+		"다양한 경험을 했다 — 정말 좋았다 — 다음 학기도 듣고 싶다. " +
+		"교수님 강의 — 매우 도움이 되었다 — 강력 추천한다. " +
+		"동기들과의 협업 — 의외로 즐거웠다 — 친구도 많이 생겼다. " +
+		"기술적인 도전 — 처음엔 막막했다 — 끝내 해냈다."
+	got := ScoreHeuristic(text)
+	found := false
+	for _, s := range got.Signals {
+		if s.Key == "ai_em_dash_density" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected ai_em_dash_density signal, got %+v", signalKeys(got.Signals))
+	}
+}
+
+func TestScoreHeuristic_AllAIEncodingFlagsPushScoreVeryHigh(t *testing.T) {
+	// 사람 풍 글 + AI 흔적 다수 박음 → 점수가 사람 풍 글보다 훨씬 높아야 함
+	base := ScoreHeuristic(humanEssay).Score
+	tampered := humanEssay + "​ \U0001D400   “a” “b” “c” “d” “e”"
+	got := ScoreHeuristic(tampered).Score
+	if got <= base+30 {
+		t.Errorf("tampered score (%d) should be much higher than base (%d) due to AI encoding flags", got, base)
+	}
+}
+
 func signalKeys(ss []Signal) []string {
 	out := make([]string, len(ss))
 	for i, s := range ss {

@@ -54,6 +54,36 @@ var sentenceSplit = regexp.MustCompile(`[.!?。\n][\s\n]*`)
 var wordSplit = regexp.MustCompile(`\s+`)
 var emojiRegex = regexp.MustCompile(`[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{1F600}-\x{1F64F}]|[ㅋㅎㅠㅜ]{2,}|[!?]{2,}`)
 
+// SuspiciousCharCounts — 사람이 키보드로 거의 입력하지 않는 유니코드 문자 빈도.
+// AI 모델 출력에는 종종 들어가지만 학생이 직접 타이핑한 글에는 거의 없음.
+type SuspiciousCharCounts struct {
+	ZeroWidth   int // U+200B/C/D, U+FEFF, U+2060 — 폭 0, 사실상 사람 입력 불가
+	MathAlpha   int // U+1D400~U+1D7FF — 𝐀, 𝒂 등 (수학 굵게/기울임 alphanumeric)
+	NBSP        int // U+00A0, U+202F — non-breaking space, 일반 keyboard 미지원
+	SmartQuotes int // U+2018/19/1C/1D — “ ” ‘ ’ (사람도 일부 씀; 빈도 조건부)
+	EmEnDash    int // U+2014/2013 — — – (한국어 글에서 빈도가 높으면 AI 의심)
+}
+
+// DetectSuspiciousChars — 텍스트를 한 번 훑어 위 카테고리 빈도 산출. UTF-8 safe.
+func DetectSuspiciousChars(text string) SuspiciousCharCounts {
+	var c SuspiciousCharCounts
+	for _, r := range text {
+		switch {
+		case r == 0x200B || r == 0x200C || r == 0x200D || r == 0xFEFF || r == 0x2060:
+			c.ZeroWidth++
+		case r >= 0x1D400 && r <= 0x1D7FF:
+			c.MathAlpha++
+		case r == 0x00A0 || r == 0x202F:
+			c.NBSP++
+		case r == 0x2018 || r == 0x2019 || r == 0x201C || r == 0x201D:
+			c.SmartQuotes++
+		case r == 0x2014 || r == 0x2013:
+			c.EmEnDash++
+		}
+	}
+	return c
+}
+
 // ScoreHeuristic — 텍스트를 받아 AI 작성 확률 점수 + 근거 산출.
 // Score 가 높을수록 AI 가능성 ↑. 너무 짧은 글(<200자)은 분석 불가로 0.
 func ScoreHeuristic(text string) HeuristicScore {
@@ -166,6 +196,68 @@ func ScoreHeuristic(text string) HeuristicScore {
 			Hint: "AI 글은 매우 단정합니다. 감정이 묻어나는 표현이 자연스러워요.",
 		})
 		score += w
+	}
+
+	// 6) AI 생성물 특유 인코딩 (#121) — 사람이 키보드로 거의 입력 않는 유니코드.
+	// 원본 text 를 사용 (TrimSpace 가 NBSP 같은 의심 공백을 제거하므로).
+	susp := DetectSuspiciousChars(text)
+
+	// 6-a) Zero-width 문자 — 1개라도 발견되면 강력 증거
+	if susp.ZeroWidth > 0 {
+		w := 30
+		signals = append(signals, Signal{
+			Key: "ai_zero_width", Label: "AI 흔적: 폭 0 문자(zero-width) 포함",
+			Value: float64(susp.ZeroWidth), Weight: w,
+			Hint: "ZWSP/ZWNJ 같은 보이지 않는 문자는 LLM 출력에서만 거의 나옵니다. 글을 직접 타이핑하셨다면 들어갈 수 없습니다.",
+		})
+		score += w
+	}
+
+	// 6-b) 수학 알파벳 (𝐀, 𝒂 등) — 1개라도 발견되면 강력 증거
+	if susp.MathAlpha > 0 {
+		w := 25
+		signals = append(signals, Signal{
+			Key: "ai_math_alpha", Label: "AI 흔적: 수학 알파벳(𝐀·𝒂 등) 포함",
+			Value: float64(susp.MathAlpha), Weight: w,
+			Hint: "특수 폰트 변환을 거친 글자입니다. 일반 키보드로는 입력 불가능합니다.",
+		})
+		score += w
+	}
+
+	// 6-c) Non-breaking space — 1개라도 발견되면 의심
+	if susp.NBSP > 0 {
+		w := 15
+		signals = append(signals, Signal{
+			Key: "ai_nbsp", Label: "AI 흔적: non-breaking space 포함",
+			Value: float64(susp.NBSP), Weight: w,
+			Hint: "일반 keyboard 의 space 가 아닌 typesetting tool / AI 가 만든 공백입니다.",
+		})
+		score += w
+	}
+
+	// 6-d) Smart quotes — 5개 이상이거나 밀도 높으면 (사람도 일부 씀)
+	if susp.SmartQuotes >= 5 {
+		w := 10
+		signals = append(signals, Signal{
+			Key: "ai_smart_quotes", Label: `AI 흔적: 둥근 따옴표(“ ” ‘ ’) 다수`,
+			Value: float64(susp.SmartQuotes), Weight: w,
+			Hint: `학생이 직접 친 글에는 보통 ASCII 따옴표(", ')가 들어갑니다. 둥근 따옴표는 AI/워드프로세서 출처.`,
+		})
+		score += w
+	}
+
+	// 6-e) Em/en dash — 한국어 글에서 밀도 높으면 (1000자당 3개 이상)
+	if runeLen > 0 {
+		dashPer1000 := float64(susp.EmEnDash) * 1000.0 / float64(runeLen)
+		if dashPer1000 >= 3 {
+			w := 10
+			signals = append(signals, Signal{
+				Key: "ai_em_dash_density", Label: "AI 흔적: em/en dash(—, –) 다수",
+				Value: round2(dashPer1000), Weight: w,
+				Hint: "한국어 글에서 em dash 는 드뭅니다. ChatGPT 류가 자주 사용하는 특징.",
+			})
+			score += w
+		}
 	}
 
 	if score > 100 {

@@ -1373,5 +1373,17 @@
       "LLM",
       "TDD"
     ]
+  },
+  {
+    "slug": "121-ai-encoding-fingerprint",
+    "title": "AI 생성물 특유 인코딩(zero-width·math alpha·NBSP·smart quotes) 검출",
+    "date": "2026-06-05",
+    "tags": [
+      "평가지표",
+      "AI탐지",
+      "유니코드",
+      "forensic",
+      "TDD"
+    ]
   }
 ]
