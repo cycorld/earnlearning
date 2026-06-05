@@ -1337,5 +1337,16 @@
       "frontend",
       "회귀"
     ]
+  },
+  {
+    "slug": "118-grants-route-redirect",
+    "title": "/grants (복수) 경로 silent fallback to /feed 버그 — TDD fix",
+    "date": "2026-06-05",
+    "tags": [
+      "핫픽스",
+      "라우팅",
+      "frontend",
+      "UX"
+    ]
   }
 ]

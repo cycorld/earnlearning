@@ -116,6 +116,8 @@ export default function App() {
               <Route path="/grant/:id" element={<GrantDetailPage />} />
               {/* /grants/:id → /grant/:id 리다이렉트 (기존 공지 게시글의 잘못된 링크 호환) */}
               <Route path="/grants/:id" element={<GrantRedirect />} />
+              {/* #118: /grants (복수, 단독) — 학생이 자연스럽게 추측하는 URL. silent catch-all 방지 */}
+              <Route path="/grants" element={<Navigate to="/grant" replace />} />
               <Route path="/bank" element={<BankPage />} />
               <Route path="/bank/apply" element={<LoanApplyPage />} />
               <Route path="/profile" element={<ProfilePage />} />
