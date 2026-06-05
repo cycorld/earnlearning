@@ -17,6 +17,7 @@ import {
   MILESTONE_TYPES,
   type Milestone,
   type StudentProgress,
+  aiScoreMeta,
 } from '@/lib/milestone'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -129,7 +130,12 @@ export default function AdminMilestonesPage() {
                           className="cursor-pointer rounded p-1 hover:bg-muted"
                           title={m.url || m.content || ''}
                         >
-                          <StatusChip status={m.status} />
+                          <div className="flex flex-col items-center gap-1">
+                            <StatusChip status={m.status} />
+                            {m.type === 'retrospective' && typeof m.ai_score === 'number' && (
+                              <AIScoreMiniChip score={m.ai_score} />
+                            )}
+                          </div>
                         </button>
                       </td>
                     ) : (
@@ -172,6 +178,13 @@ export default function AdminMilestonesPage() {
         />
       )}
     </div>
+  )
+}
+
+function AIScoreMiniChip({ score }: { score: number }) {
+  const meta = aiScoreMeta(score)
+  return (
+    <span className={`text-[10px] rounded px-1.5 py-0.5 ${meta.chip}`}>AI {score}</span>
   )
 }
 
@@ -234,6 +247,14 @@ function ReviewDialog({
 
           <div className="space-y-2">
             <StatusChip status={milestone.status} />
+            {milestone.type === 'retrospective' && typeof milestone.ai_score === 'number' && (
+              <div className="rounded-md bg-muted/50 p-2 text-xs">
+                <div className="font-medium">AI 작성 확률: {milestone.ai_score}점 — {aiScoreMeta(milestone.ai_score).label}</div>
+                {milestone.ai_reasoning && (
+                  <div className="mt-1 text-muted-foreground">LLM: {milestone.ai_reasoning}</div>
+                )}
+              </div>
+            )}
             {milestone.url && (
               <a
                 href={milestone.url}

@@ -242,9 +242,11 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	}
 
 	// #119 학생 4대 평가지표 (1차 MVP / 2차 MVP / 사업계획서 / 회고 발표)
+	// #120 /milestones/essay/score — 회고 AI 작성 확률 셀프체크
 	if h.Milestone != nil {
 		approved.GET("/milestones/mine", h.Milestone.GetMyMilestones)
 		approved.POST("/milestones", h.Milestone.SubmitMilestone)
+		approved.POST("/milestones/essay/score", h.Milestone.ScoreEssay)
 	}
 
 	// Notifications (OAuth: read:notifications)

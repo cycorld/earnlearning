@@ -1,8 +1,12 @@
 package application
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/earnlearning/backend/internal/domain/company"
 	"github.com/earnlearning/backend/internal/domain/grant"
@@ -17,6 +21,8 @@ type MilestoneUseCase struct {
 	companyRepo company.CompanyRepository
 	grantRepo   grant.Repository
 	notifUC     *NotificationUseCase
+	llm         ChatLLMClient // #120 optional — nil 이면 LLM 평가 스킵, heuristic 만.
+	llmModel    string        // 기본 "qwen-chat".
 }
 
 func NewMilestoneUseCase(
@@ -32,6 +38,16 @@ func NewMilestoneUseCase(
 		companyRepo: companyRepo,
 		grantRepo:   grantRepo,
 		notifUC:     notifUC,
+		llmModel:    "qwen-chat",
+	}
+}
+
+// SetLLM — main.go 에서 chatLLM 어댑터 주입 (#120 회고 에세이 AI 평가).
+// nil 이면 heuristic 만 사용.
+func (uc *MilestoneUseCase) SetLLM(llm ChatLLMClient, model string) {
+	uc.llm = llm
+	if model != "" {
+		uc.llmModel = model
 	}
 }
 
@@ -43,6 +59,7 @@ type SubmitManualInput struct {
 }
 
 // SubmitManual — 학생이 직접 (form으로) milestone을 제출/수정.
+// 회고(retrospective) 의 경우 본문이 200자 이상이면 AI 작성 확률 자동 평가 후 저장.
 // MVP 타입에 대해서도 학생이 직접 URL을 명시할 수 있게 허용함
 // (자동 detect 가 실패할 때 fallback).
 // 단, URL이 deny list 에 걸리면 거절.
@@ -84,6 +101,13 @@ func (uc *MilestoneUseCase) SubmitManual(studentID int, in SubmitManualInput) (*
 	if err != nil {
 		return nil, err
 	}
+
+	// 회고 에세이는 자동 평가 (#120).
+	if in.Type == milestone.TypeRetrospective && len([]rune(content)) >= 200 {
+		// 평가 실패해도 제출은 성공으로 처리.
+		_, _ = uc.ScoreAndStoreEssay(context.Background(), id, content)
+	}
+
 	return uc.repo.FindByID(id)
 }
 
@@ -300,6 +324,153 @@ func (uc *MilestoneUseCase) Reject(milestoneID, adminID int, adminNote string) e
 		)
 	}
 	return nil
+}
+
+// =============================================================================
+// #120 — 회고 에세이 AI 작성 확률 평가
+// =============================================================================
+
+// EssayScoreResult — heuristic + LLM 통합 결과.
+type EssayScoreResult struct {
+	HeuristicScore int                `json:"heuristic_score"` // 0~100
+	LLMScore       int                `json:"llm_score"`       // 0~100, LLM 없으면 -1
+	CombinedScore  int                `json:"combined_score"`  // 둘의 가중평균
+	LLMReasoning   string             `json:"llm_reasoning"`
+	Signals        []milestone.Signal `json:"signals"`
+}
+
+// EvaluateEssay — 텍스트 → AI 작성 확률 평가.
+// LLM 가 nil 이거나 실패하면 heuristic 만 사용.
+func (uc *MilestoneUseCase) EvaluateEssay(ctx context.Context, text string) EssayScoreResult {
+	h := milestone.ScoreHeuristic(text)
+	result := EssayScoreResult{
+		HeuristicScore: h.Score,
+		LLMScore:       -1,
+		CombinedScore:  h.Score,
+		Signals:        h.Signals,
+	}
+
+	if uc.llm == nil || len(strings.TrimSpace(text)) < 200 {
+		return result
+	}
+
+	// 4000자 초과는 잘라서 호출 (LLM 입력 토큰 절약, 의미 보존엔 충분).
+	snippet := text
+	if r := []rune(snippet); len(r) > 4000 {
+		snippet = string(r[:4000])
+	}
+
+	llmResult, err := uc.callLLMScorer(ctx, snippet)
+	if err != nil {
+		// LLM 실패는 silent — heuristic 만으로 진행.
+		result.LLMReasoning = fmt.Sprintf("(LLM 평가 실패: %v)", err)
+		return result
+	}
+
+	result.LLMScore = llmResult.score
+	result.LLMReasoning = llmResult.reasoning
+	// 가중평균: LLM 60% + heuristic 40%.
+	result.CombinedScore = (llmResult.score*60 + h.Score*40) / 100
+	if result.CombinedScore > 100 {
+		result.CombinedScore = 100
+	}
+	if result.CombinedScore < 0 {
+		result.CombinedScore = 0
+	}
+	return result
+}
+
+type llmEssayScore struct {
+	score     int
+	reasoning string
+}
+
+var llmJSONExtract = regexp.MustCompile(`(?s)\{.*?\}`)
+
+func (uc *MilestoneUseCase) callLLMScorer(ctx context.Context, essay string) (*llmEssayScore, error) {
+	systemPrompt := `당신은 한국어 학생 에세이가 AI(ChatGPT, Claude 등) 로 작성됐는지 판별하는 평가관입니다.
+
+평가 기준:
+- 1인칭 + 구체적 본인 경험 (시간·장소·인물) 이 있는가
+- 문장 길이/구조가 다양한가 (AI는 균질)
+- "~을 통해", "결론적으로", "다음과 같다" 같은 GPT 특유 구문 빈도
+- 감정 표현·이모지·반말 (사람 글의 시그널) 이 있는가
+- 추상적 일반론(부정적) vs 구체적 일화(긍정적)
+
+반드시 다음 JSON 형식으로만 응답하세요. 다른 텍스트 금지:
+{"score": <0~100 정수, 높을수록 AI 가능성>, "reasoning": "<한 줄 한국어 평가 근거 (50자 이내)>"}`
+
+	userPrompt := "다음 에세이를 평가하세요:\n\n" + essay
+
+	req := &LLMChatRequest{
+		Model: uc.llmModel,
+		Messages: []LLMChatMessage{
+			{Role: "system", Content: systemPrompt},
+			{Role: "user", Content: userPrompt},
+		},
+		MaxTokens: 200,
+	}
+
+	// 타임아웃 — LLM 평가는 빠르게.
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	resp, err := uc.llm.ChatComplete(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if len(resp.Choices) == 0 {
+		return nil, fmt.Errorf("LLM 응답이 비어있습니다")
+	}
+
+	content := resp.Choices[0].Message.Content
+	// JSON 추출 — LLM 이 ```json ... ``` 같은 코드블록을 붙일 수 있으니 첫 {...} 만 잡음.
+	match := llmJSONExtract.FindString(content)
+	if match == "" {
+		return nil, fmt.Errorf("LLM 응답에 JSON 없음: %s", truncate(content, 100))
+	}
+
+	var parsed struct {
+		Score     int    `json:"score"`
+		Reasoning string `json:"reasoning"`
+	}
+	if err := json.Unmarshal([]byte(match), &parsed); err != nil {
+		return nil, fmt.Errorf("JSON 파싱 실패: %w", err)
+	}
+	if parsed.Score < 0 {
+		parsed.Score = 0
+	}
+	if parsed.Score > 100 {
+		parsed.Score = 100
+	}
+	return &llmEssayScore{score: parsed.Score, reasoning: parsed.Reasoning}, nil
+}
+
+func truncate(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n]) + "…"
+}
+
+// ScoreAndStoreEssay — 회고 milestone 의 essay 를 평가하고 결과를 DB 에 저장.
+// 회고가 아니거나 milestone 이 없으면 무시.
+func (uc *MilestoneUseCase) ScoreAndStoreEssay(ctx context.Context, milestoneID int, text string) (EssayScoreResult, error) {
+	m, err := uc.repo.FindByID(milestoneID)
+	if err != nil {
+		return EssayScoreResult{}, err
+	}
+	if m.Type != milestone.TypeRetrospective {
+		return EssayScoreResult{}, fmt.Errorf("회고(retrospective) 만 평가 가능합니다")
+	}
+	result := uc.EvaluateEssay(ctx, text)
+
+	signalsJSON, _ := json.Marshal(result.Signals)
+	if err := uc.repo.UpdateAIScore(milestoneID, result.CombinedScore, result.LLMReasoning, string(signalsJSON)); err != nil {
+		return result, err
+	}
+	return result, nil
 }
 
 func milestoneTitle(t milestone.Type) string {

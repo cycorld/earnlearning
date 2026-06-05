@@ -1360,5 +1360,18 @@
       "TDD",
       "URL필터"
     ]
+  },
+  {
+    "slug": "120-retrospective-essay-ai-score",
+    "title": "회고 에세이 입력 + AI 작성 확률 평가기 (Heuristic + LLM)",
+    "date": "2026-06-05",
+    "tags": [
+      "평가지표",
+      "회고",
+      "에세이",
+      "AI탐지",
+      "LLM",
+      "TDD"
+    ]
   }
 ]

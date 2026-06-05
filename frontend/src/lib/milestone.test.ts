@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   MILESTONE_TYPES,
   MILESTONE_LABELS,
+  aiScoreMeta,
   classifyGroup,
   isValidMilestoneURL,
 } from './milestone'
@@ -47,6 +48,17 @@ describe('classifyGroup', () => {
   it('handles out-of-range values gracefully', () => {
     expect(classifyGroup(5)).toBe('')
     expect(classifyGroup(-1)).toBe('')
+  })
+})
+
+describe('aiScoreMeta', () => {
+  it('maps score → tone bucket', () => {
+    expect(aiScoreMeta(0).tone).toBe('good')
+    expect(aiScoreMeta(29).tone).toBe('good')
+    expect(aiScoreMeta(30).tone).toBe('warn')
+    expect(aiScoreMeta(59).tone).toBe('warn')
+    expect(aiScoreMeta(60).tone).toBe('danger')
+    expect(aiScoreMeta(100).tone).toBe('danger')
   })
 })
 

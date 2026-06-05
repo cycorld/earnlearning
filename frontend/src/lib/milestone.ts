@@ -37,8 +37,37 @@ export interface Milestone {
   admin_note: string
   approved_by?: number | null
   approved_at?: string | null
+  // #120 retrospective 만 채워짐
+  ai_score?: number | null
+  ai_reasoning?: string
+  ai_signals?: string
+  ai_evaluated_at?: string | null
   created_at: string
   updated_at: string
+}
+
+// #120 essay 평가 응답
+export interface EssayScoreSignal {
+  key: string
+  label: string
+  value: number
+  weight: number
+  hint: string
+}
+
+export interface EssayScoreResult {
+  heuristic_score: number
+  llm_score: number // -1 if LLM 없음
+  combined_score: number
+  llm_reasoning: string
+  signals: EssayScoreSignal[]
+}
+
+/** AI 작성 확률 점수 → 컬러 클래스 + 라벨 */
+export function aiScoreMeta(score: number): { label: string; chip: string; tone: 'good' | 'warn' | 'danger' } {
+  if (score < 30) return { label: '사람이 쓴 글 같음', chip: 'bg-emerald-100 text-emerald-700', tone: 'good' }
+  if (score < 60) return { label: '약간 AI 같음', chip: 'bg-amber-100 text-amber-700', tone: 'warn' }
+  return { label: 'AI 작성 가능성 높음', chip: 'bg-red-100 text-red-700', tone: 'danger' }
 }
 
 export interface StudentRef {

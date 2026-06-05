@@ -18,4 +18,7 @@ type Repository interface {
 
 	// UpdateStatus — admin 승인/반려.
 	UpdateStatus(id int, status Status, adminNote string, adminID int) error
+
+	// #120 회고 에세이 AI 평가 결과 저장.
+	UpdateAIScore(id int, score int, reasoning, signalsJSON string) error
 }

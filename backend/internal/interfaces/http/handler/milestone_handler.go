@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/earnlearning/backend/internal/application"
 	"github.com/earnlearning/backend/internal/domain/milestone"
@@ -59,6 +61,32 @@ func (h *MilestoneHandler) SubmitMilestone(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", err.Error()))
 	}
 	return c.JSON(http.StatusOK, successResp(m))
+}
+
+// ScoreEssay godoc
+//
+//	@Summary  회고 에세이 AI 작성 확률 셀프체크 (저장 안 함)
+//	@Tags     Milestone
+//	@Accept   json
+//	@Produce  json
+//	@Security BearerAuth
+//	@Success  200 {object} APIResponse
+//	@Router   /milestones/essay/score [post]
+func (h *MilestoneHandler) ScoreEssay(c echo.Context) error {
+	var body struct {
+		Text string `json:"text"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("BAD_REQUEST", "잘못된 요청입니다"))
+	}
+	if len([]rune(body.Text)) < 200 {
+		return c.JSON(http.StatusBadRequest, errorResp("TOO_SHORT", "200자 이상이어야 평가 가능합니다"))
+	}
+	// 셀프체크는 평가 자체만 — DB 저장 안 함. 학생당 rate-limit 없음 (학생 수 적음).
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 35*time.Second)
+	defer cancel()
+	result := h.uc.EvaluateEssay(ctx, body.Text)
+	return c.JSON(http.StatusOK, successResp(result))
 }
 
 // AdminListMilestones godoc

@@ -56,6 +56,7 @@ func (r *MilestoneRepo) FindByStudentAndType(studentID int, typ milestone.Type) 
 	row := r.db.QueryRow(`
 		SELECT id, student_id, milestone_type, source_type, source_ref_id,
 		       url, content, status, admin_note, approved_by, approved_at,
+		       ai_score, ai_reasoning, ai_signals, ai_evaluated_at,
 		       created_at, updated_at
 		FROM student_milestones
 		WHERE student_id = ? AND milestone_type = ?`,
@@ -68,6 +69,7 @@ func (r *MilestoneRepo) FindByID(id int) (*milestone.Milestone, error) {
 	row := r.db.QueryRow(`
 		SELECT id, student_id, milestone_type, source_type, source_ref_id,
 		       url, content, status, admin_note, approved_by, approved_at,
+		       ai_score, ai_reasoning, ai_signals, ai_evaluated_at,
 		       created_at, updated_at
 		FROM student_milestones
 		WHERE id = ?`, id,
@@ -86,6 +88,7 @@ func (r *MilestoneRepo) ListByStudent(studentID int) ([]*milestone.Milestone, er
 	rows, err := r.db.Query(`
 		SELECT id, student_id, milestone_type, source_type, source_ref_id,
 		       url, content, status, admin_note, approved_by, approved_at,
+		       ai_score, ai_reasoning, ai_signals, ai_evaluated_at,
 		       created_at, updated_at
 		FROM student_milestones
 		WHERE student_id = ?
@@ -149,9 +152,12 @@ func scanRowMilestone(row rowScanner) (*milestone.Milestone, error) {
 	var sourceRefID sql.NullInt64
 	var approvedBy sql.NullInt64
 	var approvedAt sql.NullTime
+	var aiScore sql.NullInt64
+	var aiEvaluatedAt sql.NullTime
 	if err := row.Scan(
 		&m.ID, &m.StudentID, &m.Type, &m.SourceType, &sourceRefID,
 		&m.URL, &m.Content, &m.Status, &m.AdminNote, &approvedBy, &approvedAt,
+		&aiScore, &m.AIReasoning, &m.AISignals, &aiEvaluatedAt,
 		&m.CreatedAt, &m.UpdatedAt,
 	); err != nil {
 		return nil, err
@@ -168,5 +174,31 @@ func scanRowMilestone(row rowScanner) (*milestone.Milestone, error) {
 		t := approvedAt.Time
 		m.ApprovedAt = &t
 	}
+	if aiScore.Valid {
+		v := int(aiScore.Int64)
+		m.AIScore = &v
+	}
+	if aiEvaluatedAt.Valid {
+		t := aiEvaluatedAt.Time
+		m.AIEvaluatedAt = &t
+	}
 	return m, nil
+}
+
+// UpdateAIScore — 회고 에세이 평가 결과 저장.
+func (r *MilestoneRepo) UpdateAIScore(id int, score int, reasoning, signalsJSON string) error {
+	res, err := r.db.Exec(`
+		UPDATE student_milestones
+		SET ai_score = ?, ai_reasoning = ?, ai_signals = ?, ai_evaluated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?`,
+		score, reasoning, signalsJSON, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update ai score: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return milestone.ErrNotFound
+	}
+	return nil
 }

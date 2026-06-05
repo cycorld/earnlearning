@@ -1,9 +1,13 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
+
+	"github.com/earnlearning/backend/internal/application"
 )
 
 // =============================================================================
@@ -304,6 +308,150 @@ func TestMilestone_AdminApproveAndGroupClassification(t *testing.T) {
 	}
 	if got.Group != "B" {
 		t.Errorf("after reject: group = %q, want B", got.Group)
+	}
+}
+
+// -----------------------------------------------------------------------------
+// #120 — 회고 에세이 AI 작성 확률 평가
+// -----------------------------------------------------------------------------
+
+// fakeChatLLM — milestone usecase 에 주입할 fake ChatLLMClient.
+// "AI" 가 들어간 텍스트는 score 90, 그 외는 10 으로 응답.
+type fakeChatLLM struct {
+	lastUser string
+}
+
+func (f *fakeChatLLM) Stats() application.LLMStats { return application.LLMStats{} }
+
+func (f *fakeChatLLM) ChatComplete(_ context.Context, req *application.LLMChatRequest) (*application.LLMChatResponse, error) {
+	user := ""
+	for _, m := range req.Messages {
+		if m.Role == "user" {
+			user += m.Content
+		}
+	}
+	f.lastUser = user
+	score := 10
+	reason := "1인칭과 구체적 경험이 풍부함"
+	if strings.Contains(user, "FAKE_AI_MARK") {
+		score = 90
+		reason = "AI 특유 구문 다수, 추상적 일반론 위주"
+	}
+	js := fmt.Sprintf(`{"score": %d, "reasoning": "%s"}`, score, reason)
+	return &application.LLMChatResponse{
+		Choices: []application.LLMChatChoice{{
+			Message: application.LLMChatMessage{Role: "assistant", Content: js},
+		}},
+	}, nil
+}
+
+func (f *fakeChatLLM) ChatCompleteStream(_ context.Context, _ *application.LLMChatRequest) (<-chan application.LLMStreamEvent, error) {
+	ch := make(chan application.LLMStreamEvent)
+	close(ch)
+	return ch, nil
+}
+
+func TestMilestone_EssayScore_SelfCheck(t *testing.T) {
+	ts := setupTestServer(t)
+	// LLM 주입 — fake 가 deterministic 응답
+	ts.injectMilestoneFakeLLM()
+
+	token := ts.registerAndApprove("ms-essay@test.com", "pass1234", "에세이", "20251010")
+
+	// 사람 풍 글 — fake LLM 은 score 10 반환 (FAKE_AI_MARK 없음)
+	humanEssay := strings.Repeat("내가 이번 학기에 정말 힘들었던 건 8주차 즈음이었다. 팀원과 다투고 새벽까지 카톡으로 말다툼했다. ", 5)
+	r := ts.post("/api/milestones/essay/score", map[string]string{"text": humanEssay}, token)
+	if !r.Success {
+		t.Fatalf("score essay: %v", r.Error)
+	}
+	var got struct {
+		HeuristicScore int    `json:"heuristic_score"`
+		LLMScore       int    `json:"llm_score"`
+		CombinedScore  int    `json:"combined_score"`
+		LLMReasoning   string `json:"llm_reasoning"`
+	}
+	json.Unmarshal(r.Data, &got)
+	if got.LLMScore != 10 {
+		t.Errorf("human essay LLM score = %d, want 10 (fake)", got.LLMScore)
+	}
+	if got.CombinedScore > 50 {
+		t.Errorf("human essay combined score = %d, want low", got.CombinedScore)
+	}
+
+	// AI 마크 포함 — fake 가 score 90 반환
+	aiEssay := strings.Repeat("이번 학기를 통해 다양한 측면에서 발전시킬 수 있었다. 결론적으로 매우 의미 있는 시간이었다. FAKE_AI_MARK ", 5)
+	r2 := ts.post("/api/milestones/essay/score", map[string]string{"text": aiEssay}, token)
+	if !r2.Success {
+		t.Fatalf("score AI essay: %v", r2.Error)
+	}
+	var got2 struct {
+		LLMScore      int `json:"llm_score"`
+		CombinedScore int `json:"combined_score"`
+	}
+	json.Unmarshal(r2.Data, &got2)
+	if got2.LLMScore != 90 {
+		t.Errorf("AI essay LLM score = %d, want 90 (fake)", got2.LLMScore)
+	}
+	if got2.CombinedScore < 50 {
+		t.Errorf("AI essay combined score = %d, want >= 50", got2.CombinedScore)
+	}
+}
+
+func TestMilestone_EssayScore_TooShort(t *testing.T) {
+	ts := setupTestServer(t)
+	ts.injectMilestoneFakeLLM()
+	token := ts.registerAndApprove("ms-essay-short@test.com", "pass1234", "짧", "20251011")
+
+	r := ts.post("/api/milestones/essay/score", map[string]string{"text": "너무 짧은 글"}, token)
+	if r.Success {
+		t.Errorf("expected error for too-short essay, got success")
+	}
+}
+
+func TestMilestone_SubmitRetrospective_AutoScored(t *testing.T) {
+	ts := setupTestServer(t)
+	ts.injectMilestoneFakeLLM()
+	token := ts.registerAndApprove("ms-retro@test.com", "pass1234", "회고", "20251012")
+
+	// 회고 제출 (AI 마크 포함 — fake 가 high score 반환)
+	essay := strings.Repeat("이번 학기를 통해 다양한 측면에서 발전시킬 수 있었다. FAKE_AI_MARK 결론적으로 ", 8)
+	r := ts.post("/api/milestones", map[string]string{
+		"type": "retrospective", "content": essay,
+	}, token)
+	if !r.Success {
+		t.Fatalf("submit retrospective: %v", r.Error)
+	}
+
+	// /milestones/mine 으로 다시 가져왔을 때 ai_score 가 저장돼있어야 함
+	got := getMyMilestones(t, ts, token)
+	retro := findMilestone(t, got, "retrospective")
+	if retro == nil {
+		t.Fatal("retrospective milestone not found")
+	}
+	// 응답 struct 에는 ai_score 가 없으니 raw 응답 한번 더 확인
+	r2 := ts.get("/api/milestones/mine", token)
+	var raw map[string]any
+	json.Unmarshal(r2.Data, &raw)
+	milestones := raw["milestones"].([]any)
+	var found bool
+	for _, m := range milestones {
+		if m == nil {
+			continue
+		}
+		mm := m.(map[string]any)
+		if mm["type"] == "retrospective" {
+			ai, ok := mm["ai_score"].(float64)
+			if !ok {
+				t.Fatalf("ai_score not present or wrong type: %v", mm["ai_score"])
+			}
+			if int(ai) < 50 {
+				t.Errorf("ai_score = %d, expected >= 50 for AI-marked essay", int(ai))
+			}
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("retrospective not in mine response")
 	}
 }
 

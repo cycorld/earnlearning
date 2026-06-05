@@ -63,6 +63,11 @@ type Milestone struct {
 	AdminNote     string     `json:"admin_note"`
 	ApprovedBy    *int       `json:"approved_by,omitempty"`
 	ApprovedAt    *time.Time `json:"approved_at,omitempty"`
+	// #120 회고 에세이 AI 평가 (retrospective 만 채워짐, 그 외 nil/0)
+	AIScore       *int       `json:"ai_score,omitempty"`       // 0~100, NULL = 미평가
+	AIReasoning   string     `json:"ai_reasoning,omitempty"`   // LLM 한 줄 평가
+	AISignals     string     `json:"ai_signals,omitempty"`     // heuristic Signals JSON
+	AIEvaluatedAt *time.Time `json:"ai_evaluated_at,omitempty"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 }

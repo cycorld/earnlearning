@@ -226,6 +226,8 @@ func main() {
 			chatSessionRepo, chatMessageRepo, chatSkillRepo,
 			chatWikiRepo, chatUsageRepo, chatTools, chatLLM, loader,
 		)
+		// #120 회고 에세이 AI 평가 — chatLLM 같은 어댑터 재사용
+		milestoneUC.SetLLM(chatLLM, "qwen-chat")
 		chatUC.SetWikiRootDir(wikiDir)
 		// #082: Notion 자동 동기화 — token 있을 때만
 		if cfg.NotionToken != "" {

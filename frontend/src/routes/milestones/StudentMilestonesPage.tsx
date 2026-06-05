@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
   Award,
+  Bot,
   CheckCircle2,
   Clock,
   ExternalLink,
@@ -10,6 +11,7 @@ import {
   Mic,
   Rocket,
   Send,
+  Sparkles,
   XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -20,9 +22,11 @@ import {
   MILESTONE_DEADLINES,
   MILESTONE_LABELS,
   MILESTONE_TYPES,
+  type EssayScoreResult,
   type Milestone,
   type MilestoneType,
   type StudentProgress,
+  aiScoreMeta,
   isValidMilestoneURL,
 } from '@/lib/milestone'
 import { Badge } from '@/components/ui/badge'
@@ -257,6 +261,9 @@ function SubmittedView({
         </div>
       )}
       <SourceLabel milestone={milestone} />
+      {type === 'retrospective' && typeof milestone.ai_score === 'number' && (
+        <AIScoreBadge score={milestone.ai_score} reasoning={milestone.ai_reasoning} />
+      )}
       {milestone.admin_note && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs">
           <strong>교수님 코멘트:</strong> {milestone.admin_note}
@@ -268,6 +275,21 @@ function SubmittedView({
         </Button>
       )}
     </>
+  )
+}
+
+function AIScoreBadge({ score, reasoning }: { score: number; reasoning?: string }) {
+  const meta = aiScoreMeta(score)
+  return (
+    <div className={`flex items-center gap-2 rounded-md p-2 text-xs ${meta.chip}`}>
+      <Bot className="h-4 w-4 flex-shrink-0" />
+      <div className="flex-1">
+        <div className="font-medium">
+          AI 작성 확률 {score}점 — {meta.label}
+        </div>
+        {reasoning && <div className="mt-0.5 text-[11px] opacity-80">{reasoning}</div>}
+      </div>
+    </div>
   )
 }
 
@@ -314,7 +336,30 @@ function SubmitForm({
   const [content, setContent] = useState(initial?.content ?? '')
   const [submitting, setSubmitting] = useState(false)
   const needsURL = type === 'mvp1' || type === 'mvp2'
+  const isEssay = type === 'retrospective'
   const urlInvalid = url.trim() !== '' && !isValidMilestoneURL(url.trim())
+
+  // #120 회고 에세이 — AI 점수 셀프체크 상태
+  const [scoreResult, setScoreResult] = useState<EssayScoreResult | null>(null)
+  const [scoring, setScoring] = useState(false)
+  const charCount = content.trim().length
+  const minChars = isEssay ? 800 : 0
+
+  const checkAIScore = async () => {
+    if (charCount < 200) {
+      toast.error('200자 이상이어야 평가 가능합니다')
+      return
+    }
+    setScoring(true)
+    try {
+      const r = await api.post<EssayScoreResult>('/milestones/essay/score', { text: content })
+      setScoreResult(r)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'AI 점수 평가 실패')
+    } finally {
+      setScoring(false)
+    }
+  }
 
   const submit = async () => {
     if (needsURL && !url.trim()) {
@@ -323,6 +368,10 @@ function SubmitForm({
     }
     if (urlInvalid) {
       toast.error('vercel.app 또는 자체 도메인만 인정됩니다 (AI Studio 등 제외)')
+      return
+    }
+    if (isEssay && charCount < 200) {
+      toast.error('회고 에세이는 200자 이상 써주세요 (권장 800자 이상)')
       return
     }
     setSubmitting(true)
@@ -358,17 +407,45 @@ function SubmitForm({
       )}
       {!needsURL && (
         <div>
-          <label className="text-xs text-muted-foreground">본문</label>
+          <label className="text-xs text-muted-foreground">
+            {isEssay ? '회고 에세이 본문' : '본문'}
+          </label>
           <Textarea
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => {
+              setContent(e.target.value)
+              setScoreResult(null) // 텍스트 바뀌면 점수 무효화
+            }}
             placeholder={
-              type === 'business_plan' ? '사업계획서 요약/링크' : '회고 발표 요약/링크'
+              isEssay
+                ? '"한 학기 동안 어떤 경험을 했고, 무엇을 배웠고, 어떻게 변했는지" 본인 말투로 솔직하게 써주세요. 800자 이상 권장.'
+                : type === 'business_plan'
+                  ? '사업계획서 요약/링크'
+                  : '본문'
             }
-            rows={4}
+            rows={isEssay ? 12 : 4}
           />
+          {isEssay && (
+            <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+              <span className={charCount < minChars ? 'text-amber-600' : 'text-emerald-600'}>
+                {charCount}자{charCount < minChars && ` (${minChars}자 권장)`}
+              </span>
+              <button
+                type="button"
+                onClick={checkAIScore}
+                disabled={scoring || charCount < 200}
+                className="inline-flex items-center gap-1 rounded-md border px-2 py-1 hover:bg-muted disabled:opacity-50"
+              >
+                <Sparkles className="h-3 w-3" />
+                {scoring ? '평가 중…' : 'AI 작성 확률 셀프체크'}
+              </button>
+            </div>
+          )}
         </div>
       )}
+
+      {isEssay && scoreResult && <EssayScorePreview result={scoreResult} />}
+
       <div className="flex gap-2">
         <Button size="sm" onClick={submit} disabled={submitting}>
           제출
@@ -377,6 +454,41 @@ function SubmitForm({
           취소
         </Button>
       </div>
+    </div>
+  )
+}
+
+function EssayScorePreview({ result }: { result: EssayScoreResult }) {
+  const meta = aiScoreMeta(result.combined_score)
+  return (
+    <div className={`space-y-2 rounded-md border p-3 text-xs ${meta.chip}`}>
+      <div className="flex items-center gap-2">
+        <Bot className="h-4 w-4" />
+        <span className="font-medium text-sm">
+          AI 작성 확률 {result.combined_score}점 — {meta.label}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2 opacity-90">
+        <span>휴리스틱 {result.heuristic_score}</span>
+        {result.llm_score >= 0 && <span>· LLM {result.llm_score}</span>}
+      </div>
+      {result.llm_reasoning && (
+        <div className="rounded bg-white/50 p-2">
+          <strong>LLM:</strong> {result.llm_reasoning}
+        </div>
+      )}
+      {result.signals.length > 0 && (
+        <details className="rounded bg-white/50 p-2">
+          <summary className="cursor-pointer font-medium">개선 가이드 ({result.signals.length}개)</summary>
+          <ul className="mt-1 space-y-1">
+            {result.signals.map((s, i) => (
+              <li key={i}>
+                <strong>{s.label}</strong>: {s.hint}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   )
 }
