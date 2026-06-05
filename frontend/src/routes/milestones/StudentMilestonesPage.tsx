@@ -477,7 +477,7 @@ function EssayScorePreview({ result }: { result: EssayScoreResult }) {
           <strong>LLM:</strong> {result.llm_reasoning}
         </div>
       )}
-      {result.signals.length > 0 && (
+      {(result.signals ?? []).length > 0 && (
         <details className="rounded bg-white/50 p-2">
           <summary className="cursor-pointer font-medium">개선 가이드 ({result.signals.length}개)</summary>
           <ul className="mt-1 space-y-1">

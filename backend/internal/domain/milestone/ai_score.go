@@ -101,7 +101,8 @@ func ScoreHeuristic(text string) HeuristicScore {
 		}
 	}
 
-	var signals []Signal
+	// Empty slice (not nil) so JSON serialises as [] — frontend code assumes array.
+	signals := []Signal{}
 	score := 0
 
 	// 1) 문장 길이 표준편차 — AI 는 균질
