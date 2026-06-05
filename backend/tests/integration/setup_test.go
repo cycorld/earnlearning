@@ -36,6 +36,7 @@ type testServer struct {
 	companyRepo *persistence.CompanyRepo
 	llmUC       *application.LLMUseCase
 	llmProxy    *fakeLLMProxy
+	milestoneUC *application.MilestoneUseCase // #120 — fake LLM 주입용
 }
 
 // setupTestServer creates a fresh test server with an in-memory-like temp DB.
@@ -101,6 +102,10 @@ func setupTestServer(t *testing.T) *testServer {
 	exchangeUC.SetShareholderUpdater(shareholderUpdater)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
 
+	// #119 평가지표 milestones
+	milestoneRepo := persistence.NewMilestoneRepo(db)
+	milestoneUC := application.NewMilestoneUseCase(milestoneRepo, userRepo, companyRepo, grantRepo, notifUC)
+
 	// DM
 	dmRepo := persistence.NewDMRepo(db)
 	dmUC := application.NewDMUseCase(dmRepo, userRepo, hub)
@@ -146,6 +151,7 @@ func setupTestServer(t *testing.T) *testServer {
 		DM:           handler.NewDMHandler(dmUC),
 		UserDB:       handler.NewUserDBHandler(userDBUC),
 		LLM:          handler.NewLLMHandler(llmUC),
+		Milestone:    handler.NewMilestoneHandler(milestoneUC),
 	}
 
 	e := echo.New()
@@ -155,7 +161,13 @@ func setupTestServer(t *testing.T) *testServer {
 	ts := httptest.NewServer(e)
 	t.Cleanup(func() { ts.Close() })
 
-	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy}
+	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy, milestoneUC: milestoneUC}
+}
+
+// injectMilestoneFakeLLM — milestone usecase 에 fake ChatLLMClient 주입 (#120).
+// 호출 후 /milestones/essay/score 와 retrospective submit 자동 평가가 fake 응답 사용.
+func (ts *testServer) injectMilestoneFakeLLM() {
+	ts.milestoneUC.SetLLM(&fakeChatLLM{}, "qwen-chat")
 }
 
 // request helpers

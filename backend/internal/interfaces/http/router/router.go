@@ -34,6 +34,7 @@ type Handlers struct {
 	LLM          *handler.LLMHandler
 	Chat         *handler.ChatHandler
 	ChatProposal *handler.ChatProposalHandler
+	Milestone    *handler.MilestoneHandler
 }
 
 // Setup registers all routes on the given Echo instance.
@@ -240,6 +241,14 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		approved.GET("/chat/proposals/:id", h.ChatProposal.Get)
 	}
 
+	// #119 학생 4대 평가지표 (1차 MVP / 2차 MVP / 사업계획서 / 회고 발표)
+	// #120 /milestones/essay/score — 회고 AI 작성 확률 셀프체크
+	if h.Milestone != nil {
+		approved.GET("/milestones/mine", h.Milestone.GetMyMilestones)
+		approved.POST("/milestones", h.Milestone.SubmitMilestone)
+		approved.POST("/milestones/essay/score", h.Milestone.ScoreEssay)
+	}
+
 	// Notifications (OAuth: read:notifications)
 	approved.GET("/notifications", h.Notification.GetNotifications, middleware.RequireScope("read:notifications"))
 	approved.PUT("/notifications/:id/read", h.Notification.MarkRead, middleware.RequireScope("read:notifications"))
@@ -303,6 +312,13 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		admin.GET("/proposals", h.ChatProposal.AdminList)
 		admin.GET("/proposals/:id", h.ChatProposal.Get)
 		admin.PATCH("/proposals/:id", h.ChatProposal.AdminUpdate)
+	}
+
+	// #119 학생 평가지표 admin
+	if h.Milestone != nil {
+		admin.GET("/milestones", h.Milestone.AdminListMilestones)
+		admin.POST("/milestones/:id/approve", h.Milestone.AdminApproveMilestone)
+		admin.POST("/milestones/:id/reject", h.Milestone.AdminRejectMilestone)
 	}
 
 	// User Databases admin reconcile (#016)

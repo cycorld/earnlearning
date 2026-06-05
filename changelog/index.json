@@ -1348,5 +1348,42 @@
       "frontend",
       "UX"
     ]
+  },
+  {
+    "slug": "119-student-milestone-dashboard",
+    "title": "학생 4대 평가지표 대시보드 + 관리자 승인 매트릭스",
+    "date": "2026-06-05",
+    "tags": [
+      "평가지표",
+      "대시보드",
+      "관리자",
+      "TDD",
+      "URL필터"
+    ]
+  },
+  {
+    "slug": "120-retrospective-essay-ai-score",
+    "title": "회고 에세이 입력 + AI 작성 확률 평가기 (Heuristic + LLM)",
+    "date": "2026-06-05",
+    "tags": [
+      "평가지표",
+      "회고",
+      "에세이",
+      "AI탐지",
+      "LLM",
+      "TDD"
+    ]
+  },
+  {
+    "slug": "121-ai-encoding-fingerprint",
+    "title": "AI 생성물 특유 인코딩(zero-width·math alpha·NBSP·smart quotes) 검출",
+    "date": "2026-06-05",
+    "tags": [
+      "평가지표",
+      "AI탐지",
+      "유니코드",
+      "forensic",
+      "TDD"
+    ]
   }
 ]

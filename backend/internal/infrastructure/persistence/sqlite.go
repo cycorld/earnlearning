@@ -51,6 +51,13 @@ func RunMigrations(db *sql.DB) error {
 		`ALTER TABLE job_applications ADD COLUMN completion_media TEXT DEFAULT '[]'`,
 		`ALTER TABLE freelance_jobs ADD COLUMN price_type TEXT NOT NULL DEFAULT 'negotiable'`,
 		`ALTER TABLE companies ADD COLUMN service_url TEXT DEFAULT ''`,
+		// #120 — 회고 에세이 AI 평가. student_milestones 가 fresh CREATE 된 DB 는 이미 컬럼 포함;
+		// #119 로 이미 만들어진 DB 만 이 ALTER 가 효과.
+		// 테이블이 아직 없는 fresh DB 에서는 에러 무시 → 이후 CREATE 단계에서 컬럼 포함되어 생성.
+		`ALTER TABLE student_milestones ADD COLUMN ai_score INTEGER`,
+		`ALTER TABLE student_milestones ADD COLUMN ai_reasoning TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE student_milestones ADD COLUMN ai_signals TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE student_milestones ADD COLUMN ai_evaluated_at DATETIME`,
 	}
 	for _, stmt := range alterStatements {
 		db.Exec(stmt) // ignore "duplicate column" errors
@@ -382,6 +389,38 @@ func RunMigrations(db *sql.DB) error {
 	for _, stmt := range dmTables {
 		if _, err := db.Exec(stmt); err != nil {
 			return fmt.Errorf("create dm tables: %w", err)
+		}
+	}
+
+	// #119 학생 4대 평가지표 (1차 MVP / 2차 MVP / 사업계획서 / 회고 발표)
+	// #120 ai_* 컬럼 — 회고 에세이 AI 작성 확률 평가
+	milestoneTables := []string{
+		`CREATE TABLE IF NOT EXISTS student_milestones (
+			id              INTEGER PRIMARY KEY AUTOINCREMENT,
+			student_id      INTEGER NOT NULL REFERENCES users(id),
+			milestone_type  TEXT NOT NULL CHECK (milestone_type IN ('mvp1', 'mvp2', 'business_plan', 'retrospective')),
+			source_type     TEXT NOT NULL DEFAULT 'manual' CHECK (source_type IN ('manual', 'company', 'grant')),
+			source_ref_id   INTEGER,
+			url             TEXT NOT NULL DEFAULT '',
+			content         TEXT NOT NULL DEFAULT '',
+			status          TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+			admin_note      TEXT NOT NULL DEFAULT '',
+			approved_by     INTEGER REFERENCES users(id),
+			approved_at     DATETIME,
+			ai_score        INTEGER,
+			ai_reasoning    TEXT NOT NULL DEFAULT '',
+			ai_signals      TEXT NOT NULL DEFAULT '',
+			ai_evaluated_at DATETIME,
+			created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(student_id, milestone_type)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_student_milestones_student ON student_milestones(student_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_student_milestones_status ON student_milestones(status)`,
+	}
+	for _, stmt := range milestoneTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create student_milestones tables: %w", err)
 		}
 	}
 

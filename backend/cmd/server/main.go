@@ -127,6 +127,10 @@ func main() {
 	companyUC.SetNotificationUseCase(notifUC)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
 
+	// #119 학생 4대 평가지표
+	milestoneRepo := persistence.NewMilestoneRepo(db)
+	milestoneUC := application.NewMilestoneUseCase(milestoneRepo, userRepo, companyRepo, grantRepo, notifUC)
+
 	// Task repo (reads tasks/ markdown files)
 	tasksPath := os.Getenv("TASKS_PATH")
 	if tasksPath == "" {
@@ -222,6 +226,8 @@ func main() {
 			chatSessionRepo, chatMessageRepo, chatSkillRepo,
 			chatWikiRepo, chatUsageRepo, chatTools, chatLLM, loader,
 		)
+		// #120 회고 에세이 AI 평가 — chatLLM 같은 어댑터 재사용
+		milestoneUC.SetLLM(chatLLM, "qwen-chat")
 		chatUC.SetWikiRootDir(wikiDir)
 		// #082: Notion 자동 동기화 — token 있을 때만
 		if cfg.NotionToken != "" {
@@ -262,6 +268,7 @@ func main() {
 		OAuthUC:      oauthUC,
 		DM:           handler.NewDMHandler(dmUC),
 		UserDB:       handler.NewUserDBHandler(userDBUC),
+		Milestone:    handler.NewMilestoneHandler(milestoneUC),
 	}
 	if llmUC != nil {
 		handlers.LLM = handler.NewLLMHandler(llmUC)
