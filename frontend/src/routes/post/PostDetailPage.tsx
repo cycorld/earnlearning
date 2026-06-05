@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { api, ApiError } from '@/lib/api'
-import type { Post, Comment } from '@/types'
+import type { Post, Comment, PaginatedData } from '@/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -43,8 +43,12 @@ export default function PostDetailPage() {
     try {
       const p = await api.get<Post>(`/posts/${id}`)
       setPost(p)
-      const cs = await api.get<Comment[]>(`/posts/${id}/comments?page=1&limit=200`).catch(() => [])
-      setComments(Array.isArray(cs) ? cs : [])
+      // #117: 백엔드가 {data: [...], pagination} 으로 wrap. FeedPage 와 동일 패턴.
+      // 이전엔 Comment[] 로 받아서 항상 [] 로 떨어졌음 → 댓글 0개 표시.
+      const cs = await api
+        .get<PaginatedData<Comment>>(`/posts/${id}/comments?page=1&limit=200`)
+        .catch(() => ({ data: [], pagination: { page: 1, limit: 0, total: 0, total_pages: 0 } }))
+      setComments(Array.isArray(cs?.data) ? cs.data : [])
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true)
