@@ -74,6 +74,9 @@ function getNotifIcon(type: string) {
       return <Wallet className="h-5 w-5 text-warning" />
     case 'llm_billed':
       return <Sparkles className="h-5 w-5 text-highlight" />
+    case 'milestone_approved':
+    case 'milestone_rejected':
+      return <ShieldCheck className="h-5 w-5 text-emerald-500" />
     default:
       return <Bell className="h-5 w-5 text-muted-foreground" />
   }
@@ -112,6 +115,10 @@ function getReferencePath(refType: string, refId: number): string | null {
       return `/messages/${refId}`
     case 'user':
       return `/profile/${refId}`
+    case 'milestone':
+      // #119 학생 본인은 /milestones 로, admin 은 동일 알림에서 매트릭스로 이동하길 원할 수 있음.
+      // 현재는 학생용 경로로 통일.
+      return '/milestones'
     default:
       return null
   }

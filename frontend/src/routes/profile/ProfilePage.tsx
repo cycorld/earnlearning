@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   LogOut,
+  Award,
   Wallet,
   Settings,
   ChevronRight,
@@ -229,6 +230,15 @@ export default function ProfilePage() {
           >
             <Building2 className="h-5 w-5 text-muted-foreground" />
             <span className="flex-1 text-sm">내 회사</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+          <Separator />
+          <Link
+            to="/milestones"
+            className="flex items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-accent"
+          >
+            <Award className="h-5 w-5 text-muted-foreground" />
+            <span className="flex-1 text-sm">평가지표 (4개)</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
           <Separator />

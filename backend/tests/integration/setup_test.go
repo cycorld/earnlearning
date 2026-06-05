@@ -101,6 +101,10 @@ func setupTestServer(t *testing.T) *testServer {
 	exchangeUC.SetShareholderUpdater(shareholderUpdater)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
 
+	// #119 평가지표 milestones
+	milestoneRepo := persistence.NewMilestoneRepo(db)
+	milestoneUC := application.NewMilestoneUseCase(milestoneRepo, userRepo, companyRepo, grantRepo, notifUC)
+
 	// DM
 	dmRepo := persistence.NewDMRepo(db)
 	dmUC := application.NewDMUseCase(dmRepo, userRepo, hub)
@@ -146,6 +150,7 @@ func setupTestServer(t *testing.T) *testServer {
 		DM:           handler.NewDMHandler(dmUC),
 		UserDB:       handler.NewUserDBHandler(userDBUC),
 		LLM:          handler.NewLLMHandler(llmUC),
+		Milestone:    handler.NewMilestoneHandler(milestoneUC),
 	}
 
 	e := echo.New()

@@ -127,6 +127,10 @@ func main() {
 	companyUC.SetNotificationUseCase(notifUC)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
 
+	// #119 학생 4대 평가지표
+	milestoneRepo := persistence.NewMilestoneRepo(db)
+	milestoneUC := application.NewMilestoneUseCase(milestoneRepo, userRepo, companyRepo, grantRepo, notifUC)
+
 	// Task repo (reads tasks/ markdown files)
 	tasksPath := os.Getenv("TASKS_PATH")
 	if tasksPath == "" {
@@ -262,6 +266,7 @@ func main() {
 		OAuthUC:      oauthUC,
 		DM:           handler.NewDMHandler(dmUC),
 		UserDB:       handler.NewUserDBHandler(userDBUC),
+		Milestone:    handler.NewMilestoneHandler(milestoneUC),
 	}
 	if llmUC != nil {
 		handlers.LLM = handler.NewLLMHandler(llmUC)

@@ -16,6 +16,7 @@ import {
   KanbanSquare,
   Sparkles,
   FileText,
+  Award,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
@@ -126,6 +127,14 @@ export default function AdminPage() {
       icon: Sparkles,
       href: '/admin/chat',
       color: 'bg-highlight/15 text-highlight',
+      badge: null,
+    },
+    {
+      title: '평가지표 매트릭스',
+      description: '학생별 4대 평가지표 + 그룹(A/B/C/D) 분류 + 승인',
+      icon: Award,
+      href: '/admin/milestones',
+      color: 'bg-emerald-100 text-emerald-700',
       badge: null,
     },
   ]

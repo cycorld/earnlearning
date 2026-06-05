@@ -211,6 +211,38 @@ func (r *GrantRepo) ListApplicationsByGrant(grantID int) ([]*grant.GrantApplicat
 	return apps, nil
 }
 
+func (r *GrantRepo) ListApplicationsByUserID(userID int) ([]*grant.GrantApplication, error) {
+	rows, err := r.db.Query(`
+		SELECT a.id, a.grant_id, a.user_id, a.proposal, a.status, a.created_at,
+			   u.name, u.student_id, u.department
+		FROM grant_applications a
+		JOIN users u ON u.id = a.user_id
+		WHERE a.user_id = ?
+		ORDER BY a.created_at DESC`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list grant applications by user: %w", err)
+	}
+	defer rows.Close()
+
+	var apps []*grant.GrantApplication
+	for rows.Next() {
+		app := &grant.GrantApplication{}
+		var userName, userStudentID, userDepartment string
+		if err := rows.Scan(
+			&app.ID, &app.GrantID, &app.UserID, &app.Proposal, &app.Status, &app.CreatedAt,
+			&userName, &userStudentID, &userDepartment,
+		); err != nil {
+			return nil, fmt.Errorf("scan grant application: %w", err)
+		}
+		app.UserName = userName
+		app.UserStudentID = userStudentID
+		app.UserDepartment = userDepartment
+		app.User = &grant.UserRef{ID: app.UserID, Name: userName, StudentID: userStudentID, Department: userDepartment}
+		apps = append(apps, app)
+	}
+	return apps, nil
+}
+
 func (r *GrantRepo) UpdateApplicationStatus(id int, status grant.ApplicationStatus) error {
 	_, err := r.db.Exec("UPDATE grant_applications SET status = ? WHERE id = ?", status, id)
 	return err

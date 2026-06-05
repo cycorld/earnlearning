@@ -385,5 +385,32 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// #119 학생 4대 평가지표 (1차 MVP / 2차 MVP / 사업계획서 / 회고 발표)
+	milestoneTables := []string{
+		`CREATE TABLE IF NOT EXISTS student_milestones (
+			id              INTEGER PRIMARY KEY AUTOINCREMENT,
+			student_id      INTEGER NOT NULL REFERENCES users(id),
+			milestone_type  TEXT NOT NULL CHECK (milestone_type IN ('mvp1', 'mvp2', 'business_plan', 'retrospective')),
+			source_type     TEXT NOT NULL DEFAULT 'manual' CHECK (source_type IN ('manual', 'company', 'grant')),
+			source_ref_id   INTEGER,
+			url             TEXT NOT NULL DEFAULT '',
+			content         TEXT NOT NULL DEFAULT '',
+			status          TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+			admin_note      TEXT NOT NULL DEFAULT '',
+			approved_by     INTEGER REFERENCES users(id),
+			approved_at     DATETIME,
+			created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(student_id, milestone_type)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_student_milestones_student ON student_milestones(student_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_student_milestones_status ON student_milestones(status)`,
+	}
+	for _, stmt := range milestoneTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create student_milestones tables: %w", err)
+		}
+	}
+
 	return nil
 }

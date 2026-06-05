@@ -71,6 +71,8 @@ import AdminTasksPage from '@/routes/admin/AdminTasksPage'
 import AdminDisclosuresPage from '@/routes/admin/AdminDisclosuresPage'
 import AdminClassroomDetailPage from '@/routes/admin/AdminClassroomDetailPage'
 import AdminChatPage from '@/routes/admin/AdminChatPage'
+import AdminMilestonesPage from '@/routes/admin/AdminMilestonesPage'
+import StudentMilestonesPage from '@/routes/milestones/StudentMilestonesPage'
 
 // /grants/:id → /grant/:id 리다이렉트 (기존 공지 게시글의 잘못된 복수형 링크)
 function GrantRedirect() {
@@ -129,6 +131,7 @@ export default function App() {
               <Route path="/developer" element={<DeveloperPage />} />
               <Route path="/developer/gamification" element={<GamificationShowcasePage />} />
               <Route path="/llm" element={<LlmPage />} />
+              <Route path="/milestones" element={<StudentMilestonesPage />} />
               <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
 
               <Route element={<AdminGuard />}>
@@ -143,6 +146,7 @@ export default function App() {
                 <Route path="/admin/tasks" element={<AdminTasksPage />} />
                 <Route path="/admin/disclosures" element={<AdminDisclosuresPage />} />
                 <Route path="/admin/chat" element={<AdminChatPage />} />
+                <Route path="/admin/milestones" element={<AdminMilestonesPage />} />
               </Route>
             </Route>
           </Route>
