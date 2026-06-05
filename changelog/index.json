@@ -1314,5 +1314,28 @@
       "URL",
       "회사정보"
     ]
+  },
+  {
+    "slug": "116-llm-bounty-grant14-payout",
+    "title": "LLM 바운티 grant 14 fix + 보상 지급 4명 (#108 후속)",
+    "date": "2026-06-05",
+    "tags": [
+      "바운티",
+      "LLM",
+      "proxy",
+      "운영",
+      "보안"
+    ]
+  },
+  {
+    "slug": "117-post-detail-comments-shape",
+    "title": "게시글 상세 페이지에서 댓글이 안 보이던 버그 수정",
+    "date": "2026-06-05",
+    "tags": [
+      "핫픽스",
+      "댓글",
+      "frontend",
+      "회귀"
+    ]
   }
 ]
