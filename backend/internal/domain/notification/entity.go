@@ -50,6 +50,9 @@ const (
 
 	// Proposal (#106) — 학생이 챗봇으로 제출한 교수님께의 제안
 	NotifProposalSubmitted NotifType = "proposal_submitted"
+
+	// Mention (#132) — 게시글/댓글 본문 @멘션
+	NotifMention           NotifType = "mention"
 )
 
 // PushEligibleTypes are notification types that should trigger push notifications.
@@ -83,6 +86,7 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifLiquidationPayout:  true,
 	NotifLLMBilled:          true,
 	NotifProposalSubmitted:  true,
+	NotifMention:            true,
 }
 
 type Notification struct {
@@ -93,6 +97,8 @@ type Notification struct {
 	Body          string    `json:"body"`
 	ReferenceType string    `json:"reference_type"`
 	ReferenceID   int       `json:"reference_id"`
+	// Anchor (#132) — 클릭 이동 시 페이지 내 위치 (예: "comment-12" → /post/3#comment-12)
+	Anchor        string    `json:"anchor"`
 	IsRead        bool      `json:"is_read"`
 	CreatedAt     time.Time `json:"created_at"`
 }

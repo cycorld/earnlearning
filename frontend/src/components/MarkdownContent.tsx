@@ -25,14 +25,20 @@ function isInternalSPARoute(href: string): boolean {
   return SPA_ROUTES.has(seg)
 }
 
+// #132 멘션 마크업 @[이름](user:ID) → 프로필 링크 [@이름](/profile/ID)
+function processMentions(content: string): string {
+  return content.replace(/@\[([^\]]+)\]\(user:(\d+)\)/g, '[@$1](/profile/$2)')
+}
+
 export function MarkdownContent({
-  content,
+  content: rawContent,
   maxLines = 8,
   className = '',
 }: MarkdownContentProps) {
   const navigate = useNavigate()
   const [expanded, setExpanded] = useState(false)
 
+  const content = processMentions(rawContent)
   const lineCount = content.split('\n').length
   const charCount = content.length
   const isLong = lineCount > maxLines || charCount > 400

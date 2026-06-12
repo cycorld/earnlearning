@@ -315,6 +315,8 @@ export interface Notification {
   body: string
   reference_type: string
   reference_id: number
+  /** #132 클릭 이동 시 페이지 내 위치 (예: "comment-12") */
+  anchor?: string
   is_read: boolean
   created_at: string
 }

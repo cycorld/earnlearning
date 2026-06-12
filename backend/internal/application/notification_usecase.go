@@ -48,7 +48,7 @@ type PaginationInfo struct {
 	TotalPages int `json:"total_pages"`
 }
 
-func (uc *NotificationUseCase) GetNotifications(userID int, isRead *bool, page, limit int) (*NotificationListResult, error) {
+func (uc *NotificationUseCase) GetNotifications(userID int, isRead *bool, notifType string, page, limit int) (*NotificationListResult, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -56,7 +56,7 @@ func (uc *NotificationUseCase) GetNotifications(userID int, isRead *bool, page, 
 		limit = 20
 	}
 
-	notifications, total, err := uc.notifRepo.GetByUserID(userID, isRead, page, limit)
+	notifications, total, err := uc.notifRepo.GetByUserID(userID, isRead, notifType, page, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -133,6 +133,11 @@ func (uc *NotificationUseCase) CreateNotificationQuiet(userID int, notifType not
 
 // CreateNotification creates a notification and sends it via WebSocket, Push, and Email.
 func (uc *NotificationUseCase) CreateNotification(userID int, notifType notification.NotifType, title, body, refType string, refID int) error {
+	return uc.CreateNotificationWithAnchor(userID, notifType, title, body, refType, refID, "")
+}
+
+// CreateNotificationWithAnchor (#132) — anchor: 클릭 이동 시 페이지 내 위치 (예: "comment-12").
+func (uc *NotificationUseCase) CreateNotificationWithAnchor(userID int, notifType notification.NotifType, title, body, refType string, refID int, anchor string) error {
 	n := &notification.Notification{
 		UserID:        userID,
 		NotifType:     notifType,
@@ -140,6 +145,7 @@ func (uc *NotificationUseCase) CreateNotification(userID int, notifType notifica
 		Body:          body,
 		ReferenceType: refType,
 		ReferenceID:   refID,
+		Anchor:        anchor,
 	}
 
 	id, err := uc.notifRepo.Create(n)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/earnlearning/backend/internal/domain/user"
@@ -224,6 +225,25 @@ func (uc *AuthUseCase) GetMe(userID int) (*user.User, error) {
 
 func (uc *AuthUseCase) GetProfile(userID int) (*user.User, error) {
 	return uc.userRepo.FindByID(userID)
+}
+
+// SearchUsers (#132) — 멘션 자동완성용. approved 유저 이름/학번 부분일치, 빈 검색어는 빈 결과.
+func (uc *AuthUseCase) SearchUsers(q string, limit int) ([]*user.User, error) {
+	q = strings.TrimSpace(q)
+	if q == "" {
+		return []*user.User{}, nil
+	}
+	if limit < 1 || limit > 20 {
+		limit = 10
+	}
+	users, err := uc.userRepo.SearchApproved(q, limit)
+	if err != nil {
+		return nil, err
+	}
+	if users == nil {
+		users = []*user.User{}
+	}
+	return users, nil
 }
 
 func (uc *AuthUseCase) AdminGetPending() ([]*user.User, error) {

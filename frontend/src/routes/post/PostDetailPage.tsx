@@ -1,15 +1,15 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { api, ApiError } from '@/lib/api'
 import type { Post, Comment, PaginatedData } from '@/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { ArrowLeft, Heart, MessageCircle, Loader2, Link as LinkIcon } from 'lucide-react'
 import { MarkdownContent } from '@/components/MarkdownContent'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 
 function parseTags(tags: unknown): string[] {
   if (Array.isArray(tags)) return tags as string[]
@@ -27,6 +27,7 @@ function timeAgo(iso: string): string {
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [post, setPost] = useState<Post | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
@@ -63,6 +64,17 @@ export default function PostDetailPage() {
   useEffect(() => {
     fetchPost()
   }, [fetchPost])
+
+  // #132 멘션 알림 클릭 → #comment-<id> 앵커로 해당 댓글 스크롤
+  useEffect(() => {
+    if (loading || !/^#comment-\d+$/.test(location.hash)) return
+    const el = document.getElementById(location.hash.slice(1))
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('ring-2', 'ring-primary')
+    const t = setTimeout(() => el.classList.remove('ring-2', 'ring-primary'), 2000)
+    return () => clearTimeout(t)
+  }, [loading, location.hash])
 
   const handleLike = async () => {
     if (!post || likeBusy) return
@@ -200,7 +212,7 @@ export default function PostDetailPage() {
           <p className="px-2 py-6 text-center text-xs text-muted-foreground">아직 댓글이 없어요. 첫 댓글을 남겨보세요.</p>
         ) : (
           comments.map((c) => (
-            <div key={c.id} className="rounded-md border bg-card p-3 text-sm">
+            <div key={c.id} id={`comment-${c.id}`} className="rounded-md border bg-card p-3 text-sm">
               <div className="mb-1 flex items-center gap-2">
                 {c.author && (
                   <>
@@ -213,18 +225,20 @@ export default function PostDetailPage() {
                 )}
                 <span className="ml-auto text-[10px] text-muted-foreground">{timeAgo(c.created_at)}</span>
               </div>
-              <p className="whitespace-pre-wrap text-sm">{c.content}</p>
+              {/* #132 멘션 하이라이트 — FeedPage 댓글과 동일하게 마크다운 렌더 */}
+              <MarkdownContent content={c.content} className="text-sm" />
             </div>
           ))
         )}
 
-        <div className="mt-3 rounded-md border p-3">
-          <Textarea
+        <div className="mt-3">
+          {/* #132 @멘션 자동완성 지원 에디터 (FeedPage 댓글 입력과 동일) */}
+          <MarkdownEditor
             value={commentInput}
-            onChange={(e) => setCommentInput(e.target.value)}
-            placeholder="댓글 작성..."
+            onChange={setCommentInput}
+            placeholder="댓글 작성... (@로 멘션)"
             rows={2}
-            className="resize-none border-0 p-0 shadow-none focus-visible:ring-0"
+            compact
           />
           <div className="mt-2 flex justify-end">
             <Button size="sm" disabled={submittingComment || !commentInput.trim()} onClick={handleAddComment}>
