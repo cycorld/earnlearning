@@ -107,6 +107,22 @@ func (r *UserRepo) ListAll(page, limit int) ([]*user.User, int, error) {
 	return users, total, nil
 }
 
+func (r *UserRepo) SearchApproved(q string, limit int) ([]*user.User, error) {
+	pattern := "%" + q + "%"
+	rows, err := r.db.Query(
+		`SELECT id, email, password, name, department, student_id, role, status, bio, avatar_url, created_at, updated_at
+		 FROM users
+		 WHERE status = 'approved' AND (name LIKE ? OR student_id LIKE ?)
+		 ORDER BY name, id LIMIT ?`, pattern, pattern, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanUsers(rows)
+}
+
 func (r *UserRepo) UpdateStatus(id int, status user.Status) error {
 	result, err := r.db.Exec(
 		"UPDATE users SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",

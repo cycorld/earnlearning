@@ -17,9 +17,9 @@ func NewNotificationRepo(db *sql.DB) *NotificationRepo {
 
 func (r *NotificationRepo) Create(n *notification.Notification) (int, error) {
 	result, err := r.db.Exec(`
-		INSERT INTO notifications (user_id, notif_type, title, body, reference_type, reference_id, is_read)
-		VALUES (?, ?, ?, ?, ?, ?, 0)`,
-		n.UserID, n.NotifType, n.Title, n.Body, n.ReferenceType, n.ReferenceID,
+		INSERT INTO notifications (user_id, notif_type, title, body, reference_type, reference_id, anchor, is_read)
+		VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
+		n.UserID, n.NotifType, n.Title, n.Body, n.ReferenceType, n.ReferenceID, n.Anchor,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("create notification: %w", err)
@@ -34,9 +34,9 @@ func (r *NotificationRepo) Create(n *notification.Notification) (int, error) {
 func (r *NotificationRepo) FindByID(id int) (*notification.Notification, error) {
 	n := &notification.Notification{}
 	err := r.db.QueryRow(`
-		SELECT id, user_id, notif_type, title, body, reference_type, reference_id, is_read, created_at
+		SELECT id, user_id, notif_type, title, body, reference_type, reference_id, anchor, is_read, created_at
 		FROM notifications WHERE id = ?`, id,
-	).Scan(&n.ID, &n.UserID, &n.NotifType, &n.Title, &n.Body, &n.ReferenceType, &n.ReferenceID, &n.IsRead, &n.CreatedAt)
+	).Scan(&n.ID, &n.UserID, &n.NotifType, &n.Title, &n.Body, &n.ReferenceType, &n.ReferenceID, &n.Anchor, &n.IsRead, &n.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("알림을 찾을 수 없습니다")
@@ -46,7 +46,7 @@ func (r *NotificationRepo) FindByID(id int) (*notification.Notification, error) 
 	return n, nil
 }
 
-func (r *NotificationRepo) GetByUserID(userID int, isRead *bool, page, limit int) ([]*notification.Notification, int, error) {
+func (r *NotificationRepo) GetByUserID(userID int, isRead *bool, notifType string, page, limit int) ([]*notification.Notification, int, error) {
 	baseQuery := "FROM notifications WHERE user_id = ?"
 	args := []interface{}{userID}
 
@@ -59,6 +59,11 @@ func (r *NotificationRepo) GetByUserID(userID int, isRead *bool, page, limit int
 		}
 	}
 
+	if notifType != "" {
+		baseQuery += " AND notif_type = ?"
+		args = append(args, notifType)
+	}
+
 	var total int
 	err := r.db.QueryRow("SELECT COUNT(*) "+baseQuery, args...).Scan(&total)
 	if err != nil {
@@ -68,7 +73,7 @@ func (r *NotificationRepo) GetByUserID(userID int, isRead *bool, page, limit int
 	offset := (page - 1) * limit
 	queryArgs := append(args, limit, offset)
 	rows, err := r.db.Query(`
-		SELECT id, user_id, notif_type, title, body, reference_type, reference_id, is_read, created_at
+		SELECT id, user_id, notif_type, title, body, reference_type, reference_id, anchor, is_read, created_at
 		`+baseQuery+`
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?`, queryArgs...,
@@ -81,7 +86,7 @@ func (r *NotificationRepo) GetByUserID(userID int, isRead *bool, page, limit int
 	var notifications []*notification.Notification
 	for rows.Next() {
 		n := &notification.Notification{}
-		if err := rows.Scan(&n.ID, &n.UserID, &n.NotifType, &n.Title, &n.Body, &n.ReferenceType, &n.ReferenceID, &n.IsRead, &n.CreatedAt); err != nil {
+		if err := rows.Scan(&n.ID, &n.UserID, &n.NotifType, &n.Title, &n.Body, &n.ReferenceType, &n.ReferenceID, &n.Anchor, &n.IsRead, &n.CreatedAt); err != nil {
 			return nil, 0, err
 		}
 		notifications = append(notifications, n)

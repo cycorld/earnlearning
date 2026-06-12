@@ -39,7 +39,10 @@ func (h *NotificationHandler) GetNotifications(c echo.Context) error {
 		isRead = &b
 	}
 
-	result, err := h.uc.GetNotifications(userID, isRead, page, limit)
+	// #132 멘션 탭 — ?type=mention 등 notif_type 필터
+	notifType := c.QueryParam("type")
+
+	result, err := h.uc.GetNotifications(userID, isRead, notifType, page, limit)
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "서버 오류가 발생했습니다")
 	}

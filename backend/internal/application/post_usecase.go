@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,17 @@ import (
 )
 
 var tagRegex = regexp.MustCompile(`#([^\s#]+)`)
+
+// #132 멘션 마크업: @[이름](user:ID) — 자동완성 드롭다운에서 선택 시 프론트가 삽입
+var (
+	mentionRegex        = regexp.MustCompile(`@\[[^\]]*\]\(user:(\d+)\)`)
+	mentionDisplayRegex = regexp.MustCompile(`@\[([^\]]*)\]\(user:\d+\)`)
+)
+
+// stripMentionMarkup — 알림 미리보기용: @[이름](user:ID) → @이름
+func stripMentionMarkup(content string) string {
+	return mentionDisplayRegex.ReplaceAllString(content, "@$1")
+}
 
 type PostUsecase struct {
 	postRepo   post.PostRepository
@@ -160,6 +172,9 @@ func (uc *PostUsecase) CreatePost(userID int, role string, input CreatePostInput
 	// (과제는 CreateAssignment, 자동 게시글은 repo 직접 호출 경로라 보상 제외)
 	_ = uc.creditOrDebitUser(userID, PostRewardAmount, true,
 		wallet.TxPostReward, "게시글 작성 보상", "post", postID)
+
+	// 게시글 본문 @멘션 알림 (#132)
+	uc.notifyMentions(input.Content, userID, postID, "")
 
 	return p, nil
 }
@@ -361,16 +376,21 @@ func (uc *PostUsecase) CreateComment(userID int, input CreateCommentInput) (*pos
 
 	_ = uc.postRepo.IncrementCommentCount(input.PostID)
 
+	// 댓글 본문 @멘션 알림 (#132) — anchor로 댓글 위치 전달
+	mentioned := uc.notifyMentions(input.Content, userID, input.PostID,
+		fmt.Sprintf("comment-%d", commentID))
+
 	// Notify post author about the new comment (skip if self-comment)
 	if p.AuthorID != userID {
 		// Credit comment reward to post author
 		_ = uc.creditOrDebitUser(p.AuthorID, CommentRewardAmount, true,
 			wallet.TxCommentReward, "댓글 보상", "post", input.PostID)
 
-		if uc.notifUC != nil {
-			preview := input.Content
-			if len(preview) > 50 {
-				preview = preview[:50] + "..."
+		// 글 작성자가 댓글에서 멘션됐으면 mention 알림이 이미 갔으므로 new_comment 생략 (#132 중복 방지)
+		if uc.notifUC != nil && !mentioned[p.AuthorID] {
+			preview := stripMentionMarkup(input.Content)
+			if r := []rune(preview); len(r) > 50 {
+				preview = string(r[:50]) + "..."
 			}
 			_ = uc.notifUC.CreateNotification(p.AuthorID, notification.NotifNewComment,
 				"새 댓글이 달렸습니다", preview, "post", input.PostID)
@@ -612,6 +632,63 @@ func (uc *PostUsecase) DeleteComment(commentID, userID int, role string) error {
 
 func (uc *PostUsecase) GetSubmissions(assignmentID int) ([]*post.Submission, error) {
 	return uc.postRepo.GetSubmissions(assignmentID)
+}
+
+// extractMentions parses @[이름](user:ID) markup and returns unique mentioned user IDs.
+func extractMentions(content string) []int {
+	matches := mentionRegex.FindAllStringSubmatch(content, -1)
+	seen := make(map[int]bool)
+	var ids []int
+	for _, m := range matches {
+		id, err := strconv.Atoi(m[1])
+		if err != nil || id <= 0 || seen[id] {
+			continue
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// notifyMentions sends mention notifications to users mentioned in content (#132).
+// anchor: 댓글 멘션이면 "comment-<id>", 게시글 멘션이면 "".
+// 작성자 본인 멘션은 제외. 반환값: 알림 보낸 유저 ID 집합 (중복 알림 방지용).
+func (uc *PostUsecase) notifyMentions(content string, authorID, postID int, anchor string) map[int]bool {
+	notified := make(map[int]bool)
+	if uc.notifUC == nil {
+		return notified
+	}
+
+	mentionIDs := extractMentions(content)
+	if len(mentionIDs) == 0 {
+		return notified
+	}
+
+	authorName := "누군가"
+	if u, err := uc.userRepo.FindByID(authorID); err == nil {
+		authorName = u.Name
+	}
+
+	// rune 단위 자르기 — 바이트 슬라이스는 한글 멀티바이트를 깨뜨림
+	preview := stripMentionMarkup(content)
+	if r := []rune(preview); len(r) > 100 {
+		preview = string(r[:100]) + "..."
+	}
+
+	for _, uid := range mentionIDs {
+		if uid == authorID {
+			continue
+		}
+		// 존재하는 유저만 (마크업은 클라이언트 입력이므로 검증)
+		if _, err := uc.userRepo.FindByID(uid); err != nil {
+			continue
+		}
+		if err := uc.notifUC.CreateNotificationWithAnchor(uid, notification.NotifMention,
+			fmt.Sprintf("%s님이 회원님을 멘션했습니다", authorName), preview, "post", postID, anchor); err == nil {
+			notified[uid] = true
+		}
+	}
+	return notified
 }
 
 // extractTags parses #태그 patterns from content.

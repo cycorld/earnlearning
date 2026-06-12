@@ -58,6 +58,8 @@ func RunMigrations(db *sql.DB) error {
 		`ALTER TABLE student_milestones ADD COLUMN ai_reasoning TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE student_milestones ADD COLUMN ai_signals TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE student_milestones ADD COLUMN ai_evaluated_at DATETIME`,
+		// #132 멘션 알림 — 클릭 이동 시 페이지 내 anchor (예: comment-12)
+		`ALTER TABLE notifications ADD COLUMN anchor TEXT NOT NULL DEFAULT ''`,
 	}
 	for _, stmt := range alterStatements {
 		db.Exec(stmt) // ignore "duplicate column" errors

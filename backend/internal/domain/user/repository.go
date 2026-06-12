@@ -12,6 +12,9 @@ type Repository interface {
 	UpdateAvatarURL(id int, avatarURL string) error
 	GetUserActivity(userID int) (*UserActivity, error)
 
+	// #132 멘션 자동완성 — approved 유저만 이름/학번 부분일치 검색
+	SearchApproved(q string, limit int) ([]*User, error)
+
 	// #128 비밀번호 재설정
 	UpdatePassword(id int, passwordHash string) error
 	// SaveResetToken은 해당 사용자의 기존 토큰을 모두 무효화하고 새 토큰 해시를 저장한다.

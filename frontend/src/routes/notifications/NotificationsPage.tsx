@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
+  AtSign,
   Bell,
   CheckCheck,
   Loader2,
@@ -32,6 +34,8 @@ function timeAgo(dateStr: string): string {
 
 function getNotifIcon(type: string) {
   switch (type) {
+    case 'mention':
+      return <AtSign className="h-5 w-5 text-primary" />
     case 'comment':
     case 'new_comment':
     case 'post':
@@ -129,12 +133,15 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [markingAll, setMarkingAll] = useState(false)
+  // #132 멘션 탭: 'all' | 'mention'
+  const [tab, setTab] = useState('all')
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true)
     try {
+      const typeParam = tab === 'mention' ? '&type=mention' : ''
       const data = await api.get<PaginatedData<Notification>>(
-        '/notifications?page=1&limit=20',
+        `/notifications?page=1&limit=20${typeParam}`,
       )
       setNotifications(data?.data ?? [])
     } catch {
@@ -142,7 +149,7 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [tab])
 
   useEffect(() => {
     fetchNotifications()
@@ -162,7 +169,8 @@ export default function NotificationsPage() {
 
     const path = getReferencePath(notif.reference_type, notif.reference_id)
     if (path) {
-      navigate(path)
+      // #132 anchor — 댓글 멘션이면 /post/3#comment-12 로 이동해 해당 댓글로 스크롤
+      navigate(notif.anchor ? `${path}#${notif.anchor}` : path)
     }
   }
 
@@ -220,10 +228,23 @@ export default function NotificationsPage() {
         )}
       </div>
 
+      {/* #132 멘션 탭 */}
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="all">전체</TabsTrigger>
+          <TabsTrigger value="mention" className="gap-1">
+            <AtSign className="h-3.5 w-3.5" />
+            멘션
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {notifications.length === 0 ? (
         <div className="flex flex-col items-center py-12 text-muted-foreground">
           <Bell className="mb-2 h-10 w-10" />
-          <p className="text-sm">알림이 없습니다.</p>
+          <p className="text-sm">
+            {tab === 'mention' ? '멘션 알림이 없습니다.' : '알림이 없습니다.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">

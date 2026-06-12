@@ -191,6 +191,7 @@ func (r *fakeUserRepo) UpdateAvatarURL(int, string) error              { return 
 func (r *fakeUserRepo) GetUserActivity(int) (*user.UserActivity, error) {
 	return nil, nil
 }
+func (r *fakeUserRepo) SearchApproved(string, int) ([]*user.User, error) { return nil, nil }
 func (r *fakeUserRepo) UpdatePassword(int, string) error            { return nil }
 func (r *fakeUserRepo) SaveResetToken(int, string, time.Time) error { return nil }
 func (r *fakeUserRepo) ConsumeResetToken(string) (int, error)       { return 0, nil }

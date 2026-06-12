@@ -3,6 +3,7 @@ import { api } from '@/lib/api'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { MarkdownContent } from './MarkdownContent'
+import { useMentionAutocomplete } from './MentionAutocomplete'
 import {
   Bold,
   Italic,
@@ -55,6 +56,9 @@ export function MarkdownEditor({
   const [preview, setPreview] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+
+  // #132 @멘션 자동완성
+  const mention = useMentionAutocomplete(value, onChange, textareaRef)
 
   // Clear uploaded files when value is reset externally (e.g. after comment submit)
   useEffect(() => {
@@ -270,17 +274,24 @@ export function MarkdownEditor({
           )}
         </div>
       ) : (
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={rows}
-          className="rounded-t-none border-t-0 font-mono text-sm"
-          onPaste={handlePaste}
-          onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
-        />
+        <div className="relative">
+          <Textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => {
+              onChange(e.target.value)
+              mention.detect(e.target.value, e.target.selectionStart)
+            }}
+            onKeyDown={mention.onKeyDown}
+            placeholder={placeholder}
+            rows={rows}
+            className="rounded-t-none border-t-0 font-mono text-sm"
+            onPaste={handlePaste}
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+          />
+          {mention.dropdown}
+        </div>
       )}
 
       {/* Hidden file input */}

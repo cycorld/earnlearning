@@ -256,6 +256,46 @@ func (h *AuthHandler) GetProfile(c echo.Context) error {
 	return successResponse(c, http.StatusOK, userToResponse(u, viewerRole))
 }
 
+// SearchUsers godoc
+//
+//	@Summary		유저 검색 (멘션 자동완성)
+//	@Description	approved 유저 이름/학번 부분일치 검색 (#132)
+//	@Tags			Auth
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			q	query		string	true	"검색어"
+//	@Success		200	{object}	APIResponse
+//	@Router			/users/search [get]
+func (h *AuthHandler) SearchUsers(c echo.Context) error {
+	q := c.QueryParam("q")
+	users, err := h.authUC.SearchUsers(q, 10)
+	if err != nil {
+		return errorResponse(c, http.StatusInternalServerError, "SEARCH_FAILED", "검색에 실패했습니다")
+	}
+
+	viewerRole := middleware.GetUserRole(c)
+	results := make([]searchUserResponse, 0, len(users))
+	for _, u := range users {
+		results = append(results, searchUserResponse{
+			ID:         u.ID,
+			Name:       u.Name,
+			Department: u.Department,
+			StudentID:  u.StudentIDDisplay(viewerRole),
+			AvatarURL:  u.AvatarURL,
+		})
+	}
+	return successResponse(c, http.StatusOK, results)
+}
+
+// searchUserResponse — 멘션 자동완성용 최소 정보 (이메일 등 비공개 필드 제외)
+type searchUserResponse struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Department string `json:"department"`
+	StudentID  string `json:"student_id"`
+	AvatarURL  string `json:"avatar_url"`
+}
+
 // UpdateAvatar godoc
 //
 //	@Summary		아바타 변경

@@ -98,6 +98,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	// Approved routes (JWT + approved status)
 	// ================================================================
 	approved := auth.Group("", middleware.ApprovedOnly())
+	approved.GET("/users/search", h.Auth.SearchUsers) // #132 멘션 자동완성
 
 	// Wallet (OAuth: read:wallet / write:wallet)
 	approved.GET("/wallet", h.Wallet.GetWallet, middleware.RequireScope("read:wallet"))
