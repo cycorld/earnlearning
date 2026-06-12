@@ -26,6 +26,8 @@ type Config struct {
 	Context7APIKey string
 	// Notion 자동 동기화 (#082)
 	NotionToken string
+	// 비밀번호 재설정 링크 prefix (#128)
+	PublicBaseURL string
 }
 
 func Load() *Config {
@@ -49,6 +51,7 @@ func Load() *Config {
 		LLMAffiliation:     getEnv("LLM_AFFILIATION", "이화여대"),
 		Context7APIKey:     getEnv("CONTEXT7_API_KEY", ""),
 		NotionToken:        getEnv("NOTION_INTEGRATION_TOKEN", ""),
+		PublicBaseURL:      getEnv("PUBLIC_BASE_URL", "https://earnlearning.com"),
 	}
 }
 

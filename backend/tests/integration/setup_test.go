@@ -37,6 +37,7 @@ type testServer struct {
 	llmUC       *application.LLMUseCase
 	llmProxy    *fakeLLMProxy
 	milestoneUC *application.MilestoneUseCase // #120 — fake LLM 주입용
+	authUC      *application.AuthUseCase      // #128 — fake email sender 주입용
 }
 
 // setupTestServer creates a fresh test server with an in-memory-like temp DB.
@@ -162,7 +163,7 @@ func setupTestServer(t *testing.T) *testServer {
 	ts := httptest.NewServer(e)
 	t.Cleanup(func() { ts.Close() })
 
-	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy, milestoneUC: milestoneUC}
+	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy, milestoneUC: milestoneUC, authUC: authUC}
 }
 
 // injectMilestoneFakeLLM — milestone usecase 에 fake ChatLLMClient 주입 (#120).

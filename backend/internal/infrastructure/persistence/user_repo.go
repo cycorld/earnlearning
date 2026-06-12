@@ -3,6 +3,7 @@ package persistence
 import (
 	"database/sql"
 	"strings"
+	"time"
 
 	"github.com/earnlearning/backend/internal/domain/user"
 )
@@ -128,6 +129,60 @@ func (r *UserRepo) UpdateStatus(id int, status user.Status) error {
 func (r *UserRepo) UpdateAvatarURL(id int, avatarURL string) error {
 	_, err := r.db.Exec("UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", avatarURL, id)
 	return err
+}
+
+func (r *UserRepo) UpdatePassword(id int, passwordHash string) error {
+	result, err := r.db.Exec(
+		"UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		passwordHash, id,
+	)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return user.ErrNotFound
+	}
+	return nil
+}
+
+func (r *UserRepo) SaveResetToken(userID int, tokenHash string, expiresAt time.Time) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec("DELETE FROM password_reset_tokens WHERE user_id = ?", userID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(
+		"INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
+		userID, tokenHash, expiresAt.UTC(),
+	); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (r *UserRepo) ConsumeResetToken(tokenHash string) (int, error) {
+	var userID int
+	err := r.db.QueryRow(
+		`UPDATE password_reset_tokens SET used = 1
+		 WHERE token_hash = ? AND used = 0 AND expires_at > ?
+		 RETURNING user_id`,
+		tokenHash, time.Now().UTC(),
+	).Scan(&userID)
+	if err == sql.ErrNoRows {
+		return 0, user.ErrInvalidResetToken
+	}
+	if err != nil {
+		return 0, err
+	}
+	return userID, nil
 }
 
 func (r *UserRepo) GetUserActivity(userID int) (*user.UserActivity, error) {

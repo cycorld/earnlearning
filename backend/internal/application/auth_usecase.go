@@ -1,7 +1,11 @@
 package application
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"log"
 	"regexp"
 	"time"
 
@@ -13,10 +17,19 @@ import (
 
 var studentIDRegex = regexp.MustCompile(`^\d{7,10}$`)
 
+// EmailSender는 비밀번호 재설정 메일 발송용 인터페이스 (#128).
+// 프로덕션은 email.SESService, 테스트는 fake 구현을 주입한다.
+type EmailSender interface {
+	SendEmail(to, subject, htmlBody, textBody string) error
+	IsEnabled() bool
+}
+
 type AuthUseCase struct {
-	userRepo   user.Repository
-	walletRepo wallet.Repository
-	jwtSecret  string
+	userRepo    user.Repository
+	walletRepo  wallet.Repository
+	jwtSecret   string
+	emailSender EmailSender
+	baseURL     string
 }
 
 func NewAuthUseCase(repo user.Repository, walletRepo wallet.Repository, jwtSecret string) *AuthUseCase {
@@ -104,6 +117,76 @@ func (uc *AuthUseCase) Login(input LoginInput) (*AuthResponse, error) {
 	}
 
 	return &AuthResponse{Token: token, User: u}, nil
+}
+
+// SetEmailService는 비밀번호 재설정 메일 발송 의존성을 주입한다 (#128).
+// baseURL: 재설정 링크 prefix (예: https://earnlearning.com)
+func (uc *AuthUseCase) SetEmailService(sender EmailSender, baseURL string) {
+	uc.emailSender = sender
+	uc.baseURL = baseURL
+}
+
+const resetTokenTTL = 1 * time.Hour
+
+// ForgotPassword는 이메일이 등록된 경우에만 재설정 토큰을 발급·발송한다.
+// 이메일 존재 여부를 노출하지 않기 위해 미등록 이메일도 에러 없이 반환한다.
+func (uc *AuthUseCase) ForgotPassword(email string) error {
+	u, err := uc.userRepo.FindByEmail(email)
+	if err != nil {
+		return nil // 미등록 이메일 — 침묵 (enumeration 방지)
+	}
+
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return err
+	}
+	token := hex.EncodeToString(raw)
+	hash := sha256.Sum256([]byte(token))
+
+	if err := uc.userRepo.SaveResetToken(u.ID, hex.EncodeToString(hash[:]), time.Now().Add(resetTokenTTL)); err != nil {
+		return err
+	}
+
+	resetURL := uc.baseURL + "/reset-password?token=" + token
+
+	if uc.emailSender == nil || !uc.emailSender.IsEnabled() {
+		// dev 환경 (SES 미설정) — 로그로 대체
+		log.Printf("password reset (email disabled): user=%d url=%s", u.ID, resetURL)
+		return nil
+	}
+
+	subject := "[언러닝] 비밀번호 재설정 안내"
+	text := fmt.Sprintf("안녕하세요, %s님.\n\n아래 링크에서 비밀번호를 재설정할 수 있습니다 (1시간 유효):\n%s\n\n본인이 요청하지 않았다면 이 메일을 무시하세요.", u.Name, resetURL)
+	html := fmt.Sprintf(`<p>안녕하세요, %s님.</p>
+<p>아래 버튼을 눌러 비밀번호를 재설정하세요. 링크는 <strong>1시간</strong> 동안 유효합니다.</p>
+<p><a href="%s" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;border-radius:8px;text-decoration:none">비밀번호 재설정</a></p>
+<p>버튼이 동작하지 않으면 다음 주소를 브라우저에 붙여넣으세요:<br>%s</p>
+<p>본인이 요청하지 않았다면 이 메일을 무시하세요.</p>`, u.Name, resetURL, resetURL)
+
+	if err := uc.emailSender.SendEmail(u.Email, subject, html, text); err != nil {
+		log.Printf("password reset email failed: user=%d err=%v", u.ID, err)
+		return err
+	}
+	return nil
+}
+
+// ResetPassword는 토큰을 검증(1회용·TTL)하고 새 비밀번호로 교체한다.
+func (uc *AuthUseCase) ResetPassword(token, newPassword string) error {
+	if len(newPassword) < 8 {
+		return user.ErrWeakPassword
+	}
+
+	hash := sha256.Sum256([]byte(token))
+	userID, err := uc.userRepo.ConsumeResetToken(hex.EncodeToString(hash[:]))
+	if err != nil {
+		return err
+	}
+
+	pwHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+	if err != nil {
+		return err
+	}
+	return uc.userRepo.UpdatePassword(userID, string(pwHash))
 }
 
 func (uc *AuthUseCase) UpdateAvatar(userID int, avatarURL string) error {

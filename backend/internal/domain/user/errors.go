@@ -9,4 +9,6 @@ var (
 	ErrRejected       = errors.New("가입이 거절된 계정입니다")
 	ErrWeakPassword   = errors.New("비밀번호는 최소 8자 이상이어야 합니다")
 	ErrInvalidStudent = errors.New("학번은 7~10자리 숫자여야 합니다")
+
+	ErrInvalidResetToken = errors.New("유효하지 않거나 만료된 재설정 링크입니다")
 )
