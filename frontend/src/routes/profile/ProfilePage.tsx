@@ -15,6 +15,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
   LogOut,
   Award,
   Wallet,
@@ -28,6 +37,7 @@ import {
   Code2,
   Camera,
   Trash2,
+  KeyRound,
 } from 'lucide-react'
 import { usePush } from '@/hooks/use-push'
 import { useEmailPreference } from '@/hooks/use-email-preference'
@@ -41,6 +51,7 @@ export default function ProfilePage() {
   const { wallet, loading: walletLoading } = useWallet()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
+  const [pwDialogOpen, setPwDialogOpen] = useState(false)
   const { isSupported: pushSupported, isSubscribed, loading: pushLoading, error: pushError, subscribe, unsubscribe } = usePush()
   const { emailEnabled, loading: emailLoading, updating: emailUpdating, updatePreference } = useEmailPreference()
 
@@ -308,6 +319,15 @@ export default function ProfilePage() {
             )}
           </button>
           <Separator />
+          <button
+            onClick={() => setPwDialogOpen(true)}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-accent"
+          >
+            <KeyRound className="h-5 w-5 text-muted-foreground" />
+            <span className="flex-1 text-left text-sm">비밀번호 변경</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <Separator />
           <Link
             to="/developer"
             className="flex items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-accent"
@@ -342,6 +362,110 @@ export default function ProfilePage() {
         로그아웃
       </Button>
       </div>
+      <ChangePasswordDialog open={pwDialogOpen} onOpenChange={setPwDialogOpen} />
     </div>
+  )
+}
+
+function ChangePasswordDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const reset = () => {
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirm('')
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (newPassword !== confirm) {
+      toast.error('새 비밀번호가 일치하지 않습니다.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await api.put('/auth/password', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      })
+      toast.success('비밀번호가 변경되었습니다.')
+      reset()
+      onOpenChange(false)
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : '비밀번호 변경에 실패했습니다.'
+      toast.error(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) reset()
+        onOpenChange(o)
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>비밀번호 변경</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="current-password">현재 비밀번호</Label>
+            <Input
+              id="current-password"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-password">새 비밀번호</Label>
+            <Input
+              id="new-password"
+              type="password"
+              placeholder="8자 이상"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">새 비밀번호 확인</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={submitting} className="w-full">
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              변경하기
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
