@@ -170,6 +170,27 @@ func (uc *AuthUseCase) ForgotPassword(email string) error {
 	return nil
 }
 
+// ChangePassword는 로그인 사용자가 현재 비밀번호 확인 후 새 비밀번호로 교체한다 (#131).
+func (uc *AuthUseCase) ChangePassword(userID int, currentPassword, newPassword string) error {
+	if len(newPassword) < 8 {
+		return user.ErrWeakPassword
+	}
+
+	u, err := uc.userRepo.FindByID(userID)
+	if err != nil {
+		return user.ErrInvalidCreds
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(currentPassword)); err != nil {
+		return user.ErrInvalidCreds
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+	if err != nil {
+		return err
+	}
+	return uc.userRepo.UpdatePassword(userID, string(hash))
+}
+
 // ResetPassword는 토큰을 검증(1회용·TTL)하고 새 비밀번호로 교체한다.
 func (uc *AuthUseCase) ResetPassword(token, newPassword string) error {
 	if len(newPassword) < 8 {

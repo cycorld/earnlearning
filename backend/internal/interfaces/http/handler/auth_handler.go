@@ -192,6 +192,44 @@ func (h *AuthHandler) GetMe(c echo.Context) error {
 	return successResponse(c, http.StatusOK, userToResponse(u, viewerRole))
 }
 
+// ChangePassword godoc
+//
+//	@Summary		비밀번호 변경
+//	@Description	로그인 사용자가 현재 비밀번호 확인 후 새 비밀번호로 변경
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	APIResponse
+//	@Failure		400	{object}	APIResponse
+//	@Failure		401	{object}	APIResponse
+//	@Router			/auth/password [put]
+func (h *AuthHandler) ChangePassword(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	var input struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := c.Bind(&input); err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "잘못된 입력입니다")
+	}
+
+	if err := h.authUC.ChangePassword(userID, input.CurrentPassword, input.NewPassword); err != nil {
+		switch err {
+		case user.ErrWeakPassword:
+			return errorResponse(c, http.StatusBadRequest, "WEAK_PASSWORD", err.Error())
+		case user.ErrInvalidCreds:
+			return errorResponse(c, http.StatusUnauthorized, "INVALID_CREDENTIALS", "현재 비밀번호가 올바르지 않습니다")
+		default:
+			return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "서버 오류가 발생했습니다")
+		}
+	}
+
+	return successResponse(c, http.StatusOK, map[string]string{
+		"message": "비밀번호가 변경되었습니다",
+	})
+}
+
 // GetProfile godoc
 //
 //	@Summary		사용자 프로필 조회

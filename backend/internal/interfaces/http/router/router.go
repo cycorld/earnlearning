@@ -90,6 +90,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	auth := api.Group("", middleware.JWTAuth(jwtSecret, h.OAuthUC))
 	auth.GET("/auth/me", h.Auth.GetMe)
 	auth.PUT("/auth/avatar", h.Auth.UpdateAvatar)
+	auth.PUT("/auth/password", h.Auth.ChangePassword)
 	auth.GET("/users/:id/profile", h.Auth.GetProfile)
 	auth.GET("/users/:id/activity", h.Auth.GetUserActivity)
 
