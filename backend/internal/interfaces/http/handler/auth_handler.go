@@ -110,6 +110,67 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 	return successResponse(c, http.StatusOK, resp)
 }
 
+// ForgotPassword godoc
+//
+//	@Summary		비밀번호 재설정 요청
+//	@Description	이메일로 비밀번호 재설정 링크 발송 (이메일 존재 여부는 응답에 노출하지 않음)
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	APIResponse
+//	@Router			/auth/forgot-password [post]
+func (h *AuthHandler) ForgotPassword(c echo.Context) error {
+	var input struct {
+		Email string `json:"email"`
+	}
+	if err := c.Bind(&input); err != nil || input.Email == "" {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "이메일을 입력해주세요")
+	}
+
+	if err := h.authUC.ForgotPassword(input.Email); err != nil {
+		return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "서버 오류가 발생했습니다")
+	}
+
+	return successResponse(c, http.StatusOK, map[string]string{
+		"message": "등록된 이메일이라면 재설정 링크를 보냈습니다",
+	})
+}
+
+// ResetPassword godoc
+//
+//	@Summary		비밀번호 재설정
+//	@Description	이메일로 받은 토큰으로 새 비밀번호 설정 (토큰은 1회용, 1시간 유효)
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	APIResponse
+//	@Failure		400	{object}	APIResponse
+//	@Router			/auth/reset-password [post]
+func (h *AuthHandler) ResetPassword(c echo.Context) error {
+	var input struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+	if err := c.Bind(&input); err != nil || input.Token == "" {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "잘못된 입력입니다")
+	}
+
+	if err := h.authUC.ResetPassword(input.Token, input.Password); err != nil {
+		switch err {
+		case user.ErrWeakPassword:
+			return errorResponse(c, http.StatusBadRequest, "WEAK_PASSWORD", err.Error())
+		case user.ErrInvalidResetToken:
+			return errorResponse(c, http.StatusBadRequest, "INVALID_RESET_TOKEN", err.Error())
+		default:
+			return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "서버 오류가 발생했습니다")
+		}
+	}
+
+	return successResponse(c, http.StatusOK, map[string]string{
+		"message": "비밀번호가 변경되었습니다",
+	})
+}
+
 // GetMe godoc
 //
 //	@Summary		내 정보 조회

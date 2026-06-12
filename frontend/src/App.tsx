@@ -14,6 +14,8 @@ import AdminGuard from '@/components/guards/AdminGuard'
 // Auth pages
 import LoginPage from '@/routes/auth/LoginPage'
 import RegisterPage from '@/routes/auth/RegisterPage'
+import ForgotPasswordPage from '@/routes/auth/ForgotPasswordPage'
+import ResetPasswordPage from '@/routes/auth/ResetPasswordPage'
 import PendingPage from '@/routes/auth/PendingPage'
 
 // Main pages
@@ -91,6 +93,8 @@ export default function App() {
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Route>
           <Route path="/pending" element={<PendingPage />} />
 

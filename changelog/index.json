@@ -1446,5 +1446,15 @@
       "housekeeping",
       "chore"
     ]
+  },
+  {
+    "slug": "128-password-reset",
+    "title": "이메일 기반 비밀번호 찾기",
+    "date": "2026-06-12",
+    "tags": [
+      "auth",
+      "보안",
+      "이메일"
+    ]
   }
 ]

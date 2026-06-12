@@ -109,6 +109,7 @@ func main() {
 
 	// Use Cases
 	authUC := application.NewAuthUseCase(userRepo, walletRepo, cfg.JWTSecret)
+	authUC.SetEmailService(emailSvc, cfg.PublicBaseURL) // #128 비밀번호 재설정 메일
 	walletUC := application.NewWalletUseCase(walletRepo, userRepo, companyRepo)
 	classroomUC := application.NewClassroomUseCase(classroomRepo, walletRepo)
 	companyUC := application.NewCompanyUsecase(companyRepo, userRepo, walletRepo)

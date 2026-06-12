@@ -446,5 +446,23 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// #128 비밀번호 재설정 토큰. 원본 토큰은 이메일로만 전달, DB에는 SHA-256 해시만 저장.
+	passwordResetTables := []string{
+		`CREATE TABLE IF NOT EXISTS password_reset_tokens (
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id    INTEGER NOT NULL REFERENCES users(id),
+			token_hash TEXT NOT NULL UNIQUE,
+			expires_at DATETIME NOT NULL,
+			used       INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens(user_id)`,
+	}
+	for _, stmt := range passwordResetTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create password_reset_tokens tables: %w", err)
+		}
+	}
+
 	return nil
 }
