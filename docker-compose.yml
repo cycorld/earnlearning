@@ -7,9 +7,11 @@ services:
     volumes:
       - db_data:/data/db
       - upload_data:/data/uploads
+      - private_data:/data/private
     environment:
       - DB_PATH=/data/db/earnlearning.db
       - UPLOAD_PATH=/data/uploads
+      - PRIVATE_UPLOAD_PATH=/data/private
       - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
@@ -40,3 +42,4 @@ services:
 volumes:
   db_data:
   upload_data:
+  private_data:

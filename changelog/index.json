@@ -1415,5 +1415,17 @@
       "housekeeping",
       "chore"
     ]
+  },
+  {
+    "slug": "125-milestones-files-editor-grade",
+    "title": "평가지표 — 사업계획서 비공개 첨부 + 회고 에디터 + 성적/자산 percentile",
+    "date": "2026-06-12",
+    "tags": [
+      "평가지표",
+      "파일업로드",
+      "접근제어",
+      "성적",
+      "TDD"
+    ]
   }
 ]

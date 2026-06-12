@@ -25,6 +25,16 @@ export const MILESTONE_DEADLINES: Record<MilestoneType, string> = {
 export type MilestoneStatus = 'pending' | 'approved' | 'rejected'
 export type MilestoneSourceType = 'manual' | 'company' | 'grant'
 
+// #125 사업계획서 비공개 첨부 파일
+export interface MilestoneFile {
+  id: number
+  student_id: number
+  filename: string
+  mime_type: string
+  size: number
+  created_at: string
+}
+
 export interface Milestone {
   id: number
   student_id: number
@@ -33,6 +43,7 @@ export interface Milestone {
   source_ref_id?: number | null
   url: string
   content: string
+  files?: MilestoneFile[] // #125 business_plan 첨부
   status: MilestoneStatus
   admin_note: string
   approved_by?: number | null
@@ -82,6 +93,11 @@ export interface StudentProgress {
   milestones: (Milestone | null)[] // ordered by MILESTONE_TYPES; nulls allowed
   approved_count: number
   group: '' | 'A' | 'B' | 'C' | 'D'
+  // #125 성적/자산 — 본인 대시보드에서만 채워짐
+  asset_total?: number
+  group_size?: number
+  asset_rank?: number
+  asset_percentile?: number // 같은 그룹 내 상위 N% (1~100), 0 = 미산정
 }
 
 /**

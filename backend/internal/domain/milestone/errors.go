@@ -8,4 +8,6 @@ var (
 	ErrNotFound      = errors.New("평가지표를 찾을 수 없습니다")
 	ErrNotOwner      = errors.New("본인의 제출만 수정할 수 있습니다")
 	ErrAlreadyApproved = errors.New("이미 승인된 제출은 수정할 수 없습니다")
+	ErrForbidden       = errors.New("이 파일에 접근할 권한이 없습니다") // #125 파일 접근제어
+	ErrFileNotFound    = errors.New("파일을 찾을 수 없습니다")
 )

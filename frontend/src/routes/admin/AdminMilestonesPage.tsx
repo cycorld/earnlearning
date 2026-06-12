@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  FileDown,
   RefreshCw,
   X,
   XCircle,
@@ -19,6 +20,7 @@ import {
   type StudentProgress,
   aiScoreMeta,
 } from '@/lib/milestone'
+import { formatFileSize, openMilestoneFile } from '@/lib/milestoneFiles'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -268,6 +270,27 @@ function ReviewDialog({
             {milestone.content && (
               <div className="whitespace-pre-wrap rounded bg-muted/50 p-2 text-sm">
                 {milestone.content}
+              </div>
+            )}
+            {milestone.type === 'business_plan' && (milestone.files?.length ?? 0) > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">첨부 파일</p>
+                <ul className="space-y-1">
+                  {milestone.files!.map((f) => (
+                    <li key={f.id} className="flex items-center gap-2 rounded bg-muted/50 px-2 py-1 text-sm">
+                      <FileDown className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                      <button
+                        type="button"
+                        onClick={() => openMilestoneFile(f)}
+                        className="flex-1 truncate text-left hover:underline"
+                        title={f.filename}
+                      >
+                        {f.filename}
+                      </button>
+                      <span className="flex-shrink-0 text-xs text-muted-foreground">{formatFileSize(f.size)}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
             <div className="text-xs text-muted-foreground">

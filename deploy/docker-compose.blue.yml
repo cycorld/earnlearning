@@ -5,11 +5,13 @@ services:
     volumes:
       - prod_db:/data/db
       - prod_uploads:/data/uploads
+      - prod_private:/data/private
       - prod_wiki:/data/wiki
       - ../tasks:/data/tasks:ro
     environment:
       - DB_PATH=/data/db/earnlearning.db
       - UPLOAD_PATH=/data/uploads
+      - PRIVATE_UPLOAD_PATH=/data/private
       - TASKS_PATH=/data/tasks
       - LLM_WIKI_DIR=/data/wiki
     env_file: .env.prod
@@ -47,6 +49,8 @@ volumes:
     external: true
   prod_wiki:
     name: earnlearning-prod_prod_wiki
+  prod_private:
+    name: earnlearning-prod_prod_private
 
 networks:
   blue:

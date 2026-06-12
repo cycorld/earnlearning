@@ -5,11 +5,13 @@ services:
     volumes:
       - stage_db:/data/db
       - stage_uploads:/data/uploads
+      - stage_private:/data/private
       - stage_wiki:/data/wiki
       - ../tasks:/data/tasks:ro
     environment:
       - DB_PATH=/data/db/earnlearning.db
       - UPLOAD_PATH=/data/uploads
+      - PRIVATE_UPLOAD_PATH=/data/private
       - TASKS_PATH=/data/tasks
       - LLM_WIKI_DIR=/data/wiki
     env_file: .env.stage
@@ -41,6 +43,7 @@ services:
 volumes:
   stage_db:
   stage_uploads:
+  stage_private:
   stage_wiki:
 
 networks:

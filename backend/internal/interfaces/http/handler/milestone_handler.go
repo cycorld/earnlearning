@@ -118,6 +118,113 @@ func (h *MilestoneHandler) AdminListMilestones(c echo.Context) error {
 	return c.JSON(http.StatusOK, successResp(all))
 }
 
+// UploadFile godoc
+//
+//	@Summary  사업계획서 비공개 첨부 업로드 (다중 파일은 반복 호출)
+//	@Tags     Milestone
+//	@Accept   multipart/form-data
+//	@Produce  json
+//	@Security BearerAuth
+//	@Param    file formData file true "첨부 파일"
+//	@Success  201 {object} APIResponse
+//	@Router   /milestones/files [post]
+func (h *MilestoneHandler) UploadFile(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	file, err := c.FormFile("file")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("NO_FILE", "파일이 첨부되지 않았습니다"))
+	}
+	typ := milestone.Type(c.FormValue("type"))
+	if typ == "" {
+		typ = milestone.TypeBusinessPlan
+	}
+	f, err := h.uc.UploadFile(userID, typ, file, generateUUID())
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("UPLOAD_FAILED", err.Error()))
+	}
+	return c.JSON(http.StatusCreated, successResp(f))
+}
+
+// ListFiles godoc
+//
+//	@Summary  내 사업계획서 첨부 목록
+//	@Tags     Milestone
+//	@Produce  json
+//	@Security BearerAuth
+//	@Success  200 {object} APIResponse
+//	@Router   /milestones/files [get]
+func (h *MilestoneHandler) ListFiles(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	typ := milestone.Type(c.QueryParam("type"))
+	if typ == "" {
+		typ = milestone.TypeBusinessPlan
+	}
+	files, err := h.uc.ListFiles(userID, typ)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, errorResp("INTERNAL", err.Error()))
+	}
+	if files == nil {
+		files = []*milestone.FileRef{}
+	}
+	return c.JSON(http.StatusOK, successResp(files))
+}
+
+// DownloadFile godoc
+//
+//	@Summary  첨부 다운로드/열람 (업로더 본인 또는 관리자만)
+//	@Tags     Milestone
+//	@Security BearerAuth
+//	@Param    id path int true "file id"
+//	@Success  200 {file} file
+//	@Router   /milestones/files/{id} [get]
+func (h *MilestoneHandler) DownloadFile(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	isAdmin := middleware.GetUserRole(c) == "admin"
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("INVALID_ID", "유효하지 않은 ID"))
+	}
+	f, err := h.uc.GetFileForAccess(id, userID, isAdmin)
+	if err != nil {
+		switch err {
+		case milestone.ErrForbidden:
+			return c.JSON(http.StatusForbidden, errorResp("FORBIDDEN", err.Error()))
+		case milestone.ErrFileNotFound:
+			return c.JSON(http.StatusNotFound, errorResp("NOT_FOUND", err.Error()))
+		}
+		return c.JSON(http.StatusInternalServerError, errorResp("INTERNAL", err.Error()))
+	}
+	// Inline: PDF/이미지는 브라우저에서 바로 열람, 그 외는 다운로드.
+	return c.Inline(f.Path, f.Filename)
+}
+
+// DeleteFile godoc
+//
+//	@Summary  첨부 삭제 (업로더 본인 또는 관리자만)
+//	@Tags     Milestone
+//	@Security BearerAuth
+//	@Param    id path int true "file id"
+//	@Success  200 {object} APIResponse
+//	@Router   /milestones/files/{id} [delete]
+func (h *MilestoneHandler) DeleteFile(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	isAdmin := middleware.GetUserRole(c) == "admin"
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errorResp("INVALID_ID", "유효하지 않은 ID"))
+	}
+	if err := h.uc.DeleteFile(id, userID, isAdmin); err != nil {
+		switch err {
+		case milestone.ErrForbidden:
+			return c.JSON(http.StatusForbidden, errorResp("FORBIDDEN", err.Error()))
+		case milestone.ErrFileNotFound:
+			return c.JSON(http.StatusNotFound, errorResp("NOT_FOUND", err.Error()))
+		}
+		return c.JSON(http.StatusInternalServerError, errorResp("INTERNAL", err.Error()))
+	}
+	return c.JSON(http.StatusOK, successResp(map[string]string{"message": "삭제되었습니다"}))
+}
+
 // AdminApproveMilestone godoc
 //
 //	@Summary  관리자: 평가지표 승인

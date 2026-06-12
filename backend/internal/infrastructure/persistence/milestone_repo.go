@@ -185,6 +185,116 @@ func scanRowMilestone(row rowScanner) (*milestone.Milestone, error) {
 	return m, nil
 }
 
+// =============================================================================
+// #125 — business_plan 비공개 첨부 파일
+// =============================================================================
+
+func (r *MilestoneRepo) AddFile(f *milestone.FileRef) (int, error) {
+	res, err := r.db.Exec(`
+		INSERT INTO milestone_files (student_id, milestone_type, filename, stored_name, mime_type, size, path, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		f.StudentID, f.Type, f.Filename, f.StoredName, f.MimeType, f.Size, f.Path,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("add milestone file: %w", err)
+	}
+	id, _ := res.LastInsertId()
+	return int(id), nil
+}
+
+func (r *MilestoneRepo) ListFiles(studentID int, typ milestone.Type) ([]*milestone.FileRef, error) {
+	rows, err := r.db.Query(`
+		SELECT id, student_id, milestone_type, filename, stored_name, mime_type, size, path, created_at
+		FROM milestone_files
+		WHERE student_id = ? AND milestone_type = ?
+		ORDER BY created_at ASC, id ASC`, studentID, typ,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list milestone files: %w", err)
+	}
+	defer rows.Close()
+	var out []*milestone.FileRef
+	for rows.Next() {
+		f, err := scanFileRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, nil
+}
+
+func (r *MilestoneRepo) FindFileByID(id int) (*milestone.FileRef, error) {
+	row := r.db.QueryRow(`
+		SELECT id, student_id, milestone_type, filename, stored_name, mime_type, size, path, created_at
+		FROM milestone_files WHERE id = ?`, id,
+	)
+	f, err := scanFileRow(row)
+	if err == sql.ErrNoRows {
+		return nil, milestone.ErrFileNotFound
+	}
+	return f, err
+}
+
+func (r *MilestoneRepo) DeleteFile(id int) error {
+	res, err := r.db.Exec(`DELETE FROM milestone_files WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete milestone file: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return milestone.ErrFileNotFound
+	}
+	return nil
+}
+
+func scanFileRow(row rowScanner) (*milestone.FileRef, error) {
+	f := &milestone.FileRef{}
+	if err := row.Scan(
+		&f.ID, &f.StudentID, &f.Type, &f.Filename, &f.StoredName,
+		&f.MimeType, &f.Size, &f.Path, &f.CreatedAt,
+	); err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+// ListStudentAssets — 전체 승인 학생의 (승인 milestone 개수, 총자산).
+// 총자산 = Cash + StockValue + CompanyEquity − Debt (GetAssetBreakdown 와 동일 공식).
+func (r *MilestoneRepo) ListStudentAssets() ([]milestone.StudentAsset, error) {
+	rows, err := r.db.Query(`
+		SELECT u.id,
+		  (SELECT COUNT(*) FROM student_milestones sm
+		     WHERE sm.student_id = u.id AND sm.status = 'approved') AS approved_count,
+		  COALESCE((SELECT balance FROM wallets w WHERE w.user_id = u.id), 0)
+		  + COALESCE((SELECT SUM(s.shares * c.valuation / c.total_shares)
+		     FROM shareholders s JOIN companies c ON c.id = s.company_id
+		     WHERE s.user_id = u.id AND c.status = 'active'), 0)
+		  + COALESCE((SELECT SUM(cw.balance * s.shares / c.total_shares)
+		     FROM shareholders s JOIN companies c ON c.id = s.company_id
+		     JOIN company_wallets cw ON cw.company_id = c.id
+		     WHERE s.user_id = u.id AND c.status = 'active'), 0)
+		  - COALESCE((SELECT SUM(remaining) FROM loans
+		     WHERE borrower_id = u.id AND status IN ('active','overdue')), 0)
+		  AS total_asset
+		FROM users u
+		WHERE u.role = 'student' AND u.status = 'approved'`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list student assets: %w", err)
+	}
+	defer rows.Close()
+	var out []milestone.StudentAsset
+	for rows.Next() {
+		var a milestone.StudentAsset
+		if err := rows.Scan(&a.StudentID, &a.ApprovedCount, &a.TotalAsset); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, nil
+}
+
 // UpdateAIScore — 회고 에세이 평가 결과 저장.
 func (r *MilestoneRepo) UpdateAIScore(id int, score int, reasoning, signalsJSON string) error {
 	res, err := r.db.Exec(`
