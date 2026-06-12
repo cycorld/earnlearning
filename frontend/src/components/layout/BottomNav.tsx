@@ -16,6 +16,7 @@ import {
   FileCheck,
   MessageSquare,
   Sparkles,
+  Award,
 } from 'lucide-react'
 import {
   Sheet,
@@ -46,6 +47,7 @@ export default function BottomNav() {
   const [sheetOpen, setSheetOpen] = useState(false)
 
   const moreItems: NavItem[] = [
+    { label: '평가지표', icon: <Award className="h-5 w-5" />, path: '/milestones' },
     { label: '메시지', icon: <MessageSquare className="h-5 w-5" />, path: '/messages' },
     { label: '정부과제', icon: <FileCheck className="h-5 w-5" />, path: '/grant' },
     { label: '투자', icon: <TrendingUp className="h-5 w-5" />, path: '/invest' },
