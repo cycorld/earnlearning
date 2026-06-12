@@ -25,6 +25,7 @@ const (
 	TxCompanyTransfer TxType = "company_transfer"
 	TxLikeReward      TxType = "like_reward"
 	TxCommentReward   TxType = "comment_reward"
+	TxPostReward      TxType = "post_reward"
 	// Company liquidation (#023)
 	TxLiquidationPayout TxType = "liquidation_payout"
 	TxLiquidationTax    TxType = "liquidation_tax"

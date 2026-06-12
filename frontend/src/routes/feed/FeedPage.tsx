@@ -249,7 +249,7 @@ export default function FeedPage() {
         post_type: 'normal',
         tags: JSON.stringify(tags),
       })
-      toast.success('게시물이 작성되었습니다.')
+      toast.success('게시물이 작성되었습니다. 작성 보상 +10,000원이 지급되었습니다!')
       setNewPostContent('')
       setNewPostTags('')
       setPostChannelId(null)
@@ -361,7 +361,7 @@ export default function FeedPage() {
       // Check if comment is on someone else's post → reward toast
       const post = posts.find((p) => p.id === postId)
       if (post && post.author?.id !== user?.id) {
-        toast.success('댓글 보상 +100원이 글쓴이에게 지급되었습니다')
+        toast.success('댓글 보상 +1,000원이 글쓴이에게 지급되었습니다')
       }
       setPosts((prev) =>
         prev.map((p) =>

@@ -7,9 +7,9 @@ import (
 )
 
 // TestEngagementReward tests the like/comment reward system.
-// Rules:
-// - Like: 글쓴이에게 10원, 취소 시 10원 회수
-// - Comment: 글쓴이에게 100원, 삭제 시 100원 회수
+// Rules (#123):
+// - Like: 글쓴이에게 500원, 취소 시 500원 회수
+// - Comment: 글쓴이에게 1000원, 삭제 시 1000원 회수
 // - Self like/comment: 보상 없음
 func TestEngagementReward(t *testing.T) {
 	ts := setupTestServer(t)
@@ -107,7 +107,7 @@ func TestEngagementReward(t *testing.T) {
 
 	authorBalanceBefore := getBalance(authorToken)
 
-	t.Run("Like by other user rewards author 10원", func(t *testing.T) {
+	t.Run("Like by other user rewards author 500원", func(t *testing.T) {
 		r := ts.post(fmt.Sprintf("/api/posts/%d/like", postID), nil, readerToken)
 		if !r.Success {
 			t.Fatalf("like failed: %v", r.Error)
@@ -121,14 +121,14 @@ func TestEngagementReward(t *testing.T) {
 		if !data.Liked {
 			t.Error("expected liked=true")
 		}
-		if data.Reward != 10 {
-			t.Errorf("expected reward=10, got %d", data.Reward)
+		if data.Reward != 500 {
+			t.Errorf("expected reward=500, got %d", data.Reward)
 		}
 
-		// Check author balance increased by 10
+		// Check author balance increased by 500
 		newBalance := getBalance(authorToken)
-		if newBalance != authorBalanceBefore+10 {
-			t.Errorf("expected author balance %d, got %d", authorBalanceBefore+10, newBalance)
+		if newBalance != authorBalanceBefore+500 {
+			t.Errorf("expected author balance %d, got %d", authorBalanceBefore+500, newBalance)
 		}
 
 		// Check transaction record
@@ -136,12 +136,12 @@ func TestEngagementReward(t *testing.T) {
 		if len(txs) == 0 {
 			t.Fatal("expected like_reward transaction")
 		}
-		if txs[0].Amount != 10 {
-			t.Errorf("expected tx amount 10, got %d", txs[0].Amount)
+		if txs[0].Amount != 500 {
+			t.Errorf("expected tx amount 500, got %d", txs[0].Amount)
 		}
 	})
 
-	t.Run("Unlike deducts 10원 from author", func(t *testing.T) {
+	t.Run("Unlike deducts 500원 from author", func(t *testing.T) {
 		balanceBefore := getBalance(authorToken)
 
 		// Toggle like again (unlike)
@@ -158,13 +158,13 @@ func TestEngagementReward(t *testing.T) {
 		if data.Liked {
 			t.Error("expected liked=false (unlike)")
 		}
-		if data.Reward != -10 {
-			t.Errorf("expected reward=-10, got %d", data.Reward)
+		if data.Reward != -500 {
+			t.Errorf("expected reward=-500, got %d", data.Reward)
 		}
 
 		newBalance := getBalance(authorToken)
-		if newBalance != balanceBefore-10 {
-			t.Errorf("expected balance %d, got %d", balanceBefore-10, newBalance)
+		if newBalance != balanceBefore-500 {
+			t.Errorf("expected balance %d, got %d", balanceBefore-500, newBalance)
 		}
 	})
 
@@ -194,7 +194,7 @@ func TestEngagementReward(t *testing.T) {
 		ts.post(fmt.Sprintf("/api/posts/%d/like", postID), nil, authorToken)
 	})
 
-	t.Run("Comment by other user rewards author 100원", func(t *testing.T) {
+	t.Run("Comment by other user rewards author 1000원", func(t *testing.T) {
 		balanceBefore := getBalance(authorToken)
 
 		r := ts.post(fmt.Sprintf("/api/posts/%d/comments", postID), map[string]string{
@@ -205,8 +205,8 @@ func TestEngagementReward(t *testing.T) {
 		}
 
 		newBalance := getBalance(authorToken)
-		if newBalance != balanceBefore+100 {
-			t.Errorf("expected author balance %d, got %d", balanceBefore+100, newBalance)
+		if newBalance != balanceBefore+1000 {
+			t.Errorf("expected author balance %d, got %d", balanceBefore+1000, newBalance)
 		}
 
 		// Check transaction
@@ -214,8 +214,8 @@ func TestEngagementReward(t *testing.T) {
 		if len(txs) == 0 {
 			t.Fatal("expected comment_reward transaction")
 		}
-		if txs[0].Amount != 100 {
-			t.Errorf("expected tx amount 100, got %d", txs[0].Amount)
+		if txs[0].Amount != 1000 {
+			t.Errorf("expected tx amount 1000, got %d", txs[0].Amount)
 		}
 	})
 
@@ -235,7 +235,7 @@ func TestEngagementReward(t *testing.T) {
 		}
 	})
 
-	t.Run("Delete comment deducts 100원 from author", func(t *testing.T) {
+	t.Run("Delete comment deducts 1000원 from author", func(t *testing.T) {
 		// Reader writes another comment
 		r := ts.post(fmt.Sprintf("/api/posts/%d/comments", postID), map[string]string{
 			"content": "삭제할 댓글입니다",
@@ -257,8 +257,8 @@ func TestEngagementReward(t *testing.T) {
 		}
 
 		newBalance := getBalance(authorToken)
-		if newBalance != balanceBefore-100 {
-			t.Errorf("expected balance %d after comment delete, got %d", balanceBefore-100, newBalance)
+		if newBalance != balanceBefore-1000 {
+			t.Errorf("expected balance %d after comment delete, got %d", balanceBefore-1000, newBalance)
 		}
 	})
 

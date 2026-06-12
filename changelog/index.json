@@ -1394,5 +1394,17 @@
       "housekeeping",
       "chore"
     ]
+  },
+  {
+    "slug": "123-reward-amount-update",
+    "title": "보상 금액 상향 + 게시글 작성 보상 신설",
+    "date": "2026-06-12",
+    "tags": [
+      "보상",
+      "가상경제",
+      "게시글",
+      "어뷰징방지",
+      "TDD"
+    ]
   }
 ]
