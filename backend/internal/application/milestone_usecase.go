@@ -23,6 +23,12 @@ type MilestoneUseCase struct {
 	notifUC     *NotificationUseCase
 	llm         ChatLLMClient // #120 optional — nil 이면 LLM 평가 스킵, heuristic 만.
 	llmModel    string        // 기본 "qwen-chat".
+	privateUploadPath string  // #125 business_plan 비공개 첨부 저장 경로 (static 서빙 X).
+}
+
+// SetFileStorage — #125 비공개 첨부 파일 저장 경로 주입 (main.go).
+func (uc *MilestoneUseCase) SetFileStorage(path string) {
+	uc.privateUploadPath = path
 }
 
 func NewMilestoneUseCase(
@@ -234,7 +240,10 @@ func (uc *MilestoneUseCase) ListForStudent(studentID int) (*milestone.StudentPro
 	if err != nil {
 		return nil, err
 	}
-	return buildProgress(u, all), nil
+	p := buildProgress(u, all)
+	uc.attachBusinessPlanFiles(p)
+	uc.computeAssetPercentile(p)
+	return p, nil
 }
 
 // ListAll — 관리자용. 모든 학생 + 각자 4개 milestone 매트릭스.
@@ -253,7 +262,9 @@ func (uc *MilestoneUseCase) ListAll() ([]*milestone.StudentProgress, error) {
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, buildProgress(u, ms))
+		p := buildProgress(u, ms)
+		uc.attachBusinessPlanFiles(p) // admin 이 첨부 파일 확인/다운로드 가능하도록
+		out = append(out, p)
 	}
 	return out, nil
 }

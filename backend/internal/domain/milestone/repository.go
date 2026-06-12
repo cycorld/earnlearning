@@ -21,4 +21,13 @@ type Repository interface {
 
 	// #120 회고 에세이 AI 평가 결과 저장.
 	UpdateAIScore(id int, score int, reasoning, signalsJSON string) error
+
+	// #125 — business_plan 비공개 첨부 파일.
+	AddFile(f *FileRef) (int, error)
+	ListFiles(studentID int, typ Type) ([]*FileRef, error)
+	FindFileByID(id int) (*FileRef, error)
+	DeleteFile(id int) error
+
+	// #125 — percentile 산정용: 전체 승인 학생의 (승인개수, 총자산).
+	ListStudentAssets() ([]StudentAsset, error)
 }

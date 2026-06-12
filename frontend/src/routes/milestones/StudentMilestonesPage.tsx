@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -6,17 +6,24 @@ import {
   Bot,
   CheckCircle2,
   Clock,
+  Download,
   ExternalLink,
   FileText,
+  Loader2,
   Mic,
+  Paperclip,
   Rocket,
   Send,
   Sparkles,
+  Trash2,
+  TrendingUp,
+  Upload,
   XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api } from '@/lib/api'
+import { formatFileSize, openMilestoneFile } from '@/lib/milestoneFiles'
 import {
   GROUP_DESCRIPTIONS,
   MILESTONE_DEADLINES,
@@ -24,6 +31,7 @@ import {
   MILESTONE_TYPES,
   type EssayScoreResult,
   type Milestone,
+  type MilestoneFile,
   type MilestoneType,
   type StudentProgress,
   aiScoreMeta,
@@ -33,6 +41,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -108,6 +117,8 @@ export default function StudentMilestonesPage() {
         ))}
       </div>
 
+      <GradeAssetCard data={data} />
+
       <p className="text-xs text-muted-foreground">
         ℹ️ MVP는 회사의 service_url 또는 정부과제 응모 본문에서 자동 집계됩니다.
         AI Studio · Claude · ChatGPT · Gemini · localhost 등 연습용 URL은 제외됩니다.
@@ -150,6 +161,61 @@ function ProgressSummary({ data }: { data: StudentProgress }) {
         >
           {group ? `${group} 그룹` : '미진입'}
         </Badge>
+      </CardContent>
+    </Card>
+  )
+}
+
+const GRADE_COLOR: Record<string, string> = {
+  A: 'bg-emerald-500 text-white',
+  B: 'bg-blue-500 text-white',
+  C: 'bg-amber-500 text-white',
+  D: 'bg-orange-500 text-white',
+  '': 'bg-muted text-muted-foreground',
+}
+
+// #125 성적 평가 — 그레이드(A/B/C/D) + 같은 그룹 내 자산 상위 %.
+function GradeAssetCard({ data }: { data: StudentProgress }) {
+  const grade = data.group || ''
+  const pct = data.asset_percentile ?? 0
+  const size = data.group_size ?? 0
+  const rank = data.asset_rank ?? 0
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Award className="h-4 w-4 text-primary" /> 성적 평가
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs text-muted-foreground">그레이드 (승인 평가지표 기준)</p>
+            <p className="text-sm">{GROUP_DESCRIPTIONS[grade]}</p>
+          </div>
+          <div
+            className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl text-2xl font-bold ${GRADE_COLOR[grade]}`}
+          >
+            {grade || '–'}
+          </div>
+        </div>
+        <div className="rounded-md bg-muted/50 p-3">
+          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+            <TrendingUp className="h-3.5 w-3.5" /> 자산가치 ({grade ? `${grade} 그룹` : '미진입 그룹'} 내 비교)
+          </p>
+          {size <= 0 ? (
+            <p className="mt-0.5 text-sm text-muted-foreground">산정할 그룹원이 없습니다.</p>
+          ) : size === 1 ? (
+            <p className="mt-0.5 text-sm">그룹 내 유일한 멤버입니다.</p>
+          ) : (
+            <p className="mt-0.5 text-lg font-bold">
+              상위 {pct}%{' '}
+              <span className="text-xs font-normal text-muted-foreground">
+                ({size}명 중 {rank}위)
+              </span>
+            </p>
+          )}
+        </div>
       </CardContent>
     </Card>
   )
@@ -201,8 +267,120 @@ function MilestoneCard({
             }}
           />
         )}
+        {type === 'business_plan' && <BusinessPlanFiles />}
       </CardContent>
     </Card>
+  )
+}
+
+// BusinessPlanFiles — 사업계획서 비공개 첨부 (#125). 본인 + 관리자만 접근.
+function BusinessPlanFiles() {
+  const [files, setFiles] = useState<MilestoneFile[]>([])
+  const [uploading, setUploading] = useState(false)
+
+  const load = useCallback(() => {
+    api
+      .get<MilestoneFile[]>('/milestones/files')
+      .then((f) => setFiles(f ?? []))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const onPick = async (list: FileList | null) => {
+    if (!list || list.length === 0) return
+    setUploading(true)
+    let ok = 0
+    for (const file of Array.from(list)) {
+      try {
+        const fd = new FormData()
+        fd.append('file', file)
+        await api.post('/milestones/files', fd)
+        ok++
+      } catch (e) {
+        toast.error(`${file.name}: ${e instanceof Error ? e.message : '업로드 실패'}`)
+      }
+    }
+    setUploading(false)
+    if (ok > 0) {
+      toast.success(`${ok}개 파일을 첨부했습니다.`)
+      load()
+    }
+  }
+
+  const remove = async (id: number) => {
+    try {
+      await api.del(`/milestones/files/${id}`)
+      load()
+    } catch {
+      toast.error('삭제에 실패했습니다.')
+    }
+  }
+
+  return (
+    <div className="rounded-md border border-dashed bg-muted/30 p-2">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+          <Paperclip className="h-3.5 w-3.5" /> 첨부 파일 (본인·교수만 열람)
+        </span>
+        <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted">
+          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+          파일 추가
+          <input
+            type="file"
+            multiple
+            className="hidden"
+            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.hwp,.hwpx,.txt,.md,.csv,.zip,.png,.jpg,.jpeg,.gif,.webp"
+            disabled={uploading}
+            onChange={(e) => {
+              onPick(e.target.files)
+              e.target.value = ''
+            }}
+          />
+        </label>
+      </div>
+      {files.length === 0 ? (
+        <p className="text-xs text-muted-foreground">아직 첨부한 파일이 없습니다. (PDF·DOCX·PPTX·HWP 등, 최대 20MB)</p>
+      ) : (
+        <ul className="space-y-1">
+          {files.map((f) => (
+            <li
+              key={f.id}
+              className="flex items-center gap-2 rounded-md bg-background px-2 py-1 text-xs"
+            >
+              <FileText className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+              <button
+                type="button"
+                onClick={() => openMilestoneFile(f)}
+                className="flex-1 truncate text-left hover:underline"
+                title={f.filename}
+              >
+                {f.filename}
+              </button>
+              <span className="flex-shrink-0 text-muted-foreground">{formatFileSize(f.size)}</span>
+              <button
+                type="button"
+                onClick={() => openMilestoneFile(f)}
+                className="rounded p-0.5 hover:bg-muted"
+                title="열기/다운로드"
+              >
+                <Download className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => remove(f.id)}
+                className="rounded p-0.5 text-destructive hover:bg-destructive/10"
+                title="삭제"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
@@ -410,21 +588,27 @@ function SubmitForm({
           <label className="text-xs text-muted-foreground">
             {isEssay ? '회고 에세이 본문' : '본문'}
           </label>
-          <Textarea
-            value={content}
-            onChange={(e) => {
-              setContent(e.target.value)
-              setScoreResult(null) // 텍스트 바뀌면 점수 무효화
-            }}
-            placeholder={
-              isEssay
-                ? '"한 학기 동안 어떤 경험을 했고, 무엇을 배웠고, 어떻게 변했는지" 본인 말투로 솔직하게 써주세요. 800자 이상 권장.'
-                : type === 'business_plan'
-                  ? '사업계획서 요약/링크'
-                  : '본문'
-            }
-            rows={isEssay ? 12 : 4}
-          />
+          {isEssay ? (
+            <MarkdownEditor
+              value={content}
+              onChange={(v) => {
+                setContent(v)
+                setScoreResult(null) // 텍스트 바뀌면 점수 무효화
+              }}
+              rows={18}
+              placeholder='"한 학기 동안 어떤 경험을 했고, 무엇을 배웠고, 어떻게 변했는지" 본인 말투로 솔직하게 써주세요. 800자 이상 권장.'
+            />
+          ) : (
+            <Textarea
+              value={content}
+              onChange={(e) => {
+                setContent(e.target.value)
+                setScoreResult(null)
+              }}
+              placeholder={type === 'business_plan' ? '사업계획서 요약 또는 참고 링크 (파일은 아래에서 첨부)' : '본문'}
+              rows={4}
+            />
+          )}
           {isEssay && (
             <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
               <span className={charCount < minChars ? 'text-amber-600' : 'text-emerald-600'}>

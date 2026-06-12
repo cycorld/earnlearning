@@ -247,6 +247,11 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		approved.GET("/milestones/mine", h.Milestone.GetMyMilestones)
 		approved.POST("/milestones", h.Milestone.SubmitMilestone)
 		approved.POST("/milestones/essay/score", h.Milestone.ScoreEssay)
+		// #125 사업계획서 비공개 첨부 (owner+admin 만 접근)
+		approved.POST("/milestones/files", h.Milestone.UploadFile, middleware.RequireScope("write:posts"))
+		approved.GET("/milestones/files", h.Milestone.ListFiles, middleware.RequireScope("read:posts"))
+		approved.GET("/milestones/files/:id", h.Milestone.DownloadFile, middleware.RequireScope("read:posts"))
+		approved.DELETE("/milestones/files/:id", h.Milestone.DeleteFile, middleware.RequireScope("write:posts"))
 	}
 
 	// Notifications (OAuth: read:notifications)

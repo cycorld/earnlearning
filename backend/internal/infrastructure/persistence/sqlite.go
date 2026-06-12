@@ -424,5 +424,27 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// #125 business_plan 비공개 첨부 파일. data/private_uploads/ 에 저장 (static 서빙 X).
+	// 접근은 업로더 본인 + 관리자만 (인증 다운로드 엔드포인트 경유).
+	milestoneFileTables := []string{
+		`CREATE TABLE IF NOT EXISTS milestone_files (
+			id             INTEGER PRIMARY KEY AUTOINCREMENT,
+			student_id     INTEGER NOT NULL REFERENCES users(id),
+			milestone_type TEXT NOT NULL DEFAULT 'business_plan',
+			filename       TEXT NOT NULL,
+			stored_name    TEXT NOT NULL,
+			mime_type      TEXT NOT NULL DEFAULT '',
+			size           INTEGER NOT NULL DEFAULT 0,
+			path           TEXT NOT NULL,
+			created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_milestone_files_student ON milestone_files(student_id, milestone_type)`,
+	}
+	for _, stmt := range milestoneFileTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create milestone_files tables: %w", err)
+		}
+	}
+
 	return nil
 }

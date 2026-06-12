@@ -6,6 +6,7 @@ type Config struct {
 	Port            string
 	DBPath          string
 	UploadPath      string
+	PrivateUploadPath string // #125 비공개 첨부 (static 서빙 안 함)
 	JWTSecret       string
 	AdminEmail      string
 	AdminPassword   string
@@ -32,6 +33,7 @@ func Load() *Config {
 		Port:            getEnv("PORT", "8080"),
 		DBPath:          getEnv("DB_PATH", "./data/earnlearning.db"),
 		UploadPath:      getEnv("UPLOAD_PATH", "./data/uploads"),
+		PrivateUploadPath: getEnv("PRIVATE_UPLOAD_PATH", "./data/private_uploads"),
 		JWTSecret:       getEnv("JWT_SECRET", "dev-secret-change-in-production"),
 		AdminEmail:      getEnv("ADMIN_EMAIL", "admin@example.com"),
 		AdminPassword:   getEnv("ADMIN_PASSWORD", "change-this"),

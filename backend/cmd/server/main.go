@@ -66,8 +66,9 @@ func main() {
 		}
 	}
 
-	// Ensure upload directory
+	// Ensure upload directories (private dir is NOT static-served — #125)
 	os.MkdirAll(cfg.UploadPath, 0755)
+	os.MkdirAll(cfg.PrivateUploadPath, 0755)
 
 	// Repositories
 	userRepo := persistence.NewUserRepo(db)
@@ -130,6 +131,7 @@ func main() {
 	// #119 학생 4대 평가지표
 	milestoneRepo := persistence.NewMilestoneRepo(db)
 	milestoneUC := application.NewMilestoneUseCase(milestoneRepo, userRepo, companyRepo, grantRepo, notifUC)
+	milestoneUC.SetFileStorage(cfg.PrivateUploadPath) // #125 비공개 첨부 저장 경로
 
 	// Task repo (reads tasks/ markdown files)
 	tasksPath := os.Getenv("TASKS_PATH")

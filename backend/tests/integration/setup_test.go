@@ -105,6 +105,7 @@ func setupTestServer(t *testing.T) *testServer {
 	// #119 평가지표 milestones
 	milestoneRepo := persistence.NewMilestoneRepo(db)
 	milestoneUC := application.NewMilestoneUseCase(milestoneRepo, userRepo, companyRepo, grantRepo, notifUC)
+	milestoneUC.SetFileStorage(testUploadPath + "/private") // #125 비공개 첨부 (테스트용)
 
 	// DM
 	dmRepo := persistence.NewDMRepo(db)

@@ -49,6 +49,27 @@ func (s Status) Valid() bool {
 	return false
 }
 
+// FileRef — business_plan 비공개 첨부 파일 메타 (#125).
+// 업로더 본인 + 관리자만 접근 가능. data/private_uploads/ 에 저장 (static 서빙 X).
+type FileRef struct {
+	ID         int       `json:"id"`
+	StudentID  int       `json:"student_id"`
+	Type       Type      `json:"-"`
+	Filename   string    `json:"filename"`     // 원본 파일명
+	StoredName string    `json:"-"`            // uuid.ext (디스크 저장명)
+	MimeType   string    `json:"mime_type"`
+	Size       int64     `json:"size"`
+	Path       string    `json:"-"`            // 디스크 전체 경로 (스트리밍용, JSON 비노출)
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// StudentAsset — percentile 산정용 (학생별 승인개수 + 총자산).
+type StudentAsset struct {
+	StudentID     int
+	ApprovedCount int
+	TotalAsset    int
+}
+
 // Milestone — 학생 1명의 4가지 평가지표 중 하나.
 // UNIQUE(student_id, milestone_type) — 학생별 각 type 1개만.
 type Milestone struct {
@@ -59,6 +80,7 @@ type Milestone struct {
 	SourceRefID   *int       `json:"source_ref_id,omitempty"` // company_id / grant_application_id
 	URL           string     `json:"url"`                      // MVP 의 경우 자동 detect 된 URL
 	Content       string     `json:"content"`                  // 사업계획서/회고 본문 또는 부가 설명
+	Files         []*FileRef `json:"files,omitempty"`          // business_plan 비공개 첨부 (#125)
 	Status        Status     `json:"status"`
 	AdminNote     string     `json:"admin_note"`
 	ApprovedBy    *int       `json:"approved_by,omitempty"`
@@ -82,10 +104,15 @@ type StudentRef struct {
 
 // StudentProgress — 학생 1명 + 4개 milestone (대시보드 응답)
 type StudentProgress struct {
-	Student        StudentRef   `json:"student"`
-	Milestones     []*Milestone `json:"milestones"`     // ordered by AllTypes
-	ApprovedCount  int          `json:"approved_count"` // 0~4
-	Group          string       `json:"group"`          // "A" / "B" / "C" / "D" / ""
+	Student       StudentRef   `json:"student"`
+	Milestones    []*Milestone `json:"milestones"`     // ordered by AllTypes
+	ApprovedCount int          `json:"approved_count"` // 0~4
+	Group         string       `json:"group"`          // "A" / "B" / "C" / "D" / "" (= 성적 그레이드)
+	// #125 성적/자산 — 본인 대시보드(ListForStudent)에서만 채워짐.
+	AssetTotal     int `json:"asset_total"`      // 본인 총자산 (Cash+Stock+CompanyEquity−Debt)
+	GroupSize      int `json:"group_size"`       // 같은 그룹(A/B/C/D) 인원 수
+	AssetRank      int `json:"asset_rank"`       // 같은 그룹 내 자산 순위 (1 = 최상위), 0 = 미산정
+	AssetPercentile int `json:"asset_percentile"` // 같은 그룹 내 상위 N% (1~100), 0 = 미산정
 }
 
 // ClassifyGroup — approved 개수 기반 그룹.
