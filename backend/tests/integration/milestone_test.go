@@ -40,6 +40,7 @@ type myMilestonesResp struct {
 		Content    string `json:"content"`
 		Status     string `json:"status"`
 		SourceType string `json:"source_type"`
+		AdminNote  string `json:"admin_note"`
 	} `json:"milestones"`
 	ApprovedCount int    `json:"approved_count"`
 	Group         string `json:"group"`
@@ -65,6 +66,7 @@ func findMilestone(t *testing.T, resp *myMilestonesResp, typ string) *struct {
 	Content    string `json:"content"`
 	Status     string `json:"status"`
 	SourceType string `json:"source_type"`
+	AdminNote  string `json:"admin_note"`
 } {
 	t.Helper()
 	for i := range resp.Milestones {

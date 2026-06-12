@@ -138,14 +138,24 @@ func (uc *MilestoneUseCase) SyncAuto(studentID int) ([]*milestone.Milestone, err
 		}
 		cand := candidates[i]
 
-		// 이미 approved 상태면 자동 갱신 스킵 (admin이 다시 검토하지 않도록).
 		existing, err := uc.repo.FindByStudentAndType(studentID, t)
 		if err != nil {
 			return nil, err
 		}
-		if existing != nil && existing.Status == milestone.StatusApproved {
-			// 같은 URL이면 그대로, 다른 URL이면 그래도 유지 (승인 보호).
-			continue
+		if existing != nil {
+			// 이미 approved 상태면 자동 갱신 스킵 (admin이 다시 검토하지 않도록).
+			if existing.Status == milestone.StatusApproved {
+				continue
+			}
+			// 학생이 직접 제출/수정한 항목은 자동 동기화로 덮어쓰지 않음 (#130).
+			if existing.SourceType == milestone.SourceManual {
+				continue
+			}
+			// URL·source 가 그대로면 재 Upsert 스킵 — rejected 상태와
+			// admin_note 가 매 조회마다 리셋되는 것 방지 (#130).
+			if existing.URL == cand.URL && existing.SourceType == cand.SourceType {
+				continue
+			}
 		}
 
 		m := &milestone.Milestone{
