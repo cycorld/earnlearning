@@ -1456,5 +1456,14 @@
       "보안",
       "이메일"
     ]
+  },
+  {
+    "slug": "129-housekeeping-128",
+    "title": "Housekeeping — #128 비밀번호 찾기 done 이동",
+    "date": "2026-06-12",
+    "tags": [
+      "housekeeping",
+      "chore"
+    ]
   }
 ]
