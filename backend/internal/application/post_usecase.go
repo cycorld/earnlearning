@@ -156,6 +156,11 @@ func (uc *PostUsecase) CreatePost(userID int, role string, input CreatePostInput
 	}
 	p.ID = postID
 
+	// 게시글 작성 보상: 작성자에게 PostRewardAmount 지급 (#123)
+	// (과제는 CreateAssignment, 자동 게시글은 repo 직접 호출 경로라 보상 제외)
+	_ = uc.creditOrDebitUser(userID, PostRewardAmount, true,
+		wallet.TxPostReward, "게시글 작성 보상", "post", postID)
+
 	return p, nil
 }
 
@@ -218,12 +223,21 @@ func (uc *PostUsecase) DeletePost(postID, userID int, role string) error {
 	if p.AuthorID != userID && role != "admin" {
 		return fmt.Errorf("본인이 작성한 게시글만 삭제할 수 있습니다")
 	}
-	return uc.postRepo.DeletePost(postID)
+	if err := uc.postRepo.DeletePost(postID); err != nil {
+		return err
+	}
+
+	// 게시글 작성 보상 회수: 작성자/관리자 삭제 모두 작성자 지갑에서 회수 (#123, 어뷰징 방지)
+	_ = uc.creditOrDebitUser(p.AuthorID, PostRewardAmount, false,
+		wallet.TxPostReward, "게시글 삭제 보상 회수", "post", postID)
+
+	return nil
 }
 
 const (
-	LikeRewardAmount   = 10
-	CommentRewardAmount = 100
+	LikeRewardAmount    = 500
+	CommentRewardAmount = 1000
+	PostRewardAmount    = 10000
 )
 
 // LikePostResult contains the like toggle result and reward info.
