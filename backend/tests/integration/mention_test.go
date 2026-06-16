@@ -77,7 +77,7 @@ func TestUserSearch(t *testing.T) {
 	searcherToken := ts.registerAndApprove("searcher@ewha.ac.kr", "password123", "검색러", "2024060")
 	ts.registerAndApprove("target1@ewha.ac.kr", "password123", "김멘션", "2024061")
 	ts.registerAndApprove("target2@ewha.ac.kr", "password123", "김멘션", "2024062") // 동명이인
-	ts.register("pending@ewha.ac.kr", "password123", "김펜딩", "2024063")             // 미승인
+	ts.register("pending@ewha.ac.kr", "password123", "김펜딩", "2024063")           // 미승인
 
 	// 동명이인 구분용 전공 포함 가입 (#132 — 드롭다운에 이름+전공 표시)
 	regResp := ts.post("/api/auth/register", map[string]string{
@@ -390,6 +390,76 @@ func TestNotificationTypeFilter(t *testing.T) {
 		}
 		if !types["mention"] || !types["new_comment"] {
 			t.Errorf("전체 조회에 mention+new_comment 둘 다 있어야 합니다: %v", types)
+		}
+	})
+}
+
+// TestUpdatePostMentionNotification — #134
+// 게시글 수정 시 "새로 추가된" 멘션만 알림. 기존 멘션 재알림 금지(수정 스팸 방지).
+func TestUpdatePostMentionNotification(t *testing.T) {
+	ts := setupTestServer(t)
+	channelID, writerToken, targetToken, targetID := setupMentionFixture(t, ts)
+
+	// 수정 때 새로 추가될 두 번째 멘션 대상 (채널 가입 불필요 — 멘션 알림은 유저 존재만 검증)
+	target2Token := ts.registerAndApprove("target2@ewha.ac.kr", "password123", "멘션대상2", "2024072")
+	target2ID := ts.myID(target2Token)
+
+	// 글 생성: targetA만 멘션
+	postResp := ts.post(fmt.Sprintf("/api/channels/%d/posts", channelID), map[string]string{
+		"content": fmt.Sprintf("처음 글 @[멘션대상](user:%d)", targetID),
+	}, writerToken)
+	if !postResp.Success {
+		t.Fatalf("create post failed: %v", postResp.Error)
+	}
+	var postData struct {
+		ID int `json:"id"`
+	}
+	json.Unmarshal(postResp.Data, &postData)
+
+	mentionCount := func(token string) int {
+		n := 0
+		for _, x := range ts.notifs(token, "type=mention&limit=50") {
+			if x.ReferenceID == postData.ID {
+				n++
+			}
+		}
+		return n
+	}
+
+	// 생성 직후 targetA 멘션 알림 1건 (#132 기존 동작)
+	if c := mentionCount(targetToken); c != 1 {
+		t.Fatalf("생성 직후 targetA 멘션 알림 1건이어야 함, got %d", c)
+	}
+
+	// 수정: targetA 유지 + targetB 신규 추가
+	updResp := ts.put(fmt.Sprintf("/api/posts/%d", postData.ID), map[string]string{
+		"content": fmt.Sprintf("수정 글 @[멘션대상](user:%d) @[멘션대상2](user:%d)", targetID, target2ID),
+	}, writerToken)
+	if !updResp.Success {
+		t.Fatalf("update post failed: %v", updResp.Error)
+	}
+
+	t.Run("수정으로 추가된 멘션(targetB) → 알림 1건", func(t *testing.T) {
+		if c := mentionCount(target2Token); c != 1 {
+			t.Errorf("신규 멘션 알림 1건이어야 함, got %d", c)
+		}
+	})
+
+	t.Run("구본문에 이미 있던 멘션(targetA) → 재알림 없음", func(t *testing.T) {
+		if c := mentionCount(targetToken); c != 1 {
+			t.Errorf("기존 멘션은 재알림 금지(여전히 1건이어야 함), got %d", c)
+		}
+	})
+
+	t.Run("동일 본문 재저장 → 신규 알림 없음", func(t *testing.T) {
+		ts.put(fmt.Sprintf("/api/posts/%d", postData.ID), map[string]string{
+			"content": fmt.Sprintf("수정 글 @[멘션대상](user:%d) @[멘션대상2](user:%d)", targetID, target2ID),
+		}, writerToken)
+		if c := mentionCount(targetToken); c != 1 {
+			t.Errorf("targetA 재알림 금지, got %d", c)
+		}
+		if c := mentionCount(target2Token); c != 1 {
+			t.Errorf("targetB 재알림 금지, got %d", c)
 		}
 	})
 }

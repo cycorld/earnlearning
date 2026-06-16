@@ -174,7 +174,7 @@ func (uc *PostUsecase) CreatePost(userID int, role string, input CreatePostInput
 		wallet.TxPostReward, "게시글 작성 보상", "post", postID)
 
 	// 게시글 본문 @멘션 알림 (#132)
-	uc.notifyMentions(input.Content, userID, postID, "")
+	uc.notifyMentions(input.Content, userID, postID, "", nil)
 
 	return p, nil
 }
@@ -222,9 +222,18 @@ func (uc *PostUsecase) UpdatePost(postID, userID int, role string, input UpdateP
 	}
 	tagsJSON, _ := json.Marshal(tags)
 
+	// 수정 전 본문의 멘션 — 신규 추가된 멘션만 알림 보내기 위한 exclude set (#134)
+	existing := make(map[int]bool)
+	for _, id := range extractMentions(p.Content) {
+		existing[id] = true
+	}
+
 	if err := uc.postRepo.UpdatePost(postID, input.Content, string(tagsJSON)); err != nil {
 		return nil, fmt.Errorf("게시글 수정 실패: %w", err)
 	}
+
+	// 수정으로 새로 추가된 @멘션만 알림 (구본문에 이미 있던 멘션은 제외 = 수정 스팸 방지) (#134)
+	uc.notifyMentions(input.Content, userID, postID, "", existing)
 
 	// Re-fetch to return updated post
 	return uc.postRepo.FindPostByID(postID)
@@ -378,7 +387,7 @@ func (uc *PostUsecase) CreateComment(userID int, input CreateCommentInput) (*pos
 
 	// 댓글 본문 @멘션 알림 (#132) — anchor로 댓글 위치 전달
 	mentioned := uc.notifyMentions(input.Content, userID, input.PostID,
-		fmt.Sprintf("comment-%d", commentID))
+		fmt.Sprintf("comment-%d", commentID), nil)
 
 	// Notify post author about the new comment (skip if self-comment)
 	if p.AuthorID != userID {
@@ -652,8 +661,10 @@ func extractMentions(content string) []int {
 
 // notifyMentions sends mention notifications to users mentioned in content (#132).
 // anchor: 댓글 멘션이면 "comment-<id>", 게시글 멘션이면 "".
+// exclude: 이미 알림 보낸(또는 보낼 필요 없는) 유저 ID 집합 — 게시글 수정 시 구본문에
+// 이미 있던 멘션 재알림 방지에 사용 (#134). 생성 경로는 nil 전달.
 // 작성자 본인 멘션은 제외. 반환값: 알림 보낸 유저 ID 집합 (중복 알림 방지용).
-func (uc *PostUsecase) notifyMentions(content string, authorID, postID int, anchor string) map[int]bool {
+func (uc *PostUsecase) notifyMentions(content string, authorID, postID int, anchor string, exclude map[int]bool) map[int]bool {
 	notified := make(map[int]bool)
 	if uc.notifUC == nil {
 		return notified
@@ -677,6 +688,9 @@ func (uc *PostUsecase) notifyMentions(content string, authorID, postID int, anch
 
 	for _, uid := range mentionIDs {
 		if uid == authorID {
+			continue
+		}
+		if exclude[uid] {
 			continue
 		}
 		// 존재하는 유저만 (마크업은 클라이언트 입력이므로 검증)
