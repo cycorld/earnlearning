@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { MessageCircle, Paperclip, Send, Sparkles, Trash2, X, ZapOff, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api, ApiError } from '@/lib/api'
 import { getToken } from '@/lib/auth'
 import { cn } from '@/lib/utils'
+import {
+  type FabAnchor,
+  anchorStyle,
+  loadAnchor,
+  nearestAnchor,
+  saveAnchor,
+} from '@/components/chat/fab-position'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { MarkdownContent } from '@/components/MarkdownContent'
@@ -176,6 +184,61 @@ export default function ChatDock() {
   const [uploadingFile, setUploadingFile] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // #135 FAB 위치(6모서리 드래그) + 컨텍스트 숨김
+  const location = useLocation()
+  const [fabAnchor, setFabAnchor] = useState<FabAnchor>(() => loadAnchor())
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
+  const [inputFocused, setInputFocused] = useState(false)
+  const dragStartRef = useRef<{ x: number; y: number; moved: boolean } | null>(null)
+  const suppressClickRef = useRef(false)
+
+  // 챗봇 외부 텍스트 입력 포커스 시 FAB를 숨겨 페이지 전송버튼과 겹치지 않게 (#135-A)
+  useEffect(() => {
+    const isTextField = (el: EventTarget | null) =>
+      el instanceof HTMLElement &&
+      (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
+    const onFocusIn = (e: FocusEvent) => setInputFocused(isTextField(e.target))
+    const onFocusOut = () => setInputFocused(false)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
+    return () => {
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
+    }
+  }, [])
+
+  const DRAG_THRESHOLD = 8
+  const onFabPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    dragStartRef.current = { x: e.clientX, y: e.clientY, moved: false }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onFabPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const st = dragStartRef.current
+    if (!st) return
+    if (!st.moved && Math.hypot(e.clientX - st.x, e.clientY - st.y) < DRAG_THRESHOLD) return
+    st.moved = true
+    setDragPos({ x: e.clientX, y: e.clientY })
+  }
+  const onFabPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const st = dragStartRef.current
+    dragStartRef.current = null
+    if (st?.moved) {
+      // 드래그였으면 가장 가까운 모서리로 스냅 + 영속, 뒤따르는 click(열기) 무시
+      suppressClickRef.current = true
+      const next = nearestAnchor({ x: e.clientX, y: e.clientY }, window.innerWidth, window.innerHeight)
+      setFabAnchor(next)
+      saveAnchor(next)
+    }
+    setDragPos(null)
+  }
+  const onFabClick = () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false
+      return
+    }
+    setOpen(true)
+  }
 
   const isAdmin = user?.role === 'admin'
   const isApproved = user?.status === 'approved'
@@ -376,16 +439,33 @@ export default function ChatDock() {
 
   // FAB (closed state)
   if (!open) {
+    // #135-A DM 대화 화면은 자체 하단 전송버튼이 있어 FAB 숨김 (겹침 방지)
+    if (/^\/messages\/[^/]+$/.test(location.pathname)) return null
+
+    const dragging = dragPos !== null
+    const style: React.CSSProperties = dragging
+      ? { left: dragPos.x - 24, top: dragPos.y - 24, right: 'auto', bottom: 'auto', marginTop: 0 }
+      : anchorStyle(fabAnchor)
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={onFabClick}
+        onPointerDown={onFabPointerDown}
+        onPointerMove={onFabPointerMove}
+        onPointerUp={onFabPointerUp}
+        onPointerCancel={() => {
+          dragStartRef.current = null
+          setDragPos(null)
+        }}
+        style={style}
         className={cn(
-          'fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full',
+          'fixed z-50 flex h-12 w-12 touch-none items-center justify-center rounded-full',
           'bg-primary text-primary-foreground shadow-[0_4px_0_0_var(--primary-shadow)]',
-          'transition-transform hover:scale-105 active:translate-y-[2px] active:shadow-[0_2px_0_0_var(--primary-shadow)]',
-          'sm:bottom-6',
+          'hover:scale-105 active:translate-y-[2px] active:shadow-[0_2px_0_0_var(--primary-shadow)]',
+          dragging ? 'scale-110 cursor-grabbing transition-none' : 'cursor-grab transition-all',
+          // #135-A 외부 입력 포커스 중엔 숨김 (페이지 전송버튼과 겹치지 않게)
+          inputFocused && 'pointer-events-none opacity-0',
         )}
-        aria-label="챗봇 조교 열기"
+        aria-label="챗봇 조교 열기 (드래그로 위치 이동)"
       >
         <MessageCircle className="h-5 w-5" />
       </button>
