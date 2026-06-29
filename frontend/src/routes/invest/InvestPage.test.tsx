@@ -164,3 +164,62 @@ describe('InvestPage — #114 회사 정보 노출', () => {
     expect(screen.queryByText('서비스 바로가기')).toBeNull()
   })
 })
+
+/**
+ * #136 회귀: 투자 라운드 목록 페이지네이션 + 카드 세로 간격.
+ * - 한 페이지(최대 50개)를 넘는 오픈 라운드도 전부 가져온다 (예전엔 첫 20개만 보임).
+ * - 라운드 카드를 감싼 <Link>(=inline <a>)에 block 을 줘 space-y 간격이 먹는다.
+ */
+describe('InvestPage — #136 페이지네이션 & 카드 간격', () => {
+  it('라운드가 한 페이지(50개)를 넘으면 모든 페이지를 가져온다', async () => {
+    const pageSize = 50
+    const total = 55
+    const makeRound = (id: number) => ({
+      ...sampleRound,
+      id,
+      company: { ...sampleRound.company, name: `Co${id}` },
+    })
+    vi.mocked(api.get).mockImplementation((path: string) => {
+      if (path.startsWith('/investment/rounds')) {
+        const page = Number(
+          new URLSearchParams(path.split('?')[1] ?? '').get('page') ?? '1',
+        )
+        const start = (page - 1) * pageSize
+        const batch = Array.from(
+          { length: Math.max(0, Math.min(pageSize, total - start)) },
+          (_, i) => makeRound(start + i + 1),
+        )
+        return Promise.resolve({ rounds: batch, total })
+      }
+      return Promise.resolve([])
+    })
+    render(
+      <MemoryRouter>
+        <InvestPage />
+      </MemoryRouter>,
+    )
+    // Co55 는 2페이지에만 존재 → 페이지 순회를 했다는 증거
+    await waitFor(() => {
+      expect(screen.getByText('Co55')).toBeInTheDocument()
+    })
+  })
+
+  it('라운드 카드 링크가 block 이라 카드 간 세로 간격이 유지된다', async () => {
+    vi.mocked(api.get).mockImplementation((path: string) => {
+      if (path.startsWith('/investment/rounds')) {
+        return Promise.resolve({ rounds: [sampleRound], total: 1 })
+      }
+      return Promise.resolve([])
+    })
+    render(
+      <MemoryRouter>
+        <InvestPage />
+      </MemoryRouter>,
+    )
+    await waitFor(() => {
+      expect(screen.getByText('Genova')).toBeInTheDocument()
+    })
+    const link = screen.getByText('Genova').closest('a')
+    expect(link).toHaveClass('block')
+  })
+})

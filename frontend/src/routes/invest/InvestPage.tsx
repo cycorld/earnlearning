@@ -71,6 +71,24 @@ function HelpBox({
   )
 }
 
+// #136: fetch every page of open rounds. Backend clamps limit to 50 (anything
+// larger silently falls back to 20), so page through until we've gathered the
+// reported `total`. The 50-page cap is a safety stop against a runaway loop.
+async function fetchAllOpenRounds(): Promise<InvestmentRound[]> {
+  const limit = 50
+  const all: InvestmentRound[] = []
+  for (let page = 1; page <= 50; page++) {
+    const resp = await api.get<
+      { rounds: InvestmentRound[]; total: number } | InvestmentRound[]
+    >(`/investment/rounds?status=open&limit=${limit}&page=${page}`)
+    const batch = Array.isArray(resp) ? resp : (resp?.rounds ?? [])
+    all.push(...batch)
+    const total = Array.isArray(resp) ? batch.length : (resp?.total ?? all.length)
+    if (batch.length === 0 || all.length >= total) break
+  }
+  return all
+}
+
 export default function InvestPage() {
   const [rounds, setRounds] = useState<InvestmentRound[]>([])
   const [portfolio, setPortfolio] = useState<Investment[]>([])
@@ -80,11 +98,9 @@ export default function InvestPage() {
   useEffect(() => {
     Promise.all([
       // Bug A fix: backend status enum is open/funded/failed/cancelled.
-      api
-        .get<{ rounds: InvestmentRound[]; total: number } | InvestmentRound[]>(
-          '/investment/rounds?status=open',
-        )
-        .catch(() => [] as InvestmentRound[]),
+      // #136: backend caps page size at 50 (limit>50 → 20) and there can be
+      // more open rounds than one page, so walk pages until all are collected.
+      fetchAllOpenRounds().catch(() => [] as InvestmentRound[]),
       api
         .get<Investment[]>('/investment/portfolio')
         .catch(() => [] as Investment[]),
@@ -92,12 +108,9 @@ export default function InvestPage() {
         .get<DividendPayment[]>('/investment/dividends')
         .catch(() => [] as DividendPayment[]),
     ]).then(([r, p, d]) => {
-      const roundsArr = Array.isArray(r) ? r : (r?.rounds ?? [])
-      const portfolioArr = Array.isArray(p) ? p : []
-      const dividendsArr = Array.isArray(d) ? d : []
-      setRounds(roundsArr)
-      setPortfolio(portfolioArr)
-      setDividends(dividendsArr)
+      setRounds(Array.isArray(r) ? r : [])
+      setPortfolio(Array.isArray(p) ? p : [])
+      setDividends(Array.isArray(d) ? d : [])
       setLoading(false)
     })
   }, [])
@@ -218,7 +231,7 @@ export default function InvestPage() {
               const primaryURL = serviceURLs[0]
               const extraURLCount = serviceURLs.length - 1
               return (
-                <Link key={round.id} to={`/invest/${round.id}`}>
+                <Link key={round.id} to={`/invest/${round.id}`} className="block">
                   <Card className="transition-colors hover:bg-accent/30">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
