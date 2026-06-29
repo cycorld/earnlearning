@@ -44,7 +44,7 @@ func (h *ExchangeHandler) ListCompanies(c echo.Context) error {
 //	@Success		200			{object}	APIResponse
 //	@Router			/exchange/orderbook/{companyId} [get]
 func (h *ExchangeHandler) GetOrderbook(c echo.Context) error {
-	companyID, err := intParam(c, "id")
+	companyID, err := intParam(c, "companyId")
 	if err != nil {
 		return errorResponse(c, http.StatusBadRequest, "INVALID_ID", "유효하지 않은 회사 ID입니다")
 	}
@@ -54,6 +54,31 @@ func (h *ExchangeHandler) GetOrderbook(c echo.Context) error {
 		return errorResponse(c, http.StatusBadRequest, "EXCHANGE_ERROR", err.Error())
 	}
 	return successResponse(c, http.StatusOK, orderbook)
+}
+
+// GetTrades godoc
+//
+//	@Summary		체결 내역 조회
+//	@Description	회사의 최근 체결(거래) 내역 — 가격 차트 데이터원
+//	@Tags			Exchange
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			companyId	path		int	true	"회사 ID"
+//	@Param			limit		query		int	false	"개수"	default(50)
+//	@Success		200			{object}	APIResponse
+//	@Router			/exchange/trades/{companyId} [get]
+func (h *ExchangeHandler) GetTrades(c echo.Context) error {
+	companyID, err := intParam(c, "companyId")
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_ID", "유효하지 않은 회사 ID입니다")
+	}
+	limit := intQuery(c, "limit", 50)
+
+	trades, err := h.uc.GetCompanyTrades(companyID, limit)
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "EXCHANGE_ERROR", err.Error())
+	}
+	return successResponse(c, http.StatusOK, trades)
 }
 
 // PlaceOrder godoc

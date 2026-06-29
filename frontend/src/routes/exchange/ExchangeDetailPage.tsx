@@ -7,19 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
   ArrowLeft,
   TrendingUp,
   TrendingDown,
-  ShoppingCart,
   X,
   RefreshCw,
 } from 'lucide-react'
@@ -29,12 +22,12 @@ import { Spinner } from '@/components/ui/spinner'
 interface OrderbookEntry {
   price: number
   shares: number
-  order_count: number
+  count: number
 }
 
 interface Orderbook {
-  buy_orders: OrderbookEntry[]
-  sell_orders: OrderbookEntry[]
+  asks: OrderbookEntry[]
+  bids: OrderbookEntry[]
 }
 
 interface ExchangeOrder {
@@ -42,9 +35,103 @@ interface ExchangeOrder {
   company_id: number
   order_type: 'buy' | 'sell'
   shares: number
-  price: number
+  price_per_share: number
   status: string
   created_at: string
+}
+
+interface StockTrade {
+  id: number
+  price_per_share: number
+  shares: number
+  total_amount: number
+  created_at: string
+}
+
+interface ListedCompany {
+  id: number
+  name: string
+  logo_url: string
+  last_price: number
+  change_percent: number
+  volume_24h: number
+}
+
+// 체결 시각을 HH:MM (브라우저 로컬, KST)로 표시
+function timeHM(iso: string): string {
+  return new Date(iso).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// 체결가 추이 라인+영역 차트. 차트 라이브러리 없이 SVG로 직접 그린다.
+// trades 는 최신순으로 들어오므로 시간순(과거→현재)으로 뒤집어 그린다.
+function PriceChart({ trades }: { trades: StockTrade[] }) {
+  const points = [...trades].reverse()
+  if (points.length < 2) {
+    return (
+      <div className="flex h-36 items-center justify-center text-sm text-muted-foreground">
+        차트를 그릴 체결 데이터가 아직 부족합니다
+      </div>
+    )
+  }
+
+  const W = 320
+  const H = 140
+  const PAD = 10
+  const prices = points.map((p) => p.price_per_share)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  const range = max - min || 1
+  const stepX = (W - PAD * 2) / (points.length - 1)
+
+  const coords = points.map((p, i) => {
+    const x = PAD + i * stepX
+    const y = PAD + (H - PAD * 2) * (1 - (p.price_per_share - min) / range)
+    return [x, y] as const
+  })
+
+  const line = coords
+    .map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(' ')
+  const area = `${line} L${coords[coords.length - 1][0].toFixed(1)},${H - PAD} L${coords[0][0].toFixed(1)},${H - PAD} Z`
+
+  // 한국식 색상: 상승=빨강(coral), 하락=파랑(info)
+  const up = prices[prices.length - 1] >= prices[0]
+  const color = up ? 'var(--coral)' : 'var(--info)'
+
+  return (
+    <div className="space-y-1">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="h-36 w-full"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="priceFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#priceFill)" />
+        <path
+          d={line}
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <div className="flex justify-between px-1 text-[10px] text-muted-foreground">
+        <span>{timeHM(points[0].created_at)}</span>
+        <span>최저 {formatMoney(min)} · 최고 {formatMoney(max)}</span>
+        <span>{timeHM(points[points.length - 1].created_at)}</span>
+      </div>
+    </div>
+  )
 }
 
 export default function ExchangeDetailPage() {
@@ -52,7 +139,9 @@ export default function ExchangeDetailPage() {
   const navigate = useNavigate()
   const companyId = Number(id)
 
+  const [company, setCompany] = useState<ListedCompany | null>(null)
   const [orderbook, setOrderbook] = useState<Orderbook | null>(null)
+  const [trades, setTrades] = useState<StockTrade[]>([])
   const [myOrders, setMyOrders] = useState<ExchangeOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -63,12 +152,23 @@ export default function ExchangeDetailPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [ob, orders] = await Promise.all([
+      const [companies, ob, tr, orders] = await Promise.all([
+        api.get<ListedCompany[]>('/exchange/companies'),
         api.get<Orderbook>(`/exchange/orderbook/${companyId}`),
-        api.get<ExchangeOrder[]>('/exchange/orders/mine'),
+        api.get<StockTrade[]>(`/exchange/trades/${companyId}?limit=50`),
+        api.get<{ orders: ExchangeOrder[] } | ExchangeOrder[]>(
+          '/exchange/orders/mine',
+        ),
       ])
+      setCompany(
+        (Array.isArray(companies) ? companies : []).find(
+          (c) => c.id === companyId,
+        ) ?? null,
+      )
       setOrderbook(ob)
-      setMyOrders((orders || []).filter((o) => o.company_id === companyId))
+      setTrades(tr || [])
+      const ordersArr = Array.isArray(orders) ? orders : (orders?.orders ?? [])
+      setMyOrders(ordersArr.filter((o) => o.company_id === companyId))
     } catch {
       // ignore
     } finally {
@@ -79,6 +179,13 @@ export default function ExchangeDetailPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // 호가를 누르면 주문 폼에 가격을 자동으로 채운다.
+  // 매도호가(asks) 클릭 → 매수, 매수호가(bids) 클릭 → 매도 로 전환.
+  const fillFromOrderbook = (side: 'buy' | 'sell', p: number) => {
+    setOrderType(side)
+    setPrice(String(p))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -121,147 +228,113 @@ export default function ExchangeDetailPage() {
     )
   }
 
+  const lastPrice = trades[0]?.price_per_share ?? company?.last_price ?? 0
+  const changePercent = company?.change_percent ?? 0
+  const changeUp = changePercent >= 0
+  const total = Number(shares) * Number(price)
+
   return (
-    <div className="mx-auto max-w-lg space-y-5 p-4">
+    <div className="mx-auto max-w-lg space-y-4 p-4">
+      {/* 헤더: 회사 + 현재가 + 등락률 */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-xl font-bold">호가창</h1>
+        {company?.logo_url ? (
+          <img
+            src={company.logo_url}
+            alt={company.name}
+            className="h-8 w-8 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+            <TrendingUp className="h-4 w-4 text-primary" />
+          </div>
+        )}
+        <h1 className="truncate text-lg font-bold">
+          {company?.name ?? `기업 #${companyId}`}
+        </h1>
         <div className="flex-1" />
         <Button variant="ghost" size="icon" onClick={fetchData}>
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
 
-      {orderbook && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">오더북</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-coral">매도 호가</p>
-              {orderbook.sell_orders.length === 0 ? (
-                <p className="py-2 text-center text-xs text-muted-foreground">
-                  매도 주문 없음
-                </p>
-              ) : (
-                [...orderbook.sell_orders].reverse().map((entry, i) => (
-                  <div
-                    key={`sell-${i}`}
-                    className="flex items-center justify-between rounded px-2 py-1 text-sm"
-                  >
-                    <span className="text-muted-foreground">
-                      {entry.shares}주
-                      <span className="ml-1 text-xs">
-                        ({entry.order_count}건)
-                      </span>
-                    </span>
-                    <span className="font-medium text-coral">
-                      {formatMoney(entry.price)}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <Separator className="my-2" />
-
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-info">매수 호가</p>
-              {orderbook.buy_orders.length === 0 ? (
-                <p className="py-2 text-center text-xs text-muted-foreground">
-                  매수 주문 없음
-                </p>
-              ) : (
-                orderbook.buy_orders.map((entry, i) => (
-                  <div
-                    key={`buy-${i}`}
-                    className="flex items-center justify-between rounded px-2 py-1 text-sm"
-                  >
-                    <span className="font-medium text-info">
-                      {formatMoney(entry.price)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {entry.shares}주
-                      <span className="ml-1 text-xs">
-                        ({entry.order_count}건)
-                      </span>
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <ShoppingCart className="h-4 w-4" />
-            주문하기
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>주문 유형</Label>
-              <Select
-                value={orderType}
-                onValueChange={(v) => setOrderType(v as 'buy' | 'sell')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="buy">
-                    <span className="flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3 text-info" /> 매수
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="sell">
-                    <span className="flex items-center gap-1">
-                      <TrendingDown className="h-3 w-3 text-coral" /> 매도
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+        <CardContent className="space-y-3 p-4">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-2xl font-bold">{formatMoney(lastPrice)}</p>
+              <p className="text-xs text-muted-foreground">현재가 / 주</p>
+            </div>
+            <div
+              className={`flex items-center gap-1 text-sm font-semibold ${
+                changeUp ? 'text-coral' : 'text-info'
+              }`}
+            >
+              {changeUp ? (
+                <TrendingUp className="h-4 w-4" />
+              ) : (
+                <TrendingDown className="h-4 w-4" />
+              )}
+              {changeUp ? '+' : ''}
+              {changePercent.toFixed(2)}%
+            </div>
+          </div>
+          <Separator />
+          <PriceChart trades={trades} />
+        </CardContent>
+      </Card>
+
+      {/* 주문하기: 매수/매도 탭 */}
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <Tabs
+            value={orderType}
+            onValueChange={(v) => setOrderType(v as 'buy' | 'sell')}
+          >
+            <TabsList className="w-full">
+              <TabsTrigger value="buy" className="flex-1 gap-1">
+                <TrendingUp className="h-3.5 w-3.5" /> 매수
+              </TabsTrigger>
+              <TabsTrigger value="sell" className="flex-1 gap-1">
+                <TrendingDown className="h-3.5 w-3.5" /> 매도
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">수량 (주)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="0"
+                  value={shares}
+                  onChange={(e) => setShares(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">가격 (원/주)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="0"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>수량 (주)</Label>
-              <Input
-                type="number"
-                min="1"
-                placeholder="주문 수량"
-                value={shares}
-                onChange={(e) => setShares(e.target.value)}
-                required
-              />
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">총 금액</span>
+              <span className="font-semibold">
+                {total > 0 ? formatMoney(total) : '-'}
+              </span>
             </div>
-
-            <div className="space-y-2">
-              <Label>가격 (원/주)</Label>
-              <Input
-                type="number"
-                min="1"
-                placeholder="주당 가격"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                required
-              />
-            </div>
-
-            {shares && price && (
-              <p className="text-sm text-muted-foreground">
-                총 금액:{' '}
-                <span className="font-semibold text-foreground">
-                  {formatMoney(Number(shares) * Number(price))}
-                </span>
-              </p>
-            )}
 
             <Button
               type="submit"
@@ -279,6 +352,89 @@ export default function ExchangeDetailPage() {
         </CardContent>
       </Card>
 
+      {/* 호가창 + 체결 내역 */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">호가창</CardTitle>
+            <p className="text-[10px] text-muted-foreground">눌러서 가격 입력</p>
+          </CardHeader>
+          <CardContent className="space-y-1 px-3 pb-3">
+            {orderbook && orderbook.asks.length === 0 && orderbook.bids.length === 0 && (
+              <p className="py-4 text-center text-xs text-muted-foreground">
+                호가 없음
+              </p>
+            )}
+            {[...(orderbook?.asks ?? [])].reverse().map((e, i) => (
+              <button
+                key={`ask-${i}`}
+                type="button"
+                onClick={() => fillFromOrderbook('buy', e.price)}
+                className="flex w-full items-center justify-between rounded bg-coral/10 px-2 py-1 text-xs hover:bg-coral/20"
+              >
+                <span className="font-medium text-coral">
+                  {formatMoney(e.price)}
+                </span>
+                <span className="text-muted-foreground">{e.shares}</span>
+              </button>
+            ))}
+            {orderbook && (orderbook.asks.length > 0 || orderbook.bids.length > 0) && (
+              <Separator className="my-1" />
+            )}
+            {(orderbook?.bids ?? []).map((e, i) => (
+              <button
+                key={`bid-${i}`}
+                type="button"
+                onClick={() => fillFromOrderbook('sell', e.price)}
+                className="flex w-full items-center justify-between rounded bg-info/10 px-2 py-1 text-xs hover:bg-info/20"
+              >
+                <span className="font-medium text-info">
+                  {formatMoney(e.price)}
+                </span>
+                <span className="text-muted-foreground">{e.shares}</span>
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">체결 내역</CardTitle>
+            <p className="text-[10px] text-muted-foreground">최근 거래이력</p>
+          </CardHeader>
+          <CardContent className="space-y-1 px-3 pb-3">
+            {trades.length === 0 ? (
+              <p className="py-4 text-center text-xs text-muted-foreground">
+                체결 내역 없음
+              </p>
+            ) : (
+              trades.map((t, i) => {
+                const prev = trades[i + 1]?.price_per_share
+                const up =
+                  prev === undefined ? true : t.price_per_share >= prev
+                return (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between px-1 py-1 text-xs"
+                  >
+                    <span className="text-muted-foreground">
+                      {timeHM(t.created_at)}
+                    </span>
+                    <span
+                      className={`font-medium ${up ? 'text-coral' : 'text-info'}`}
+                    >
+                      {formatMoney(t.price_per_share)}
+                    </span>
+                    <span className="text-muted-foreground">{t.shares}주</span>
+                  </div>
+                )
+              })
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 내 주문 */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">내 주문</CardTitle>
@@ -305,14 +461,20 @@ export default function ExchangeDetailPage() {
                   </Badge>
                   <div>
                     <p className="text-sm">
-                      {order.shares}주 x {formatMoney(order.price)}
+                      {order.shares}주 x {formatMoney(order.price_per_share)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {order.status === 'open' ? '대기' : order.status}
+                      {order.status === 'open'
+                        ? '대기'
+                        : order.status === 'partial'
+                          ? '부분체결'
+                          : order.status === 'filled'
+                            ? '체결'
+                            : order.status}
                     </p>
                   </div>
                 </div>
-                {order.status === 'open' && (
+                {(order.status === 'open' || order.status === 'partial') && (
                   <Button
                     variant="ghost"
                     size="icon"

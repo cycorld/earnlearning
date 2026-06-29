@@ -21,7 +21,7 @@ interface ExchangeOrder {
   company_name?: string
   order_type: 'buy' | 'sell'
   shares: number
-  price: number
+  price_per_share: number
   status: string
   created_at: string
 }
@@ -173,7 +173,7 @@ export default function ExchangePage() {
                       {order.company_name || `기업 #${order.company_id}`}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {order.shares}주 x {formatMoney(order.price)}
+                      {order.shares}주 x {formatMoney(order.price_per_share)}
                     </p>
                   </div>
                 </div>
