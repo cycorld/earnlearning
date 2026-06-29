@@ -1573,5 +1573,17 @@
       "버그수정"
     ],
     "github": null
+  },
+  {
+    "slug": "140-exchange-matching-panic",
+    "title": "거래소 체결 시 매칭 엔진 패닉(nil deref) → 500 + 데이터 손상 수정",
+    "date": "2026-06-30",
+    "tags": [
+      "버그수정",
+      "데이터무결성",
+      "거래소",
+      "TDD"
+    ],
+    "github": null
   }
 ]
