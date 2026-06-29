@@ -68,6 +68,17 @@ func (uc *ExchangeUseCase) GetOrderbook(companyID int) (*exchange.Orderbook, err
 	return uc.exchangeRepo.GetOrderbook(companyID)
 }
 
+func (uc *ExchangeUseCase) GetCompanyTrades(companyID, limit int) ([]*exchange.StockTrade, error) {
+	c, err := uc.companyRepo.FindByID(companyID)
+	if err != nil {
+		return nil, exchange.ErrCompanyNotFound
+	}
+	if !c.Listed {
+		return nil, exchange.ErrCompanyNotListed
+	}
+	return uc.exchangeRepo.GetCompanyTrades(companyID, limit)
+}
+
 type PlaceOrderInput struct {
 	CompanyID int    `json:"company_id"`
 	OrderType string `json:"order_type"`

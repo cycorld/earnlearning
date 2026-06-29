@@ -16,6 +16,7 @@ type Repository interface {
 
 	// Query operations
 	GetOrderbook(companyID int) (*Orderbook, error)
+	GetCompanyTrades(companyID, limit int) ([]*StockTrade, error)
 	GetUserOrders(userID int, status string, companyID int, page, limit int) ([]*StockOrder, int, error)
 	GetListedCompanies() ([]*ListedCompany, error)
 

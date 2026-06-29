@@ -1560,5 +1560,18 @@
       "CSS"
     ],
     "github": null
+  },
+  {
+    "slug": "139-exchange-chart-trade-history",
+    "title": "거래소 종목 상세 개편 — 체결 차트 + 거래이력 + 매수/매도 주문 UX",
+    "date": "2026-06-30",
+    "tags": [
+      "기능추가",
+      "UX",
+      "거래소",
+      "차트",
+      "버그수정"
+    ],
+    "github": null
   }
 ]

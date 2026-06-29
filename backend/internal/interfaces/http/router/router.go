@@ -202,6 +202,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	// Exchange (OAuth: read:market / write:market)
 	approved.GET("/exchange/companies", h.Exchange.ListCompanies, middleware.RequireScope("read:market"))
 	approved.GET("/exchange/orderbook/:companyId", h.Exchange.GetOrderbook, middleware.RequireScope("read:market"))
+	approved.GET("/exchange/trades/:companyId", h.Exchange.GetTrades, middleware.RequireScope("read:market"))
 	approved.POST("/exchange/orders", h.Exchange.PlaceOrder, middleware.RequireScope("write:market"))
 	approved.DELETE("/exchange/orders/:id", h.Exchange.CancelOrder, middleware.RequireScope("write:market"))
 	approved.GET("/exchange/orders/mine", h.Exchange.GetMyOrders, middleware.RequireScope("read:market"))

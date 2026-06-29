@@ -177,6 +177,35 @@ func (r *ExchangeRepo) GetOrderbook(companyID int) (*exchange.Orderbook, error) 
 	return ob, nil
 }
 
+// GetCompanyTrades returns a company's executed trades, newest-first, capped by limit.
+func (r *ExchangeRepo) GetCompanyTrades(companyID, limit int) ([]*exchange.StockTrade, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	rows, err := r.db.Query(`
+		SELECT id, company_id, buy_order_id, sell_order_id, buyer_id, seller_id,
+			shares, price_per_share, total_amount, created_at
+		FROM stock_trades
+		WHERE company_id = ?
+		ORDER BY created_at DESC, id DESC
+		LIMIT ?`, companyID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get company trades: %w", err)
+	}
+	defer rows.Close()
+
+	trades := []*exchange.StockTrade{}
+	for rows.Next() {
+		t := &exchange.StockTrade{}
+		if err := rows.Scan(&t.ID, &t.CompanyID, &t.BuyOrderID, &t.SellOrderID,
+			&t.BuyerID, &t.SellerID, &t.Shares, &t.PricePerShare, &t.TotalAmount, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+		trades = append(trades, t)
+	}
+	return trades, nil
+}
+
 func (r *ExchangeRepo) GetUserOrders(userID int, status string, companyID int, page, limit int) ([]*exchange.StockOrder, int, error) {
 	var conditions []string
 	var args []interface{}
