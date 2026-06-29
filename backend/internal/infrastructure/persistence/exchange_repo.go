@@ -225,7 +225,11 @@ func (r *ExchangeRepo) GetUserOrders(userID int, status string, companyID int, p
 func (r *ExchangeRepo) GetListedCompanies() ([]*exchange.ListedCompany, error) {
 	rows, err := r.db.Query(`
 		SELECT c.id, c.name, c.logo_url, c.total_shares,
-			COALESCE((SELECT price_per_share FROM stock_trades WHERE company_id = c.id ORDER BY created_at DESC LIMIT 1), 0) as last_price,
+			CAST(COALESCE(
+				(SELECT price_per_share FROM stock_trades WHERE company_id = c.id ORDER BY created_at DESC LIMIT 1),
+				(SELECT price_per_share FROM investment_rounds WHERE company_id = c.id AND status = 'funded' ORDER BY COALESCE(funded_at, created_at) DESC LIMIT 1),
+				CASE WHEN c.total_shares > 0 THEN CAST(c.valuation AS REAL) / c.total_shares END,
+				0) AS INTEGER) as last_price,
 			COALESCE(
 				CASE
 					WHEN (SELECT price_per_share FROM stock_trades WHERE company_id = c.id ORDER BY created_at DESC LIMIT 1 OFFSET 1) > 0

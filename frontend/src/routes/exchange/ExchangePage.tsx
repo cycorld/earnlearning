@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
-import type { Company } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,8 +26,20 @@ interface ExchangeOrder {
   created_at: string
 }
 
+// GET /exchange/companies 응답 (백엔드 ListedCompany)
+interface ListedCompany {
+  id: number
+  name: string
+  logo_url: string
+  total_shares: number
+  last_price: number // 시가 (마지막 체결가, 거래 없으면 마지막 라운드 가격)
+  change_percent: number
+  volume_24h: number
+  market_cap: number
+}
+
 export default function ExchangePage() {
-  const [companies, setCompanies] = useState<Company[]>([])
+  const [companies, setCompanies] = useState<ListedCompany[]>([])
   const [myOrders, setMyOrders] = useState<ExchangeOrder[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -36,7 +47,7 @@ export default function ExchangePage() {
     setLoading(true)
     try {
       const [companiesData, ordersData] = await Promise.all([
-        api.get<Company[]>('/exchange/companies'),
+        api.get<ListedCompany[]>('/exchange/companies'),
         api.get<{ orders: ExchangeOrder[]; total: number } | ExchangeOrder[]>('/exchange/orders/mine'),
       ])
       setCompanies(Array.isArray(companiesData) ? companiesData : [])
@@ -77,19 +88,20 @@ export default function ExchangePage() {
             상장 기업
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-3">
           {companies.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
               상장된 기업이 없습니다.
             </p>
           ) : (
             companies.map((company) => {
-              const price =
-                company.total_shares > 0
-                  ? Math.round(company.valuation / company.total_shares)
-                  : 0
+              const price = company.last_price
               return (
-                <Link key={company.id} to={`/exchange/${company.id}`}>
+                <Link
+                  key={company.id}
+                  to={`/exchange/${company.id}`}
+                  className="block"
+                >
                   <Card className="transition-colors hover:bg-accent">
                     <CardContent className="flex items-center justify-between p-4">
                       <div className="flex items-center gap-3">
