@@ -1534,5 +1534,18 @@
       "버그수정",
       "프론트엔드"
     ]
+  },
+  {
+    "slug": "137-exchange-card-spacing-nan-price",
+    "title": "거래소 기업 카드 간격 + NaN원/주 가격 수정",
+    "date": "2026-06-29",
+    "tags": [
+      "버그수정",
+      "UX",
+      "거래소",
+      "타입안전",
+      "CSS"
+    ],
+    "github": null
   }
 ]
