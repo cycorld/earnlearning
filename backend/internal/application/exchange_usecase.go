@@ -301,8 +301,10 @@ func (uc *ExchangeUseCase) runMatching(order *exchange.StockOrder, comp *company
 		}
 
 		// Update shareholders: buyer +shares
+		// FindShareholder returns (nil, nil) for a first-time buyer (no row yet);
+		// guard on buyerSH == nil so we create instead of nil-dereferencing.
 		buyerSH, err := uc.companyRepo.FindShareholder(order.CompanyID, match.BuyOrder.UserID)
-		if err != nil {
+		if err != nil || buyerSH == nil {
 			// Create new shareholder
 			_, err = uc.companyRepo.CreateShareholder(&company.Shareholder{
 				CompanyID:       order.CompanyID,
@@ -323,8 +325,9 @@ func (uc *ExchangeUseCase) runMatching(order *exchange.StockOrder, comp *company
 		}
 
 		// Update shareholders: seller -shares (delete if 0)
+		// Guard on sellerSH != nil — FindShareholder returns (nil, nil) when no row.
 		sellerSH, err := uc.companyRepo.FindShareholder(order.CompanyID, match.SellOrder.UserID)
-		if err == nil && uc.shareholderUpdater != nil {
+		if err == nil && sellerSH != nil && uc.shareholderUpdater != nil {
 			newShares := sellerSH.Shares - match.Shares
 			if err := uc.shareholderUpdater.UpdateShareholderShares(order.CompanyID, match.SellOrder.UserID, newShares); err != nil {
 				return trades, err
