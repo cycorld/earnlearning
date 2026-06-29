@@ -233,9 +233,9 @@ function ReviewDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={onClose}
     >
-      <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <CardContent className="space-y-3 p-4">
-          <div className="flex items-start justify-between">
+      <Card className="max-h-[90vh] w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-3 p-4">
+          <div className="flex flex-shrink-0 items-start justify-between">
             <div>
               <div className="text-xs text-muted-foreground">
                 {student.name} · {student.student_id}
@@ -247,7 +247,7 @@ function ReviewDialog({
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
             <StatusChip status={milestone.status} />
             {milestone.type === 'retrospective' && typeof milestone.ai_score === 'number' && (
               <div className="rounded-md bg-muted/50 p-2 text-xs">
@@ -303,12 +303,12 @@ function ReviewDialog({
             </div>
           </div>
 
-          <div>
+          <div className="flex-shrink-0">
             <label className="text-xs text-muted-foreground">코멘트 (선택)</label>
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-shrink-0 gap-2">
             <Button onClick={() => decide('approve')} disabled={busy} className="flex-1">
               승인
             </Button>

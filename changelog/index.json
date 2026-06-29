@@ -1547,5 +1547,18 @@
       "CSS"
     ],
     "github": null
+  },
+  {
+    "slug": "138-essay-eval-modal-scroll",
+    "title": "평가지표 매트릭스 긴 에세이 평가 모달 스크롤 수정",
+    "date": "2026-06-30",
+    "tags": [
+      "버그수정",
+      "UX",
+      "관리자",
+      "모달",
+      "CSS"
+    ],
+    "github": null
   }
 ]
