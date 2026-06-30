@@ -81,6 +81,30 @@ func (h *ExchangeHandler) GetTrades(c echo.Context) error {
 	return successResponse(c, http.StatusOK, trades)
 }
 
+// GetPosition godoc
+//
+//	@Summary		내 포지션 조회
+//	@Description	해당 회사에 대한 내 보유 주식·매도가능·잔액·여유자금 (주문 폼 제약용)
+//	@Tags			Exchange
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			companyId	path		int	true	"회사 ID"
+//	@Success		200			{object}	APIResponse
+//	@Router			/exchange/position/{companyId} [get]
+func (h *ExchangeHandler) GetPosition(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	companyID, err := intParam(c, "companyId")
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_ID", "유효하지 않은 회사 ID입니다")
+	}
+
+	pos, err := h.uc.GetPosition(companyID, userID)
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "EXCHANGE_ERROR", err.Error())
+	}
+	return successResponse(c, http.StatusOK, pos)
+}
+
 // PlaceOrder godoc
 //
 //	@Summary		주문 제출

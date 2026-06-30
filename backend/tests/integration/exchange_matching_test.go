@@ -5,6 +5,72 @@ import (
 	"testing"
 )
 
+// #144: GET /exchange/position reports tradeable limits — held/available shares
+// (minus pending sells) and balance/available cash (minus pending buys) — the same
+// numbers PlaceOrder validates against, so the frontend can constrain inputs.
+func TestExchange_Position(t *testing.T) {
+	ts := setupTestServer(t)
+	_, token := createInvestor(t, ts, "pos-user@test.com", "pos", "20240711", 60_000_000)
+
+	r := ts.post("/api/companies", map[string]interface{}{
+		"name": "포지션테스트사", "description": "x", "initial_capital": 50_000_000, "logo_url": "",
+	}, token)
+	if !r.Success {
+		t.Fatalf("create company: %v", r.Error)
+	}
+	var c struct {
+		ID int `json:"id"`
+	}
+	_ = json.Unmarshal(r.Data, &c)
+
+	type position struct {
+		Shares          int `json:"shares"`
+		AvailableShares int `json:"available_shares"`
+		Balance         int `json:"balance"`
+		AvailableCash   int `json:"available_cash"`
+	}
+	getPos := func() position {
+		pr := ts.get("/api/exchange/position/"+itoaUD(c.ID), token)
+		if !pr.Success {
+			t.Fatalf("get position: %v", pr.Error)
+		}
+		var p position
+		_ = json.Unmarshal(pr.Data, &p)
+		return p
+	}
+
+	// Fresh founder: 10000 shares, no pending → available == held, cash == balance.
+	p := getPos()
+	if p.Shares != 10000 || p.AvailableShares != 10000 {
+		t.Errorf("initial shares=%d avail=%d, want 10000/10000", p.Shares, p.AvailableShares)
+	}
+	if p.Balance != p.AvailableCash {
+		t.Errorf("initial cash %d != balance %d (no pending expected)", p.AvailableCash, p.Balance)
+	}
+	balance := p.Balance
+
+	// Pending sell 5 → available_shares drops by 5, held unchanged.
+	if sr := ts.post("/api/exchange/orders", map[string]interface{}{
+		"company_id": c.ID, "order_type": "sell", "shares": 5, "price": 9000,
+	}, token); !sr.Success {
+		t.Fatalf("sell: %v", sr.Error)
+	}
+	// Pending buy 3@8000 (below own sell, no cross) → available_cash drops by 24000.
+	if br := ts.post("/api/exchange/orders", map[string]interface{}{
+		"company_id": c.ID, "order_type": "buy", "shares": 3, "price": 8000,
+	}, token); !br.Success {
+		t.Fatalf("buy: %v", br.Error)
+	}
+
+	p = getPos()
+	if p.Shares != 10000 || p.AvailableShares != 9995 {
+		t.Errorf("after sell: shares=%d avail=%d, want 10000/9995", p.Shares, p.AvailableShares)
+	}
+	if p.AvailableCash != balance-24000 {
+		t.Errorf("after buy: available_cash=%d, want %d", p.AvailableCash, balance-24000)
+	}
+}
+
 // Regression (#140): a crossing trade where the BUYER has no prior shareholder
 // row must NOT panic (nil deref in runMatching) and must transfer shares.
 //

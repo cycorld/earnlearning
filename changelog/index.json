@@ -1585,5 +1585,17 @@
       "TDD"
     ],
     "github": null
+  },
+  {
+    "slug": "144-exchange-orders-tabs-and-position",
+    "title": "거래소 주문 UX 고도화 — 내 주문 상태 탭 + 보유/여유자금 표시·제약",
+    "date": "2026-06-30",
+    "tags": [
+      "기능추가",
+      "UX",
+      "거래소",
+      "주문"
+    ],
+    "github": null
   }
 ]
