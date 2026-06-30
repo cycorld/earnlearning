@@ -9,11 +9,16 @@ import (
 )
 
 type WalletRepo struct {
-	db *sql.DB
+	db DBTX
 }
 
 func NewWalletRepo(db *sql.DB) *WalletRepo {
 	return &WalletRepo{db: db}
+}
+
+// WithTx returns a repo bound to tx so its writes join the caller's transaction (#142).
+func (r *WalletRepo) WithTx(tx *sql.Tx) wallet.Repository {
+	return &WalletRepo{db: tx}
 }
 
 func (r *WalletRepo) FindByUserID(userID int) (*wallet.Wallet, error) {
@@ -57,33 +62,25 @@ func (r *WalletRepo) Credit(walletID int, amount int, txType wallet.TxType, desc
 		return wallet.ErrInvalidAmount
 	}
 
-	tx, err := r.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	return withDBTx(r.db, func(tx DBTX) error {
+		_, err := tx.Exec("UPDATE wallets SET balance = balance + ? WHERE id = ?", amount, walletID)
+		if err != nil {
+			return err
+		}
 
-	_, err = tx.Exec("UPDATE wallets SET balance = balance + ? WHERE id = ?", amount, walletID)
-	if err != nil {
-		return err
-	}
+		var newBalance int
+		err = tx.QueryRow("SELECT balance FROM wallets WHERE id = ?", walletID).Scan(&newBalance)
+		if err != nil {
+			return err
+		}
 
-	var newBalance int
-	err = tx.QueryRow("SELECT balance FROM wallets WHERE id = ?", walletID).Scan(&newBalance)
-	if err != nil {
+		_, err = tx.Exec(
+			`INSERT INTO transactions (wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			walletID, amount, newBalance, string(txType), description, refType, refID,
+		)
 		return err
-	}
-
-	_, err = tx.Exec(
-		`INSERT INTO transactions (wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		walletID, amount, newBalance, string(txType), description, refType, refID,
-	)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	})
 }
 
 func (r *WalletRepo) Debit(walletID int, amount int, txType wallet.TxType, description, refType string, refID int) error {
@@ -91,45 +88,37 @@ func (r *WalletRepo) Debit(walletID int, amount int, txType wallet.TxType, descr
 		return wallet.ErrInvalidAmount
 	}
 
-	tx, err := r.db.Begin()
-	if err != nil {
+	return withDBTx(r.db, func(tx DBTX) error {
+		// Check balance (admin transfers bypass this via use case layer)
+		var currentBalance int
+		err := tx.QueryRow("SELECT balance FROM wallets WHERE id = ?", walletID).Scan(&currentBalance)
+		if err != nil {
+			return err
+		}
+
+		// For admin_transfer, allow negative balance
+		if txType != wallet.TxAdminTransfer && currentBalance < amount {
+			return wallet.ErrInsufficientFunds
+		}
+
+		_, err = tx.Exec("UPDATE wallets SET balance = balance - ? WHERE id = ?", amount, walletID)
+		if err != nil {
+			return err
+		}
+
+		var newBalance int
+		err = tx.QueryRow("SELECT balance FROM wallets WHERE id = ?", walletID).Scan(&newBalance)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.Exec(
+			`INSERT INTO transactions (wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			walletID, -amount, newBalance, string(txType), description, refType, refID,
+		)
 		return err
-	}
-	defer tx.Rollback()
-
-	// Check balance (admin transfers bypass this via use case layer)
-	var currentBalance int
-	err = tx.QueryRow("SELECT balance FROM wallets WHERE id = ?", walletID).Scan(&currentBalance)
-	if err != nil {
-		return err
-	}
-
-	// For admin_transfer, allow negative balance
-	if txType != wallet.TxAdminTransfer && currentBalance < amount {
-		return wallet.ErrInsufficientFunds
-	}
-
-	_, err = tx.Exec("UPDATE wallets SET balance = balance - ? WHERE id = ?", amount, walletID)
-	if err != nil {
-		return err
-	}
-
-	var newBalance int
-	err = tx.QueryRow("SELECT balance FROM wallets WHERE id = ?", walletID).Scan(&newBalance)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(
-		`INSERT INTO transactions (wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		walletID, -amount, newBalance, string(txType), description, refType, refID,
-	)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	})
 }
 
 func (r *WalletRepo) GetTransactions(walletID int, filter wallet.TransactionFilter, page, limit int) ([]*wallet.Transaction, int, error) {

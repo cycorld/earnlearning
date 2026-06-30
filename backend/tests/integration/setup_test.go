@@ -23,10 +23,10 @@ import (
 )
 
 const (
-	testJWTSecret    = "test-jwt-secret"
-	testAdminEmail   = "admin@test.com"
-	testAdminPass    = "admin1234"
-	testUploadPath   = "/tmp/earnlearning-test-uploads"
+	testJWTSecret  = "test-jwt-secret"
+	testAdminEmail = "admin@test.com"
+	testAdminPass  = "admin1234"
+	testUploadPath = "/tmp/earnlearning-test-uploads"
 )
 
 type testServer struct {
@@ -79,7 +79,6 @@ func setupTestServer(t *testing.T) *testServer {
 	exchangeRepo := persistence.NewExchangeRepo(db)
 	loanRepo := persistence.NewLoanRepo(db)
 	notifRepo := persistence.NewNotificationRepo(db)
-	shareholderUpdater := persistence.NewShareholderUpdater(db)
 
 	hub := ws.NewHub()
 	go hub.Run()
@@ -100,7 +99,7 @@ func setupTestServer(t *testing.T) *testServer {
 	grantUC := application.NewGrantUseCase(db, grantRepo, walletRepo, notifUC)
 	investmentUC := application.NewInvestmentUseCase(db, investmentRepo, companyRepo, walletRepo)
 	exchangeUC := application.NewExchangeUseCase(exchangeRepo, companyRepo, walletRepo)
-	exchangeUC.SetShareholderUpdater(shareholderUpdater)
+	exchangeUC.SetDB(db)
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
 
 	// #119 평가지표 milestones

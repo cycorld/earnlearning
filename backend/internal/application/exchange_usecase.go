@@ -11,19 +11,13 @@ import (
 	"github.com/earnlearning/backend/internal/domain/wallet"
 )
 
-// ShareholderUpdater provides direct shareholder share updates.
-type ShareholderUpdater interface {
-	UpdateShareholderShares(companyID, userID, shares int) error
-}
-
 type ExchangeUseCase struct {
-	db                 *sql.DB
-	exchangeRepo       exchange.Repository
-	companyRepo        company.CompanyRepository
-	walletRepo         wallet.Repository
-	shareholderUpdater ShareholderUpdater
-	notifUC            *NotificationUseCase
-	autoPoster         *AutoPoster
+	db           *sql.DB
+	exchangeRepo exchange.Repository
+	companyRepo  company.CompanyRepository
+	walletRepo   wallet.Repository
+	notifUC      *NotificationUseCase
+	autoPoster   *AutoPoster
 }
 
 func NewExchangeUseCase(er exchange.Repository, cr company.CompanyRepository, wr wallet.Repository) *ExchangeUseCase {
@@ -32,10 +26,6 @@ func NewExchangeUseCase(er exchange.Repository, cr company.CompanyRepository, wr
 		companyRepo:  cr,
 		walletRepo:   wr,
 	}
-}
-
-func (uc *ExchangeUseCase) SetShareholderUpdater(updater ShareholderUpdater) {
-	uc.shareholderUpdater = updater
 }
 
 func (uc *ExchangeUseCase) SetDB(db *sql.DB) {
@@ -261,9 +251,20 @@ func (uc *ExchangeUseCase) GetMyOrders(userID int, status string, companyID, pag
 	}, nil
 }
 
-func (uc *ExchangeUseCase) runMatching(order *exchange.StockOrder, comp *company.Company) ([]*exchange.StockTrade, error) {
-	var matches []*exchange.MatchResult
+// tradeNotice captures the post-commit side effects (notification + auto-post) for
+// one executed trade, so they fire only after the matching transaction commits.
+type tradeNotice struct {
+	buyerID, sellerID int
+	shares            int
+	price             int
+	totalAmount       int
+	tradeID           int
+}
 
+func (uc *ExchangeUseCase) runMatching(order *exchange.StockOrder, comp *company.Company) ([]*exchange.StockTrade, error) {
+	// Compute matches first (pure, no writes) so an order that crosses nothing
+	// skips the transaction entirely.
+	var matches []*exchange.MatchResult
 	if order.OrderType == exchange.OrderTypeBuy {
 		sellOrders, err := uc.exchangeRepo.FindMatchingSellOrders(order.CompanyID, order.PricePerShare, order.UserID)
 		if err != nil {
@@ -277,8 +278,29 @@ func (uc *ExchangeUseCase) runMatching(order *exchange.StockOrder, comp *company
 		}
 		matches = exchange.MatchSellOrder(order, buyOrders)
 	}
+	if len(matches) == 0 {
+		return nil, nil
+	}
+
+	// #142: settle every match inside ONE transaction — trade rows, order updates,
+	// wallet debit/credit, shareholder transfer and valuation all commit together or
+	// roll back together, so a failure mid-loop can never leave "money moved but
+	// shares didn't" half-state. uc.db has SetMaxOpenConns(1), so any DB access via a
+	// non-tx repo while this tx is open would deadlock — hence the matching repos are
+	// rebound to tx and the external side effects (notify/auto-post, which use other
+	// connections) are deferred until after commit.
+	tx, err := uc.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	exchangeRepo := uc.exchangeRepo.WithTx(tx)
+	walletRepo := uc.walletRepo.WithTx(tx)
+	companyRepo := uc.companyRepo.WithTx(tx)
 
 	var trades []*exchange.StockTrade
+	var notices []tradeNotice
 
 	for _, match := range matches {
 		trade := &exchange.StockTrade{
@@ -292,9 +314,9 @@ func (uc *ExchangeUseCase) runMatching(order *exchange.StockOrder, comp *company
 			TotalAmount:   match.Shares * match.Price,
 		}
 
-		tradeID, err := uc.exchangeRepo.CreateTrade(trade)
+		tradeID, err := exchangeRepo.CreateTrade(trade)
 		if err != nil {
-			return trades, err
+			return nil, err
 		}
 		trade.ID = tradeID
 
@@ -305,8 +327,8 @@ func (uc *ExchangeUseCase) runMatching(order *exchange.StockOrder, comp *company
 		} else {
 			match.BuyOrder.Status = exchange.OrderStatusPartial
 		}
-		if err := uc.exchangeRepo.UpdateOrder(match.BuyOrder); err != nil {
-			return trades, err
+		if err := exchangeRepo.UpdateOrder(match.BuyOrder); err != nil {
+			return nil, err
 		}
 
 		// Update sell order
@@ -316,88 +338,78 @@ func (uc *ExchangeUseCase) runMatching(order *exchange.StockOrder, comp *company
 		} else {
 			match.SellOrder.Status = exchange.OrderStatusPartial
 		}
-		if err := uc.exchangeRepo.UpdateOrder(match.SellOrder); err != nil {
-			return trades, err
+		if err := exchangeRepo.UpdateOrder(match.SellOrder); err != nil {
+			return nil, err
 		}
 
 		// Debit buyer wallet
-		buyerWallet, err := uc.walletRepo.FindByUserID(match.BuyOrder.UserID)
+		buyerWallet, err := walletRepo.FindByUserID(match.BuyOrder.UserID)
 		if err != nil {
-			return trades, err
+			return nil, err
 		}
-		if err := uc.walletRepo.Debit(buyerWallet.ID, trade.TotalAmount, wallet.TxStockBuy,
+		if err := walletRepo.Debit(buyerWallet.ID, trade.TotalAmount, wallet.TxStockBuy,
 			fmt.Sprintf("%s 주식 %d주 매수", comp.Name, match.Shares), "trade", tradeID); err != nil {
-			return trades, err
+			return nil, err
 		}
 
 		// Credit seller wallet
-		sellerWallet, err := uc.walletRepo.FindByUserID(match.SellOrder.UserID)
+		sellerWallet, err := walletRepo.FindByUserID(match.SellOrder.UserID)
 		if err != nil {
-			return trades, err
+			return nil, err
 		}
-		if err := uc.walletRepo.Credit(sellerWallet.ID, trade.TotalAmount, wallet.TxStockSell,
+		if err := walletRepo.Credit(sellerWallet.ID, trade.TotalAmount, wallet.TxStockSell,
 			fmt.Sprintf("%s 주식 %d주 매도", comp.Name, match.Shares), "trade", tradeID); err != nil {
-			return trades, err
+			return nil, err
 		}
 
-		// Update shareholders: buyer +shares
-		// FindShareholder returns (nil, nil) for a first-time buyer (no row yet);
-		// guard on buyerSH == nil so we create instead of nil-dereferencing.
-		buyerSH, err := uc.companyRepo.FindShareholder(order.CompanyID, match.BuyOrder.UserID)
-		if err != nil || buyerSH == nil {
-			// Create new shareholder
-			_, err = uc.companyRepo.CreateShareholder(&company.Shareholder{
-				CompanyID:       order.CompanyID,
-				UserID:          match.BuyOrder.UserID,
-				Shares:          match.Shares,
-				AcquisitionType: "trade",
-			})
-			if err != nil {
-				return trades, err
-			}
-		} else {
-			newShares := buyerSH.Shares + match.Shares
-			if uc.shareholderUpdater != nil {
-				if err := uc.shareholderUpdater.UpdateShareholderShares(order.CompanyID, match.BuyOrder.UserID, newShares); err != nil {
-					return trades, err
-				}
-			}
+		// Transfer shares: buyer +shares (Upsert inserts a first-time buyer or adds to
+		// an existing position), seller -shares (Subtract deletes the row at zero).
+		if err := companyRepo.UpsertShareholder(order.CompanyID, match.BuyOrder.UserID, match.Shares, "trade"); err != nil {
+			return nil, err
 		}
-
-		// Update shareholders: seller -shares (delete if 0)
-		// Guard on sellerSH != nil — FindShareholder returns (nil, nil) when no row.
-		sellerSH, err := uc.companyRepo.FindShareholder(order.CompanyID, match.SellOrder.UserID)
-		if err == nil && sellerSH != nil && uc.shareholderUpdater != nil {
-			newShares := sellerSH.Shares - match.Shares
-			if err := uc.shareholderUpdater.UpdateShareholderShares(order.CompanyID, match.SellOrder.UserID, newShares); err != nil {
-				return trades, err
-			}
+		if err := companyRepo.SubtractShareholderShares(order.CompanyID, match.SellOrder.UserID, match.Shares); err != nil {
+			return nil, err
 		}
 
 		// Update company valuation = trade_price * total_shares
 		comp.Valuation = trade.PricePerShare * comp.TotalShares
-		if err := uc.companyRepo.Update(comp); err != nil {
-			return trades, err
+		if err := companyRepo.Update(comp); err != nil {
+			return nil, err
 		}
 
-		// Notify buyer and seller
-		uc.notify(match.BuyOrder.UserID, notification.NotifStockTrade,
-			"주식 매수 체결",
-			fmt.Sprintf("%s %d주를 %s에 매수했습니다.", comp.Name, match.Shares, formatMoney(trade.TotalAmount)),
-			"trade", tradeID)
-		uc.notify(match.SellOrder.UserID, notification.NotifStockTrade,
-			"주식 매도 체결",
-			fmt.Sprintf("%s %d주를 %s에 매도했습니다.", comp.Name, match.Shares, formatMoney(trade.TotalAmount)),
-			"trade", tradeID)
+		notices = append(notices, tradeNotice{
+			buyerID:     match.BuyOrder.UserID,
+			sellerID:    match.SellOrder.UserID,
+			shares:      match.Shares,
+			price:       match.Price,
+			totalAmount: trade.TotalAmount,
+			tradeID:     tradeID,
+		})
+		trades = append(trades, trade)
+	}
 
-		// Auto-post to 거래소 channel
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	// Post-commit side effects: never run inside the tx (separate DB connections
+	// would deadlock under SetMaxOpenConns(1)), and never fire for a trade that
+	// rolled back. Best-effort — a failed notification must not undo a settled trade.
+	for _, n := range notices {
+		uc.notify(n.buyerID, notification.NotifStockTrade,
+			"주식 매수 체결",
+			fmt.Sprintf("%s %d주를 %s에 매수했습니다.", comp.Name, n.shares, formatMoney(n.totalAmount)),
+			"trade", n.tradeID)
+		uc.notify(n.sellerID, notification.NotifStockTrade,
+			"주식 매도 체결",
+			fmt.Sprintf("%s %d주를 %s에 매도했습니다.", comp.Name, n.shares, formatMoney(n.totalAmount)),
+			"trade", n.tradeID)
+
 		if uc.autoPoster != nil {
 			content := fmt.Sprintf("## 📊 거래 체결: %s\n\n**%d주** × **%s** = **%s**",
-				comp.Name, match.Shares, formatMoney(match.Price), formatMoney(trade.TotalAmount))
+				comp.Name, n.shares, formatMoney(n.price), formatMoney(n.totalAmount))
 			uc.autoPoster.PostToChannelAsAdmin("exchange", content, []string{"거래체결", comp.Name})
 		}
-
-		trades = append(trades, trade)
 	}
 
 	return trades, nil

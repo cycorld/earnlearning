@@ -1,6 +1,9 @@
 package wallet
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type TransactionFilter struct {
 	TxType    string
@@ -9,6 +12,9 @@ type TransactionFilter struct {
 }
 
 type Repository interface {
+	// WithTx returns a Repository whose writes run inside tx (#142).
+	WithTx(tx *sql.Tx) Repository
+
 	FindByUserID(userID int) (*Wallet, error)
 	CreateWallet(userID int) (int, error)
 	Credit(walletID int, amount int, txType TxType, description, refType string, refID int) error

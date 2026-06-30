@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 	"time"
@@ -192,9 +193,9 @@ func (r *fakeUserRepo) GetUserActivity(int) (*user.UserActivity, error) {
 	return nil, nil
 }
 func (r *fakeUserRepo) SearchApproved(string, int) ([]*user.User, error) { return nil, nil }
-func (r *fakeUserRepo) UpdatePassword(int, string) error            { return nil }
-func (r *fakeUserRepo) SaveResetToken(int, string, time.Time) error { return nil }
-func (r *fakeUserRepo) ConsumeResetToken(string) (int, error)       { return 0, nil }
+func (r *fakeUserRepo) UpdatePassword(int, string) error                 { return nil }
+func (r *fakeUserRepo) SaveResetToken(int, string, time.Time) error      { return nil }
+func (r *fakeUserRepo) ConsumeResetToken(string) (int, error)            { return 0, nil }
 
 type fakeWalletRepo struct {
 	balance int
@@ -207,6 +208,7 @@ type fakeWalletRepo struct {
 	}
 }
 
+func (r *fakeWalletRepo) WithTx(*sql.Tx) wallet.Repository { return r }
 func (r *fakeWalletRepo) FindByUserID(int) (*wallet.Wallet, error) {
 	return &wallet.Wallet{ID: 1, UserID: 1, Balance: r.balance}, nil
 }

@@ -1,9 +1,15 @@
 package company
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 // CompanyRepository defines the persistence interface for the company domain.
 type CompanyRepository interface {
+	// WithTx returns a CompanyRepository whose writes run inside tx (#142).
+	WithTx(tx *sql.Tx) CompanyRepository
+
 	Create(c *Company) (int, error)
 	FindByID(id int) (*Company, error)
 	FindByOwnerID(ownerID int) ([]*Company, error)

@@ -10,11 +10,16 @@ import (
 )
 
 type CompanyRepo struct {
-	db *sql.DB
+	db DBTX
 }
 
 func NewCompanyRepo(db *sql.DB) *CompanyRepo {
 	return &CompanyRepo{db: db}
+}
+
+// WithTx returns a repo bound to tx so its writes join the caller's transaction (#142).
+func (r *CompanyRepo) WithTx(tx *sql.Tx) company.CompanyRepository {
+	return &CompanyRepo{db: tx}
 }
 
 func (r *CompanyRepo) Create(c *company.Company) (int, error) {
@@ -298,34 +303,29 @@ func (r *CompanyRepo) FindCompanyWallet(companyID int) (*company.CompanyWallet, 
 }
 
 func (r *CompanyRepo) CreditCompanyWallet(walletID int, amount int, txType string, desc string, refType string, refID int) error {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback()
+	return withDBTx(r.db, func(tx DBTX) error {
+		var balance int
+		err := tx.QueryRow("SELECT balance FROM company_wallets WHERE id = ?", walletID).Scan(&balance)
+		if err != nil {
+			return fmt.Errorf("get balance: %w", err)
+		}
 
-	var balance int
-	err = tx.QueryRow("SELECT balance FROM company_wallets WHERE id = ?", walletID).Scan(&balance)
-	if err != nil {
-		return fmt.Errorf("get balance: %w", err)
-	}
+		newBalance := balance + amount
+		_, err = tx.Exec("UPDATE company_wallets SET balance = ? WHERE id = ?", newBalance, walletID)
+		if err != nil {
+			return fmt.Errorf("update balance: %w", err)
+		}
 
-	newBalance := balance + amount
-	_, err = tx.Exec("UPDATE company_wallets SET balance = ? WHERE id = ?", newBalance, walletID)
-	if err != nil {
-		return fmt.Errorf("update balance: %w", err)
-	}
-
-	_, err = tx.Exec(`
-		INSERT INTO company_transactions (company_wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		walletID, amount, newBalance, txType, desc, refType, refID,
-	)
-	if err != nil {
-		return fmt.Errorf("insert transaction: %w", err)
-	}
-
-	return tx.Commit()
+		_, err = tx.Exec(`
+			INSERT INTO company_transactions (company_wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			walletID, amount, newBalance, txType, desc, refType, refID,
+		)
+		if err != nil {
+			return fmt.Errorf("insert transaction: %w", err)
+		}
+		return nil
+	})
 }
 
 // Disclosure operations
@@ -638,36 +638,31 @@ func (r *CompanyRepo) GetCompanyTransactions(walletID int, page, limit int) ([]*
 }
 
 func (r *CompanyRepo) DebitCompanyWallet(walletID int, amount int, txType string, desc string, refType string, refID int) error {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback()
+	return withDBTx(r.db, func(tx DBTX) error {
+		var balance int
+		err := tx.QueryRow("SELECT balance FROM company_wallets WHERE id = ?", walletID).Scan(&balance)
+		if err != nil {
+			return fmt.Errorf("get balance: %w", err)
+		}
 
-	var balance int
-	err = tx.QueryRow("SELECT balance FROM company_wallets WHERE id = ?", walletID).Scan(&balance)
-	if err != nil {
-		return fmt.Errorf("get balance: %w", err)
-	}
+		if balance < amount {
+			return company.ErrInsufficientFunds
+		}
 
-	if balance < amount {
-		return company.ErrInsufficientFunds
-	}
+		newBalance := balance - amount
+		_, err = tx.Exec("UPDATE company_wallets SET balance = ? WHERE id = ?", newBalance, walletID)
+		if err != nil {
+			return fmt.Errorf("update balance: %w", err)
+		}
 
-	newBalance := balance - amount
-	_, err = tx.Exec("UPDATE company_wallets SET balance = ? WHERE id = ?", newBalance, walletID)
-	if err != nil {
-		return fmt.Errorf("update balance: %w", err)
-	}
-
-	_, err = tx.Exec(`
-		INSERT INTO company_transactions (company_wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		walletID, -amount, newBalance, txType, desc, refType, refID,
-	)
-	if err != nil {
-		return fmt.Errorf("insert transaction: %w", err)
-	}
-
-	return tx.Commit()
+		_, err = tx.Exec(`
+			INSERT INTO company_transactions (company_wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			walletID, -amount, newBalance, txType, desc, refType, refID,
+		)
+		if err != nil {
+			return fmt.Errorf("insert transaction: %w", err)
+		}
+		return nil
+	})
 }

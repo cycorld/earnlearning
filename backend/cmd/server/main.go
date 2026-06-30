@@ -82,7 +82,6 @@ func main() {
 	exchangeRepo := persistence.NewExchangeRepo(db)
 	loanRepo := persistence.NewLoanRepo(db)
 	notifRepo := persistence.NewNotificationRepo(db)
-	shareholderUpdater := persistence.NewShareholderUpdater(db)
 	userDBRepo := persistence.NewUserDBRepo(db)
 	llmRepo := persistence.NewLLMRepo(db)
 	chatSessionRepo := persistence.NewChatSessionRepo(db)
@@ -103,7 +102,7 @@ func main() {
 	emailSvc := email.NewSESService(email.Config{
 		Region:          cfg.SESRegion,
 		AccessKeyID:     cfg.SESAccessKeyID,
-		SecretAccessKey:  cfg.SESSecretAccessKey,
+		SecretAccessKey: cfg.SESSecretAccessKey,
 		FromEmail:       cfg.SESFromEmail,
 	})
 
@@ -122,7 +121,6 @@ func main() {
 	investmentUC := application.NewInvestmentUseCase(db, investmentRepo, companyRepo, walletRepo)
 	investmentUC.SetNotificationUseCase(notifUC)
 	exchangeUC := application.NewExchangeUseCase(exchangeRepo, companyRepo, walletRepo)
-	exchangeUC.SetShareholderUpdater(shareholderUpdater)
 	exchangeUC.SetDB(db)
 	exchangeUC.SetNotificationUseCase(notifUC)
 	postUC.SetNotificationUseCase(notifUC)
