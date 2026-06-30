@@ -1610,5 +1610,17 @@
       "TDD"
     ],
     "github": null
+  },
+  {
+    "slug": "143-exchange-halfcommit-audit",
+    "title": "\"돈만 가고 주식은 안 온\" 과거 체결 찾아내기 (데이터 정합성 점검)",
+    "date": "2026-06-30",
+    "tags": [
+      "점검",
+      "데이터무결성",
+      "거래소",
+      "SQL"
+    ],
+    "github": null
   }
 ]
