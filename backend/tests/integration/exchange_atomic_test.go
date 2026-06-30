@@ -110,3 +110,49 @@ func TestExchange_Matching_RollsBackOnMidFailure(t *testing.T) {
 		t.Errorf("seller shares = %d, want %d (no decrement should persist)", sellerSHAfter.Shares, sellerSHBefore.Shares)
 	}
 }
+
+// Invariant (#143): after a normal crossing trade, total shares are conserved —
+// SUM(shareholders.shares) must still equal companies.total_shares. The #140 bug
+// broke exactly this by moving money without moving ownership; this guards that a
+// settled trade never leaks or evaporates shares. It is also the production audit
+// query (Q1 in scripts/audit/exchange_integrity.sql) expressed as a test.
+func TestExchange_Matching_ConservesShares(t *testing.T) {
+	ts := setupTestServer(t)
+
+	_, sellerToken := createInvestor(t, ts, "conserve-seller@test.com", "seller", "20240803", 60_000_000)
+	_, buyerToken := createInvestor(t, ts, "conserve-buyer@test.com", "buyer", "20240804", 60_000_000)
+
+	r := ts.post("/api/companies", map[string]interface{}{
+		"name": "보존테스트사", "description": "주식 보존", "initial_capital": 50_000_000, "logo_url": "",
+	}, sellerToken)
+	if !r.Success {
+		t.Fatalf("create company: %v", r.Error)
+	}
+	var c struct {
+		ID int `json:"id"`
+	}
+	_ = json.Unmarshal(r.Data, &c)
+
+	if sr := ts.post("/api/exchange/orders", map[string]interface{}{
+		"company_id": c.ID, "order_type": "sell", "shares": 120, "price": 4000,
+	}, sellerToken); !sr.Success {
+		t.Fatalf("seller sell: %v", sr.Error)
+	}
+	// Buyer crosses part of it (partial fill) — exercises buyer add + seller subtract.
+	if br := ts.post("/api/exchange/orders", map[string]interface{}{
+		"company_id": c.ID, "order_type": "buy", "shares": 70, "price": 4000,
+	}, buyerToken); !br.Success {
+		t.Fatalf("buyer buy: %v", br.Error)
+	}
+
+	var total, held int
+	if err := ts.db.QueryRow("SELECT total_shares FROM companies WHERE id = ?", c.ID).Scan(&total); err != nil {
+		t.Fatalf("read total_shares: %v", err)
+	}
+	if err := ts.db.QueryRow("SELECT COALESCE(SUM(shares), 0) FROM shareholders WHERE company_id = ?", c.ID).Scan(&held); err != nil {
+		t.Fatalf("read held shares: %v", err)
+	}
+	if held != total {
+		t.Errorf("share conservation broken: SUM(shareholders.shares)=%d != total_shares=%d", held, total)
+	}
+}
