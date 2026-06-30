@@ -68,6 +68,46 @@ func (uc *ExchangeUseCase) GetOrderbook(companyID int) (*exchange.Orderbook, err
 	return uc.exchangeRepo.GetOrderbook(companyID)
 }
 
+// Position is the user's tradeable position in one company — mirrors the limits
+// PlaceOrder validates against (available_cash for buys, available_shares for sells).
+type Position struct {
+	Shares          int `json:"shares"`           // 보유 주식
+	AvailableShares int `json:"available_shares"` // 보유 − 미체결 매도
+	Balance         int `json:"balance"`          // 지갑 잔액
+	AvailableCash   int `json:"available_cash"`   // 잔액 − 미체결 매수
+}
+
+func (uc *ExchangeUseCase) GetPosition(companyID, userID int) (*Position, error) {
+	c, err := uc.companyRepo.FindByID(companyID)
+	if err != nil {
+		return nil, exchange.ErrCompanyNotFound
+	}
+	if !c.Listed {
+		return nil, exchange.ErrCompanyNotListed
+	}
+
+	pos := &Position{}
+	if w, err := uc.walletRepo.FindByUserID(userID); err == nil && w != nil {
+		pos.Balance = w.Balance
+	}
+	pendingBuy, err := uc.exchangeRepo.GetPendingBuyTotal(userID)
+	if err != nil {
+		return nil, err
+	}
+	pos.AvailableCash = max(0, pos.Balance-pendingBuy)
+
+	if sh, err := uc.companyRepo.FindShareholder(companyID, userID); err == nil && sh != nil {
+		pos.Shares = sh.Shares
+	}
+	pendingSell, err := uc.exchangeRepo.GetPendingSellShares(userID, companyID)
+	if err != nil {
+		return nil, err
+	}
+	pos.AvailableShares = max(0, pos.Shares-pendingSell)
+
+	return pos, nil
+}
+
 func (uc *ExchangeUseCase) GetCompanyTrades(companyID, limit int) ([]*exchange.StockTrade, error) {
 	c, err := uc.companyRepo.FindByID(companyID)
 	if err != nil {

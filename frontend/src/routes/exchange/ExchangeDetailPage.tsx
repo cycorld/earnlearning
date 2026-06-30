@@ -57,6 +57,13 @@ interface ListedCompany {
   volume_24h: number
 }
 
+interface Position {
+  shares: number // 보유 주식
+  available_shares: number // 매도 가능 (보유 − 미체결 매도)
+  balance: number // 지갑 잔액
+  available_cash: number // 매수 가능 (잔액 − 미체결 매수)
+}
+
 // 체결 시각을 HH:MM (브라우저 로컬, KST)로 표시
 function timeHM(iso: string): string {
   return new Date(iso).toLocaleTimeString('ko-KR', {
@@ -143,6 +150,7 @@ export default function ExchangeDetailPage() {
   const [orderbook, setOrderbook] = useState<Orderbook | null>(null)
   const [trades, setTrades] = useState<StockTrade[]>([])
   const [myOrders, setMyOrders] = useState<ExchangeOrder[]>([])
+  const [position, setPosition] = useState<Position | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -152,13 +160,14 @@ export default function ExchangeDetailPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [companies, ob, tr, orders] = await Promise.all([
+      const [companies, ob, tr, orders, pos] = await Promise.all([
         api.get<ListedCompany[]>('/exchange/companies'),
         api.get<Orderbook>(`/exchange/orderbook/${companyId}`),
         api.get<StockTrade[]>(`/exchange/trades/${companyId}?limit=50`),
         api.get<{ orders: ExchangeOrder[] } | ExchangeOrder[]>(
           '/exchange/orders/mine',
         ),
+        api.get<Position>(`/exchange/position/${companyId}`),
       ])
       setCompany(
         (Array.isArray(companies) ? companies : []).find(
@@ -169,6 +178,7 @@ export default function ExchangeDetailPage() {
       setTrades(tr || [])
       const ordersArr = Array.isArray(orders) ? orders : (orders?.orders ?? [])
       setMyOrders(ordersArr.filter((o) => o.company_id === companyId))
+      setPosition(pos)
     } catch {
       // ignore
     } finally {
@@ -190,6 +200,20 @@ export default function ExchangeDetailPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!shares || !price) return
+
+    // 프론트 제약 (백엔드 검증과 동일 기준 — 매수=여유자금, 매도=매도가능 주식)
+    const s = Number(shares)
+    const p = Number(price)
+    if (position) {
+      if (orderType === 'buy' && p > 0 && s * p > position.available_cash) {
+        toast.error('여유자금을 초과했습니다.')
+        return
+      }
+      if (orderType === 'sell' && s > position.available_shares) {
+        toast.error('매도 가능 수량을 초과했습니다.')
+        return
+      }
+    }
 
     setSubmitting(true)
     try {
@@ -232,6 +256,17 @@ export default function ExchangeDetailPage() {
   const changePercent = company?.change_percent ?? 0
   const changeUp = changePercent >= 0
   const total = Number(shares) * Number(price)
+
+  // 주문 제약 (매수=여유자금 한도, 매도=매도가능 주식 한도)
+  const sharesNum = Number(shares) || 0
+  const priceNum = Number(price) || 0
+  const maxBuy = priceNum > 0 ? Math.floor((position?.available_cash ?? 0) / priceNum) : 0
+  const maxShares = orderType === 'buy' ? maxBuy : (position?.available_shares ?? 0)
+  const exceeds =
+    position != null &&
+    (orderType === 'buy'
+      ? priceNum > 0 && sharesNum * priceNum > position.available_cash
+      : sharesNum > position.available_shares)
 
   return (
     <div className="mx-auto max-w-lg space-y-4 p-4">
@@ -303,10 +338,40 @@ export default function ExchangeDetailPage() {
             </TabsList>
           </Tabs>
 
+          {position && (
+            <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-xs">
+              <span className="text-muted-foreground">
+                보유{' '}
+                <span className="font-medium text-foreground">
+                  {position.shares.toLocaleString()}주
+                </span>
+                {position.available_shares !== position.shares && (
+                  <span> · 매도가능 {position.available_shares.toLocaleString()}</span>
+                )}
+              </span>
+              <span className="text-muted-foreground">
+                여유자금{' '}
+                <span className="font-medium text-foreground">
+                  {formatMoney(position.available_cash)}
+                </span>
+              </span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">수량 (주)</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">수량 (주)</Label>
+                  <button
+                    type="button"
+                    onClick={() => setShares(String(maxShares))}
+                    disabled={maxShares <= 0}
+                    className="text-[10px] font-medium text-primary disabled:opacity-40"
+                  >
+                    최대 {maxShares.toLocaleString()}
+                  </button>
+                </div>
                 <Input
                   type="number"
                   min="1"
@@ -336,10 +401,18 @@ export default function ExchangeDetailPage() {
               </span>
             </div>
 
+            {exceeds && (
+              <p className="text-xs font-medium text-destructive">
+                {orderType === 'buy'
+                  ? '여유자금을 초과했습니다.'
+                  : '매도 가능 수량을 초과했습니다.'}
+              </p>
+            )}
+
             <Button
               type="submit"
               className="w-full"
-              disabled={submitting}
+              disabled={submitting || exceeds || sharesNum <= 0 || priceNum <= 0}
               variant={orderType === 'buy' ? 'default' : 'destructive'}
             >
               {submitting
