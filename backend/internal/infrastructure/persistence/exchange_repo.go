@@ -9,11 +9,16 @@ import (
 )
 
 type ExchangeRepo struct {
-	db *sql.DB
+	db DBTX
 }
 
 func NewExchangeRepo(db *sql.DB) *ExchangeRepo {
 	return &ExchangeRepo{db: db}
+}
+
+// WithTx returns a repo bound to tx so its writes join the caller's transaction (#142).
+func (r *ExchangeRepo) WithTx(tx *sql.Tx) exchange.Repository {
+	return &ExchangeRepo{db: tx}
 }
 
 func (r *ExchangeRepo) CreateOrder(order *exchange.StockOrder) (int, error) {

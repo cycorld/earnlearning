@@ -1,6 +1,12 @@
 package exchange
 
+import "database/sql"
+
 type Repository interface {
+	// WithTx returns a Repository whose writes run inside tx, so the matching
+	// engine can settle an entire trade atomically (#142).
+	WithTx(tx *sql.Tx) Repository
+
 	// Order operations
 	CreateOrder(order *StockOrder) (int, error)
 	FindOrderByID(id int) (*StockOrder, error)
