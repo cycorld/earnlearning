@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /$
+Disallow: /api/
+Disallow: /admin
+Disallow: /auth/
+Disallow: /bank
+Disallow: /chatbot
+Disallow: /company
+Disallow: /feed
+Disallow: /grant
+Disallow: /invest
+Disallow: /market
+Disallow: /messages
+Disallow: /milestones
+Disallow: /notifications
+Disallow: /profile
+Disallow: /uploads/
+Disallow: /wallet
+
+Sitemap: https://earnlearning.com/sitemap.xml
