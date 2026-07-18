@@ -1622,5 +1622,17 @@
       "SQL"
     ],
     "github": null
+  },
+  {
+    "slug": "156-search-engine-crawl-files",
+    "title": "검색엔진 수집용 robots.txt 및 sitemap.xml 추가",
+    "date": "2026-07-18",
+    "tags": [
+      "SEO",
+      "검색엔진",
+      "robots",
+      "sitemap"
+    ],
+    "github": null
   }
 ]
