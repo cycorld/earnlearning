@@ -1634,5 +1634,17 @@
       "sitemap"
     ],
     "github": null
+  },
+  {
+    "slug": "157-prompt-logs-gitignore",
+    "title": "실수로 DB가 공개 저장소에 올라가지 않도록 안전장치 추가",
+    "date": "2026-07-20",
+    "tags": [
+      "보안",
+      "gitignore",
+      "공개저장소",
+      "프롬프트로그"
+    ],
+    "github": null
   }
 ]
