@@ -11,6 +11,12 @@ backend/earnlearning
 *.db-shm
 *.db-wal
 
+# Local runtime data (SQLite DB + uploads) — 공개 저장소 유출 방지
+backend/data/
+
+# Agent worktrees
+.claude/worktrees/
+
 # Environment
 .env
 .env.*
