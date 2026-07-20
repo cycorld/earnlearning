@@ -1686,5 +1686,16 @@
       "트러블슈팅"
     ],
     "github": null
+  },
+  {
+    "slug": "170-shared-mail-short-localpart",
+    "title": "팀 메일 01@ ~ 15@ — 관리자 공용 메일함만 2글자 허용",
+    "date": "2026-07-21",
+    "tags": [
+      "이메일",
+      "공용메일함",
+      "검증"
+    ],
+    "github": null
   }
 ]
