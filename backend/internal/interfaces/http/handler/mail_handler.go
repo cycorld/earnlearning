@@ -147,6 +147,8 @@ type mailDetailResp struct {
 	ID          int                  `json:"id"`
 	Direction   string               `json:"direction"`
 	FromAddr    string               `json:"from_addr"`
+	HeaderFrom     string            `json:"header_from"`      // 표시용 헤더 From (#171)
+	HeaderFromName string            `json:"header_from_name"`
 	ToAddr      string               `json:"to_addr"`
 	Subject     string               `json:"subject"`
 	BodyText    string               `json:"body_text"`
@@ -172,7 +174,8 @@ func (h *MailHandler) GetEmail(c echo.Context) error {
 		return mailErr(c, err)
 	}
 	resp := mailDetailResp{
-		ID: e.ID, Direction: e.Direction, FromAddr: e.FromAddr, ToAddr: e.ToAddr,
+		ID: e.ID, Direction: e.Direction, FromAddr: e.FromAddr,
+		HeaderFrom: e.HeaderFrom, HeaderFromName: e.HeaderFromName, ToAddr: e.ToAddr,
 		Subject: e.Subject, BodyText: e.BodyText, BodyHTML: e.BodyHTML,
 		MessageID: e.MessageID, InReplyTo: e.InReplyTo, Refs: e.Refs,
 		Read: e.Read, CreatedAt: e.CreatedAt,

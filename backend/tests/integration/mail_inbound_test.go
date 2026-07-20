@@ -253,3 +253,80 @@ func TestMailInboundDelivery(t *testing.T) {
 		t.Fatalf("관리자 목록에 owner_name 이 있어야 함: %s", string(ar.Data))
 	}
 }
+
+// TestMailInboundHeaderFrom — #171: 헤더 From(주소+이름)을 저장하고 목록·상세에 노출한다.
+// SES 발송 메일의 봉투 주소는 VERP 일회용 주소라 표시용으로는 헤더 From 이 필요하다.
+func TestMailInboundHeaderFrom(t *testing.T) {
+	ts := setupTestServer(t)
+	token := ts.registerAndApprove("hdrfrom@student.com", "pw12345678", "헤더프롬", "2024801")
+	addrID := ts.claimMailAddress(t, token, "hdrfrombox")
+
+	if st, b := ts.inbound(testMailWebhookSecret, map[string]interface{}{
+		"from":             "010cabc-verp-bounce@mail.earnlearning.com",
+		"to":               "hdrfrombox@earnlearning.com",
+		"subject":          "헤더 표시",
+		"text":             "본문",
+		"header_from":      "cyc@earnlearning.com",
+		"header_from_name": "최용철",
+	}); st != http.StatusCreated {
+		t.Fatalf("inbound 실패: %d %s", st, string(b))
+	}
+
+	// 목록에 header_from 노출
+	_, lr := ts.mailJSON("GET", "/api/mail?box=inbox&address_id="+strconv.Itoa(addrID), nil, token)
+	var lst struct {
+		Emails []struct {
+			ID             int    `json:"id"`
+			FromAddr       string `json:"from_addr"`
+			HeaderFrom     string `json:"header_from"`
+			HeaderFromName string `json:"header_from_name"`
+		} `json:"emails"`
+	}
+	json.Unmarshal(lr.Data, &lst)
+	if len(lst.Emails) != 1 {
+		t.Fatalf("inbox 1건이어야 함: %s", string(lr.Data))
+	}
+	e := lst.Emails[0]
+	if e.HeaderFrom != "cyc@earnlearning.com" || e.HeaderFromName != "최용철" {
+		t.Fatalf("목록 header_from 불일치: %+v", e)
+	}
+	if e.FromAddr != "010cabc-verp-bounce@mail.earnlearning.com" {
+		t.Fatalf("봉투 from_addr 은 그대로 보존되어야 함: %+v", e)
+	}
+
+	// 상세에도 노출
+	_, dr := ts.mailJSON("GET", "/api/mail/"+strconv.Itoa(e.ID), nil, token)
+	var det struct {
+		HeaderFrom     string `json:"header_from"`
+		HeaderFromName string `json:"header_from_name"`
+	}
+	json.Unmarshal(dr.Data, &det)
+	if det.HeaderFrom != "cyc@earnlearning.com" || det.HeaderFromName != "최용철" {
+		t.Fatalf("상세 header_from 불일치: %s", string(dr.Data))
+	}
+}
+
+// TestMailSendStoresHeaderFrom — #171: 발신 시 보낸편지함 기록에도 header_from(자기 주소·이름)을 채운다.
+func TestMailSendStoresHeaderFrom(t *testing.T) {
+	ts := setupTestServer(t)
+	ts.mailSpy.enabled = true
+	token := ts.registerAndApprove("hdrsend@student.com", "pw12345678", "헤더발신", "2024802")
+	addrID := ts.claimMailAddress(t, token, "hdrsendbox")
+
+	if st, b := ts.mailJSON("POST", "/api/mail/send", map[string]interface{}{
+		"address_id": addrID, "to": "x@y.com", "subject": "s", "body_text": "b",
+	}, token); st != http.StatusCreated {
+		t.Fatalf("send 실패: %d %s", st, string(b.Data))
+	}
+	_, lr := ts.mailJSON("GET", "/api/mail?box=sent&address_id="+strconv.Itoa(addrID), nil, token)
+	var lst struct {
+		Emails []struct {
+			HeaderFrom     string `json:"header_from"`
+			HeaderFromName string `json:"header_from_name"`
+		} `json:"emails"`
+	}
+	json.Unmarshal(lr.Data, &lst)
+	if len(lst.Emails) != 1 || lst.Emails[0].HeaderFrom != "hdrsendbox@earnlearning.com" || lst.Emails[0].HeaderFromName != "헤더발신" {
+		t.Fatalf("보낸편지함 header_from 불일치: %s", string(lr.Data))
+	}
+}

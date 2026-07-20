@@ -96,6 +96,9 @@ type Email struct {
 	OwnerUserID int       `json:"owner_user_id"`
 	Direction   string    `json:"direction"`
 	FromAddr    string    `json:"from_addr"`
+	// HeaderFrom/HeaderFromName — 표시용 헤더 From (#171). 봉투(from_addr)는 신뢰/감사용으로 보존.
+	HeaderFrom     string `json:"header_from"`
+	HeaderFromName string `json:"header_from_name"`
 	ToAddr      string    `json:"to_addr"`
 	Subject     string    `json:"subject"`
 	BodyText    string    `json:"body_text"`
@@ -126,6 +129,8 @@ type EmailListItem struct {
 	ID             int       `json:"id"`
 	Direction      string    `json:"direction"`
 	FromAddr       string    `json:"from_addr"`
+	HeaderFrom     string    `json:"header_from"`      // 표시용 헤더 From (#171)
+	HeaderFromName string    `json:"header_from_name"` // 표시용 발신자 이름
 	ToAddr         string    `json:"to_addr"`
 	Subject        string    `json:"subject"`
 	Snippet        string    `json:"snippet"`
