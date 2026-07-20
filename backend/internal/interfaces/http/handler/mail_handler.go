@@ -145,6 +145,7 @@ type mailAttachmentResp struct {
 // mailDetailResp — GET /mail/:id 응답.
 type mailDetailResp struct {
 	ID          int                  `json:"id"`
+	AddressID   int                  `json:"address_id"` // 알림 딥링크(#173): 소속 메일함 자동 선택용
 	Direction   string               `json:"direction"`
 	FromAddr    string               `json:"from_addr"`
 	HeaderFrom     string            `json:"header_from"`      // 표시용 헤더 From (#171)
@@ -174,7 +175,7 @@ func (h *MailHandler) GetEmail(c echo.Context) error {
 		return mailErr(c, err)
 	}
 	resp := mailDetailResp{
-		ID: e.ID, Direction: e.Direction, FromAddr: e.FromAddr,
+		ID: e.ID, AddressID: e.AddressID, Direction: e.Direction, FromAddr: e.FromAddr,
 		HeaderFrom: e.HeaderFrom, HeaderFromName: e.HeaderFromName, ToAddr: e.ToAddr,
 		Subject: e.Subject, BodyText: e.BodyText, BodyHTML: e.BodyHTML,
 		MessageID: e.MessageID, InReplyTo: e.InReplyTo, Refs: e.Refs,

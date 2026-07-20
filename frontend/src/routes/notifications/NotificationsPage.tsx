@@ -178,7 +178,11 @@ export default function NotificationsPage() {
       }
     }
 
-    const path = getReferencePath(notif.reference_type, notif.reference_id)
+    // 메일 수신 알림은 해당 메일 딥링크로 (#173). 주소 승인/반려는 메일함 홈.
+    const path =
+      notif.notif_type === 'mail_received'
+        ? `/mail?open=${notif.reference_id}`
+        : getReferencePath(notif.reference_type, notif.reference_id)
     if (path) {
       // #132 anchor — 댓글 멘션이면 /post/3#comment-12 로 이동해 해당 댓글로 스크롤
       navigate(notif.anchor ? `${path}#${notif.anchor}` : path)

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Building2,
@@ -79,6 +80,7 @@ interface MailAttachment {
 }
 
 interface MailDetail extends MailListItem {
+  address_id: number
   body_text: string
   body_html: string
   in_reply_to: number | null
@@ -364,6 +366,29 @@ function MailboxShell({ boxes }: { boxes: Mailbox[] }) {
   const approved = boxes.filter((b) => b.status === 'approved')
   const [selectedId, setSelectedId] = useState<number>(approved[0].address_id)
 
+  // 알림 딥링크 (#173): /mail?open=<메일id> → 소속 메일함 선택 + 해당 메일 바로 열기
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [openId, setOpenId] = useState<number | null>(null)
+  const openParam = searchParams.get('open')
+  useEffect(() => {
+    if (!openParam) return
+    const id = Number(openParam)
+    if (!id) return
+    api
+      .get<MailDetail>(`/mail/${id}`)
+      .then((d) => {
+        if (d?.address_id) {
+          setSelectedId(d.address_id)
+          setOpenId(id)
+        }
+      })
+      .catch(() => {
+        /* 접근 불가/삭제된 메일이면 메일함 홈 유지 */
+      })
+      .finally(() => setSearchParams({}, { replace: true }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openParam])
+
   // 선택된 메일함이 사라진 경우(재조회 등) 첫 승인 메일함으로 복귀
   const exists = boxes.some(
     (b) => b.address_id === selectedId && b.status === 'approved',
@@ -376,6 +401,7 @@ function MailboxShell({ boxes }: { boxes: Mailbox[] }) {
       boxes={boxes}
       selectedId={effectiveId}
       onSelect={setSelectedId}
+      initialOpenId={openId ?? undefined}
     />
   )
 }
@@ -477,10 +503,12 @@ function Mailbox({
   boxes,
   selectedId,
   onSelect,
+  initialOpenId,
 }: {
   boxes: Mailbox[]
   selectedId: number
   onSelect: (id: number) => void
+  initialOpenId?: number
 }) {
   const selected =
     boxes.find((b) => b.address_id === selectedId) ??
@@ -540,6 +568,12 @@ function Mailbox({
       setLoadingMore(false)
     }
   }
+
+  // 딥링크로 진입한 경우 해당 메일을 바로 연다 (#173).
+  useEffect(() => {
+    if (initialOpenId) openDetail(initialOpenId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialOpenId])
 
   const openDetail = async (id: number) => {
     try {
