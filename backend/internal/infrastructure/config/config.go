@@ -28,6 +28,8 @@ type Config struct {
 	NotionToken string
 	// 비밀번호 재설정 링크 prefix (#128)
 	PublicBaseURL string
+	// 학생 메일함 inbound webhook 시크릿 (#166). 비면 /api/mail/inbound 비활성(503).
+	MailWebhookSecret string
 }
 
 func Load() *Config {
@@ -52,6 +54,7 @@ func Load() *Config {
 		Context7APIKey:     getEnv("CONTEXT7_API_KEY", ""),
 		NotionToken:        getEnv("NOTION_INTEGRATION_TOKEN", ""),
 		PublicBaseURL:      getEnv("PUBLIC_BASE_URL", "https://earnlearning.com"),
+		MailWebhookSecret:  getEnv("MAIL_WEBHOOK_SECRET", ""),
 	}
 }
 

@@ -40,6 +40,7 @@ import LoanApplyPage from '@/routes/bank/LoanApplyPage'
 import ProfilePage from '@/routes/profile/ProfilePage'
 import UserProfilePage from '@/routes/profile/UserProfilePage'
 import NotificationsPage from '@/routes/notifications/NotificationsPage'
+import MailboxPage from '@/routes/mail/MailboxPage'
 
 // Grants
 import GrantListPage from '@/routes/grant/GrantListPage'
@@ -131,6 +132,7 @@ export default function App() {
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/messages/:userId" element={<ConversationPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/mail" element={<MailboxPage />} />
               <Route path="/changelog" element={<ChangelogPage />} />
               <Route path="/developer" element={<DeveloperPage />} />
               <Route path="/developer/gamification" element={<GamificationShowcasePage />} />

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -111,6 +112,93 @@ func (s *SESService) SendEmail(to, subject, htmlBody, textBody string) error {
 
 	log.Printf("email: sent to %s subject=%q", to, subject)
 	return nil
+}
+
+// OutgoingMail — 임의 From 주소로 보내는 발신 메일 (#166 학생 메일함).
+// SendEmail 과 달리 From 을 학생 개인 주소로 지정하고 스레딩 헤더를 붙일 수 있다.
+type OutgoingMail struct {
+	FromDisplay string // "이름 <local@earnlearning.com>"
+	To          string
+	Subject     string
+	TextBody    string
+	HTMLBody    string
+	InReplyTo   string // 원본 Message-ID (답장 스레딩)
+	References  string // 스레드 References 체인
+	ReplyTo     string // 미인증 From 폴백 시 Reply-To 로 사용할 학생 주소
+}
+
+// SendMailFrom — 학생 개인 주소를 From 으로 메일을 보낸다.
+// SES 가 미인증 발신자라 거부(MessageRejected / "Email address is not verified")하면
+// 설정된 FromEmail 로 From 을 바꾸고 Reply-To 에 학생 주소를 넣어 1회 재시도한 뒤
+// 성공으로 처리한다. 어느 경로로 보냈는지 로그로 남긴다.
+func (s *SESService) SendMailFrom(m OutgoingMail) error {
+	if !s.enabled {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	build := func(from string, replyTo string) *sesv2.SendEmailInput {
+		msg := &types.Message{
+			Subject: &types.Content{Data: &m.Subject, Charset: strPtr("UTF-8")},
+			Body:    &types.Body{},
+		}
+		if m.HTMLBody != "" {
+			msg.Body.Html = &types.Content{Data: &m.HTMLBody, Charset: strPtr("UTF-8")}
+		}
+		if m.TextBody != "" {
+			msg.Body.Text = &types.Content{Data: &m.TextBody, Charset: strPtr("UTF-8")}
+		}
+		var headers []types.MessageHeader
+		if m.InReplyTo != "" {
+			headers = append(headers, types.MessageHeader{Name: strPtr("In-Reply-To"), Value: strPtr(m.InReplyTo)})
+		}
+		if m.References != "" {
+			headers = append(headers, types.MessageHeader{Name: strPtr("References"), Value: strPtr(m.References)})
+		}
+		msg.Headers = headers
+
+		in := &sesv2.SendEmailInput{
+			FromEmailAddress: &from,
+			Destination:      &types.Destination{ToAddresses: []string{m.To}},
+			Content:          &types.EmailContent{Simple: msg},
+		}
+		if replyTo != "" {
+			in.ReplyToAddresses = []string{replyTo}
+		}
+		return in
+	}
+
+	// 1차: 학생 개인 주소를 From 으로.
+	_, err := s.client.SendEmail(ctx, build(m.FromDisplay, ""))
+	if err == nil {
+		log.Printf("email: sent from=%q to=%s subject=%q (student-from)", m.FromDisplay, m.To, m.Subject)
+		return nil
+	}
+
+	// 미인증 발신자 거부면 설정 From 으로 폴백 재시도.
+	if isUnverifiedIdentity(err) {
+		replyTo := m.ReplyTo
+		_, ferr := s.client.SendEmail(ctx, build(s.fromEmail, replyTo))
+		if ferr != nil {
+			return fmt.Errorf("ses send (fallback) to %s: %w", m.To, ferr)
+		}
+		log.Printf("email: sent from=%q to=%s subject=%q (fallback replyto=%s; student-from unverified)", s.fromEmail, m.To, m.Subject, replyTo)
+		return nil
+	}
+
+	return fmt.Errorf("ses send from %q to %s: %w", m.FromDisplay, m.To, err)
+}
+
+// isUnverifiedIdentity — SES 가 미인증 발신자 신원으로 거부했는지 판별.
+func isUnverifiedIdentity(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "Email address is not verified") ||
+		strings.Contains(msg, "MessageRejected")
 }
 
 func strPtr(s string) *string {
