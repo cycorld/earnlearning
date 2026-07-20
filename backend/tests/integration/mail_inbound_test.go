@@ -330,3 +330,37 @@ func TestMailSendStoresHeaderFrom(t *testing.T) {
 		t.Fatalf("보낸편지함 header_from 불일치: %s", string(lr.Data))
 	}
 }
+
+// TestMailInboundHTMLOnlySnippet — #172: text 파트가 없는 HTML 전용 메일도
+// 목록 스니펫에 태그 제거 텍스트가 나와야 한다 (빈 스니펫 방지).
+func TestMailInboundHTMLOnlySnippet(t *testing.T) {
+	ts := setupTestServer(t)
+	token := ts.registerAndApprove("htmlonly@student.com", "pw12345678", "html온리", "2024803")
+	addrID := ts.claimMailAddress(t, token, "htmlonlybox")
+
+	if st, b := ts.inbound(testMailWebhookSecret, map[string]interface{}{
+		"from": "no-reply@svc.com", "to": "htmlonlybox@earnlearning.com",
+		"subject": "보안 링크", "text": "",
+		"html": "<html><body><p>아래 <a href=\"https://x.co/l\">보안 링크</a>를 눌러주세요.</p></body></html>",
+	}); st != http.StatusCreated {
+		t.Fatalf("inbound 실패: %d %s", st, string(b))
+	}
+
+	_, lr := ts.mailJSON("GET", "/api/mail?box=inbox&address_id="+strconv.Itoa(addrID), nil, token)
+	var lst struct {
+		Emails []struct {
+			Snippet string `json:"snippet"`
+		} `json:"emails"`
+	}
+	json.Unmarshal(lr.Data, &lst)
+	if len(lst.Emails) != 1 {
+		t.Fatalf("inbox 1건이어야 함: %s", string(lr.Data))
+	}
+	sn := lst.Emails[0].Snippet
+	if !strings.Contains(sn, "보안 링크를 눌러주세요") && !strings.Contains(sn, "보안 링크") {
+		t.Fatalf("HTML 전용 메일 스니펫에 태그 제거 텍스트가 있어야 함: %q", sn)
+	}
+	if strings.Contains(sn, "<") {
+		t.Fatalf("스니펫에 HTML 태그가 남으면 안 됨: %q", sn)
+	}
+}

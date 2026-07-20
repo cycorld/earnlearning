@@ -380,6 +380,27 @@ function MailboxShell({ boxes }: { boxes: Mailbox[] }) {
   )
 }
 
+// ─── HTML 본문 렌더러 (#172) ─────────────────────────────────
+// sandbox iframe: allow-scripts 없음 → 메일 내 JS 실행 불가. 링크는 <base target="_blank">
+// + allow-popups(-to-escape-sandbox) 로 새 탭에서만 열림. 높이는 로드 후 문서 높이로 맞춤.
+function MailHtmlBody({ html }: { html: string }) {
+  const [height, setHeight] = useState(320)
+  const srcDoc = `<!doctype html><html><head><meta charset="utf-8"><base target="_blank"><style>body{margin:12px;font-family:system-ui,sans-serif;font-size:14px;word-break:break-word}img{max-width:100%}</style></head><body>${html}</body></html>`
+  return (
+    <iframe
+      title="메일 본문"
+      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+      srcDoc={srcDoc}
+      className="w-full rounded-md border bg-white"
+      style={{ height }}
+      onLoad={(e) => {
+        const doc = (e.target as HTMLIFrameElement).contentDocument
+        if (doc?.body) setHeight(Math.min(Math.max(doc.body.scrollHeight + 24, 120), 2000))
+      }}
+    />
+  )
+}
+
 // ─── 메일함 선택기 ───────────────────────────────────────────
 function MailboxSelector({
   boxes,
@@ -755,10 +776,16 @@ function DetailView({
         </div>
       </div>
 
-      {/* 본문은 text 만 렌더 (body_html 원시 렌더는 XSS 위험이라 사용 안 함) */}
-      <div className="whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-sm">
-        {detail.body_text}
-      </div>
+      {/* HTML 본문은 sandbox iframe 렌더 (#172): allow-scripts 를 주지 않아 JS 전면 차단(XSS 안전),
+          allow-popups 로 링크만 새 탭. allow-same-origin 은 스크립트가 차단된 상태라 안전하며
+          onLoad 높이 측정에 필요. 우리 DOM 에 직접 주입하지 않으므로 dangerouslySetInnerHTML 불사용 유지. */}
+      {detail.body_html ? (
+        <MailHtmlBody html={detail.body_html} />
+      ) : (
+        <div className="whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-sm">
+          {detail.body_text}
+        </div>
+      )}
 
       {detail.attachments?.length > 0 && (
         <div className="space-y-2">
