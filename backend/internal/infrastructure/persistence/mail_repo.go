@@ -314,11 +314,11 @@ func (r *MailRepo) CreateEmail(e *mail.Email) (int, error) {
 		readVal = 1
 	}
 	res, err := r.db.Exec(
-		`INSERT INTO emails (address_id, owner_user_id, direction, from_addr, to_addr, subject,
-			body_text, body_html, message_id, in_reply_to, refs, read)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		e.AddressID, e.OwnerUserID, e.Direction, e.FromAddr, e.ToAddr, e.Subject,
-		e.BodyText, e.BodyHTML, e.MessageID, e.InReplyTo, e.Refs, readVal,
+		`INSERT INTO emails (address_id, owner_user_id, direction, from_addr, header_from, header_from_name,
+			to_addr, subject, body_text, body_html, message_id, in_reply_to, refs, read)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		e.AddressID, e.OwnerUserID, e.Direction, e.FromAddr, e.HeaderFrom, e.HeaderFromName,
+		e.ToAddr, e.Subject, e.BodyText, e.BodyHTML, e.MessageID, e.InReplyTo, e.Refs, readVal,
 	)
 	if err != nil {
 		return 0, err
@@ -331,11 +331,11 @@ func (r *MailRepo) GetEmailByID(id int) (*mail.Email, error) {
 	e := &mail.Email{}
 	var readVal int
 	err := r.db.QueryRow(
-		`SELECT id, address_id, owner_user_id, direction, from_addr, to_addr, subject,
-			body_text, body_html, message_id, in_reply_to, refs, read, created_at
+		`SELECT id, address_id, owner_user_id, direction, from_addr, header_from, header_from_name,
+			to_addr, subject, body_text, body_html, message_id, in_reply_to, refs, read, created_at
 		 FROM emails WHERE id = ?`, id,
-	).Scan(&e.ID, &e.AddressID, &e.OwnerUserID, &e.Direction, &e.FromAddr, &e.ToAddr, &e.Subject,
-		&e.BodyText, &e.BodyHTML, &e.MessageID, &e.InReplyTo, &e.Refs, &readVal, &e.CreatedAt)
+	).Scan(&e.ID, &e.AddressID, &e.OwnerUserID, &e.Direction, &e.FromAddr, &e.HeaderFrom, &e.HeaderFromName,
+		&e.ToAddr, &e.Subject, &e.BodyText, &e.BodyHTML, &e.MessageID, &e.InReplyTo, &e.Refs, &readVal, &e.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -357,7 +357,7 @@ func (r *MailRepo) ListEmails(addressID int, direction string, limit, offset int
 	}
 
 	rows, err := r.db.Query(
-		`SELECT e.id, e.direction, e.from_addr, e.to_addr, e.subject, e.body_text, e.read, e.created_at,
+		`SELECT e.id, e.direction, e.from_addr, e.header_from, e.header_from_name, e.to_addr, e.subject, e.body_text, e.read, e.created_at,
 			EXISTS(SELECT 1 FROM mail_attachments a WHERE a.email_id = e.id) AS has_attachments
 		 FROM emails e
 		 WHERE e.address_id = ? AND e.direction = ?
@@ -384,7 +384,7 @@ func (r *MailRepo) ListAllEmails(limit, offset int) ([]*mail.EmailListItem, int,
 	}
 
 	rows, err := r.db.Query(
-		`SELECT e.id, e.direction, e.from_addr, e.to_addr, e.subject, e.body_text, e.read, e.created_at,
+		`SELECT e.id, e.direction, e.from_addr, e.header_from, e.header_from_name, e.to_addr, e.subject, e.body_text, e.read, e.created_at,
 			EXISTS(SELECT 1 FROM mail_attachments a WHERE a.email_id = e.id) AS has_attachments,
 			e.owner_user_id, COALESCE(u.name, '')
 		 FROM emails e
@@ -414,12 +414,12 @@ func scanListItems(rows *sql.Rows, withOwner bool) ([]*mail.EmailListItem, error
 		var readVal int
 		var hasAttach int
 		if withOwner {
-			if err := rows.Scan(&it.ID, &it.Direction, &it.FromAddr, &it.ToAddr, &it.Subject,
+			if err := rows.Scan(&it.ID, &it.Direction, &it.FromAddr, &it.HeaderFrom, &it.HeaderFromName, &it.ToAddr, &it.Subject,
 				&bodyText, &readVal, &it.CreatedAt, &hasAttach, &it.OwnerUserID, &it.OwnerName); err != nil {
 				return nil, err
 			}
 		} else {
-			if err := rows.Scan(&it.ID, &it.Direction, &it.FromAddr, &it.ToAddr, &it.Subject,
+			if err := rows.Scan(&it.ID, &it.Direction, &it.FromAddr, &it.HeaderFrom, &it.HeaderFromName, &it.ToAddr, &it.Subject,
 				&bodyText, &readVal, &it.CreatedAt, &hasAttach); err != nil {
 				return nil, err
 			}

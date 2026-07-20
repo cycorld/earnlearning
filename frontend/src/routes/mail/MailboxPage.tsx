@@ -61,6 +61,8 @@ interface MailListItem {
   id: number
   direction: string
   from_addr: string
+  header_from: string
+  header_from_name: string
   to_addr: string
   subject: string
   snippet: string
@@ -409,13 +411,14 @@ function MailboxSelector({
 
   return (
     <Tabs value={String(value)} onValueChange={(v) => onChange(Number(v))}>
-      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
+      {/* 베이스 TabsList 는 가로형 h-8 고정 → 2줄(이름+주소) 항목이 잘려서 variant 까지 h-auto 로 오버라이드 (#171 비전검사) */}
+      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto">
         {boxes.map((b) => (
           <TabsTrigger
             key={b.address_id}
             value={String(b.address_id)}
             disabled={b.status !== 'approved'}
-            className="flex flex-col items-start gap-0.5 py-1.5"
+            className="h-auto flex-none flex-col items-start gap-0.5 px-3 py-2"
           >
             <span className="flex items-center gap-1 text-xs font-medium">
               {kindIcon(b.kind)}
@@ -533,7 +536,7 @@ function Mailbox({
   const startReply = (d: MailDetail) => {
     const base = d.subject.trim()
     const subject = /^re:/i.test(base) ? base : `Re: ${base}`
-    setCompose({ to: d.from_addr, subject, inReplyToId: d.id })
+    setCompose({ to: d.header_from || d.from_addr, subject, inReplyToId: d.id })
     setDetail(null)
   }
 
@@ -678,7 +681,9 @@ function MailRow({
   onClick: () => void
 }) {
   const unread = box === 'inbox' && !mail.read
-  const who = box === 'inbox' ? mail.from_addr : mail.to_addr
+  // 표시용 발신자 (#171): 헤더 From 우선 (SES 봉투 VERP 주소 노출 방지), 이름 있으면 이름.
+  const sender = mail.header_from_name || mail.header_from || mail.from_addr
+  const who = box === 'inbox' ? sender : mail.to_addr
   return (
     <Card
       className={`cursor-pointer transition-colors hover:bg-accent/30 ${
@@ -739,7 +744,12 @@ function DetailView({
       <div className="space-y-1">
         <h1 className="text-lg font-bold">{detail.subject || '(제목 없음)'}</h1>
         <div className="text-xs text-muted-foreground">
-          <p>보낸사람: {detail.from_addr}</p>
+          <p>
+            보낸사람:{' '}
+            {detail.header_from
+              ? `${detail.header_from_name ? detail.header_from_name + ' ' : ''}<${detail.header_from}>`
+              : detail.from_addr}
+          </p>
           <p>받는사람: {detail.to_addr}</p>
           <p>{new Date(detail.created_at).toLocaleString('ko-KR')}</p>
         </div>

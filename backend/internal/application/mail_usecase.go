@@ -376,6 +376,9 @@ func (uc *MailUseCase) Send(userID, addressID int, in SendInput) (int, error) {
 		OwnerUserID: userID, // 실제 발신자
 		Direction:   mail.DirectionOut,
 		FromAddr:    myAddr,
+		// 표시용 헤더 From (#171): 발신은 내 주소/이름이 곧 헤더 From.
+		HeaderFrom:     myAddr,
+		HeaderFromName: fromName,
 		ToAddr:      in.To,
 		Subject:     in.Subject,
 		BodyText:    in.BodyText,
@@ -489,6 +492,10 @@ type InboundInput struct {
 	Subject     string              `json:"subject"`
 	Text        string              `json:"text"`
 	HTML        string              `json:"html"`
+	// HeaderFrom/HeaderFromName — 파싱된 헤더 From (#171, 표시용). 봉투 From 과 다를 수 있고 위조 가능 —
+	// 신뢰 판단은 봉투(From)를 쓰고 이 값은 표시에만 쓴다.
+	HeaderFrom     string `json:"header_from"`
+	HeaderFromName string `json:"header_from_name"`
 	MessageID   string              `json:"message_id"`
 	InReplyTo   string              `json:"in_reply_to"`
 	References  string              `json:"references"`
@@ -541,6 +548,8 @@ func (uc *MailUseCase) ReceiveInbound(in InboundInput) (int, error) {
 		OwnerUserID: ownerUserID,
 		Direction:   mail.DirectionIn,
 		FromAddr:    in.From,
+		HeaderFrom:     strings.TrimSpace(in.HeaderFrom),
+		HeaderFromName: strings.TrimSpace(in.HeaderFromName),
 		ToAddr:      in.To,
 		Subject:     in.Subject,
 		BodyText:    in.Text,

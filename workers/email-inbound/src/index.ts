@@ -47,8 +47,11 @@ export default {
     }
 
     const payload = {
-      // 봉투 주소 사용 — 헤더 From 은 스푸핑 가능하므로 message.from 이 기준
+      // 봉투 주소 사용 — 헤더 From 은 스푸핑 가능하므로 message.from 이 신뢰 기준
       from: message.from,
+      // 표시용 헤더 From (#171): SES 발송 메일은 봉투가 VERP 일회용 주소라 표시에 부적합
+      header_from: parsed.from?.address ?? "",
+      header_from_name: parsed.from?.name ?? "",
       to: message.to,
       subject: parsed.subject ?? "",
       text: parsed.text ?? "",

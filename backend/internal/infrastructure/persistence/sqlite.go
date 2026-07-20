@@ -74,6 +74,9 @@ func RunMigrations(db *sql.DB) error {
 		`ALTER TABLE mail_addresses ADD COLUMN owner_id INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE mail_addresses ADD COLUMN display_name TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE emails ADD COLUMN address_id INTEGER NOT NULL DEFAULT 0`,
+		// #171 표시용 헤더 From (봉투 from_addr 과 별도 저장)
+		`ALTER TABLE emails ADD COLUMN header_from TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE emails ADD COLUMN header_from_name TEXT NOT NULL DEFAULT ''`,
 		// owner_id 백필: 개인 주소는 owner_id = 기존 user_id (idempotent).
 		`UPDATE mail_addresses SET owner_id = user_id WHERE owner_type = 'user' AND owner_id = 0`,
 	}
@@ -515,6 +518,8 @@ func RunMigrations(db *sql.DB) error {
 		`CREATE TABLE IF NOT EXISTS emails (
 			id            INTEGER PRIMARY KEY AUTOINCREMENT,
 			address_id    INTEGER NOT NULL DEFAULT 0,
+			header_from   TEXT NOT NULL DEFAULT '',
+			header_from_name TEXT NOT NULL DEFAULT '',
 			owner_user_id INTEGER NOT NULL DEFAULT 0,
 			direction     TEXT NOT NULL CHECK(direction IN ('in','out')),
 			from_addr     TEXT NOT NULL,
