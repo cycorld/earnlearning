@@ -64,6 +64,37 @@ func (e *isoEnv) createCompany(t *testing.T, token, name string) int {
 	return c.ID
 }
 
+// activate — 유저의 활성 강의실을 전환한다 (멤버여야 성공).
+func (e *isoEnv) activate(t *testing.T, token string, classroomID int) {
+	t.Helper()
+	if r := e.ts.post(fmt.Sprintf("/api/classrooms/%d/activate", classroomID), nil, token); !r.Success {
+		t.Fatalf("activate %d: %v", classroomID, r.Error)
+	}
+}
+
+type assetView struct {
+	Cash          int `json:"cash"`
+	StockValue    int `json:"stock_value"`
+	CompanyEquity int `json:"company_equity"`
+	TotalDebt     int `json:"total_debt"`
+}
+
+// assetBreakdown — GET /api/wallet 의 assets 블록만 뽑아온다.
+func assetBreakdown(t *testing.T, ts *testServer, token string) assetView {
+	t.Helper()
+	r := ts.get("/api/wallet", token)
+	if !r.Success {
+		t.Fatalf("get wallet: %v", r.Error)
+	}
+	var w struct {
+		Assets assetView `json:"assets"`
+	}
+	if err := json.Unmarshal(r.Data, &w); err != nil {
+		t.Fatalf("parse wallet: %v", err)
+	}
+	return w.Assets
+}
+
 func containsID(data json.RawMessage, path string, id int) bool {
 	var items []map[string]interface{}
 	if err := json.Unmarshal(data, &items); err != nil {
@@ -330,5 +361,84 @@ func TestIsolation_DividendRoutesToCompanyClassroom(t *testing.T) {
 	}
 	if balB != 60_000_000 {
 		t.Errorf("B wallet=%d, want 60000000 (untouched by dividend)", balB)
+	}
+}
+
+// #159 자산 분석(GetAssetBreakdown)은 활성 강의실 지갑 기준으로 주식·지분·부채를 집계해야 한다.
+// A 강의실에서 창업/대출한 유저가 활성 강의실을 B로 바꾸면 stock_value/company_equity/total_debt = 0.
+func TestIsolation_AssetBreakdownScoping(t *testing.T) {
+	env := setupIsolation(t)
+	ts := env.ts
+
+	// ab: A+B 모두 가입한 유저 (멤버여야 활성 전환 가능)
+	abID, ab := registerWithID(t, ts, "iso-ab@test.com", "카타", "20270010")
+	if r := ts.joinClassroom(ab, env.crA.Code); !r.Success {
+		t.Fatalf("ab join A: %v", r.Error)
+	}
+	if r := ts.joinClassroom(ab, env.crB.Code); !r.Success {
+		t.Fatalf("ab join B: %v", r.Error)
+	}
+
+	// 활성 A 에서 창업 → company.classroom_id = A, 소유주 지분 + 회사지갑 발생
+	env.activate(t, ab, env.crA.ID)
+	env.createCompany(t, ab, "AB자산회사")
+
+	// 활성 A 에서 대출 1건 (직접 삽입 — 승인 절차 생략, 기존 직접-DB 스타일)
+	if _, err := ts.db.Exec(
+		`INSERT INTO loans (borrower_id, amount, remaining, interest_rate, penalty_rate, purpose, status, classroom_id)
+		 VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`,
+		abID, 1_000_000, 1_000_000, 0.05, 0.1, "격리테스트", env.crA.ID,
+	); err != nil {
+		t.Fatalf("insert loan: %v", err)
+	}
+
+	// 활성 A: 주식·지분·부채 모두 > 0 이어야 함
+	env.activate(t, ab, env.crA.ID)
+	aAssets := assetBreakdown(t, ts, ab)
+	if aAssets.StockValue == 0 || aAssets.CompanyEquity == 0 || aAssets.TotalDebt == 0 {
+		t.Fatalf("active A must show non-zero assets: %+v", aAssets)
+	}
+
+	// 활성 B: A 강의실 자산이므로 모두 0 이어야 함 (누수 방지)
+	env.activate(t, ab, env.crB.ID)
+	bAssets := assetBreakdown(t, ts, ab)
+	if bAssets.StockValue != 0 {
+		t.Errorf("active B stock_value=%d, want 0 (company belongs to A)", bAssets.StockValue)
+	}
+	if bAssets.CompanyEquity != 0 {
+		t.Errorf("active B company_equity=%d, want 0 (company belongs to A)", bAssets.CompanyEquity)
+	}
+	if bAssets.TotalDebt != 0 {
+		t.Errorf("active B total_debt=%d, want 0 (loan belongs to A)", bAssets.TotalDebt)
+	}
+}
+
+// #159 내 회사 목록(/companies/mine)도 활성 강의실 기준이어야 한다.
+// A 에서 창업한 회사는 활성 B 에서는 내 회사 목록에 안 보이고, 활성 A 에서는 보인다.
+func TestIsolation_MyCompaniesScoping(t *testing.T) {
+	env := setupIsolation(t)
+	ts := env.ts
+
+	_, ab := registerWithID(t, ts, "iso-mine@test.com", "파하", "20270011")
+	if r := ts.joinClassroom(ab, env.crA.Code); !r.Success {
+		t.Fatalf("ab join A: %v", r.Error)
+	}
+	if r := ts.joinClassroom(ab, env.crB.Code); !r.Success {
+		t.Fatalf("ab join B: %v", r.Error)
+	}
+
+	env.activate(t, ab, env.crA.ID)
+	caID := env.createCompany(t, ab, "내회사스코프A")
+
+	// 활성 B: 내 회사 목록에 A 회사가 안 보여야 함
+	env.activate(t, ab, env.crB.ID)
+	if containsID(ts.get("/api/companies/mine", ab).Data, "", caID) {
+		t.Errorf("company from A must NOT appear in /companies/mine when active B")
+	}
+
+	// 활성 A: 다시 보여야 함
+	env.activate(t, ab, env.crA.ID)
+	if !containsID(ts.get("/api/companies/mine", ab).Data, "", caID) {
+		t.Errorf("company from A must appear in /companies/mine when active A")
 	}
 }

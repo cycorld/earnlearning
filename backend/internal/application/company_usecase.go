@@ -263,8 +263,17 @@ func (uc *CompanyUsecase) GetMyCompanies(userID int) ([]*MyCompanyItem, error) {
 		return nil, err
 	}
 
+	// #159 활성 강의실 회사만 노출 (GetAllCompanies 와 동일한 스코프 규칙).
+	active, err := uc.walletRepo.GetActiveClassroomID(userID)
+	if err != nil {
+		return nil, err
+	}
+
 	items := make([]*MyCompanyItem, 0, len(companies))
 	for _, c := range companies {
+		if c.ClassroomID != active {
+			continue
+		}
 		sh, err := uc.companyRepo.FindShareholder(c.ID, userID)
 		myShares := 0
 		myPct := 0.0

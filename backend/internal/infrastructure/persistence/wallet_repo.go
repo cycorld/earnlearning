@@ -294,46 +294,54 @@ func (r *WalletRepo) GetRankingForUser(requesterID, limit int) ([]*wallet.RankEn
 func (r *WalletRepo) GetAssetBreakdown(userID int) (*wallet.AssetBreakdown, error) {
 	ab := &wallet.AssetBreakdown{}
 
-	// Cash: 활성 강의실 지갑 잔액 (#159 — FindByUserID 와 동일한 우선순위)
+	// Cash: 활성 강의실 지갑 잔액 (#159 — FindByUserID 와 동일한 우선순위:
+	// 활성 강의실 일치 지갑 우선, 없으면 최소 classroom_id 지갑).
+	// 이 지갑의 classroom_id 를 "유효 강의실"로 잡아 이하 주식·지분·부채 집계도
+	// 같은 강의실로 스코프한다 (누수 방지 #159).
+	var effClassroom int
 	err := r.db.QueryRow(
-		`SELECT COALESCE(w.balance, 0)
+		`SELECT COALESCE(w.balance, 0), w.classroom_id
 		 FROM wallets w
 		 JOIN users u ON u.id = w.user_id
 		 WHERE w.user_id = ?
 		 ORDER BY (w.classroom_id = u.active_classroom_id) DESC, w.classroom_id ASC
-		 LIMIT 1`, userID).Scan(&ab.Cash)
-	if err != nil && err != sql.ErrNoRows {
+		 LIMIT 1`, userID).Scan(&ab.Cash, &effClassroom)
+	if err == sql.ErrNoRows {
+		// 지갑이 없으면(강의실 미소속) 모든 자산 0.
+		return ab, nil
+	}
+	if err != nil {
 		return nil, err
 	}
 
-	// StockValue: sum of (shares * company.valuation / company.total_shares) for each shareholding
+	// StockValue: 유효 강의실 회사 지분 평가액 (shares * valuation / total_shares)
 	err = r.db.QueryRow(
 		`SELECT COALESCE(SUM(s.shares * c.valuation / c.total_shares), 0)
 		 FROM shareholders s
 		 INNER JOIN companies c ON c.id = s.company_id
-		 WHERE s.user_id = ? AND c.status = 'active'`, userID,
+		 WHERE s.user_id = ? AND c.status = 'active' AND c.classroom_id = ?`, userID, effClassroom,
 	).Scan(&ab.StockValue)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	// CompanyEquity: sum of (company_wallet.balance * shares / company.total_shares)
+	// CompanyEquity: 유효 강의실 회사 지갑 지분 (company_wallet.balance * shares / total_shares)
 	err = r.db.QueryRow(
 		`SELECT COALESCE(SUM(cw.balance * s.shares / c.total_shares), 0)
 		 FROM shareholders s
 		 INNER JOIN companies c ON c.id = s.company_id
 		 INNER JOIN company_wallets cw ON cw.company_id = c.id
-		 WHERE s.user_id = ? AND c.status = 'active'`, userID,
+		 WHERE s.user_id = ? AND c.status = 'active' AND c.classroom_id = ?`, userID, effClassroom,
 	).Scan(&ab.CompanyEquity)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	// TotalDebt: sum of remaining for active/overdue loans
+	// TotalDebt: 유효 강의실 대출 잔액 합 (active/overdue)
 	err = r.db.QueryRow(
 		`SELECT COALESCE(SUM(remaining), 0)
 		 FROM loans
-		 WHERE borrower_id = ? AND status IN ('active', 'overdue')`, userID,
+		 WHERE borrower_id = ? AND status IN ('active', 'overdue') AND classroom_id = ?`, userID, effClassroom,
 	).Scan(&ab.TotalDebt)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
