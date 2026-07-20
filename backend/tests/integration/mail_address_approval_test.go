@@ -873,3 +873,24 @@ func TestMailSendDisabledSenderNoStore(t *testing.T) {
 		t.Fatalf("비활성 발신 시 보낸편지함은 비어야 함: total=%d", sent.Total)
 	}
 }
+
+// TestMailSharedShortLocalPartAdminOK — #170: 관리자 공용 생성은 2자 로컬파트 허용 (팀 메일 01~15),
+// 학생 개인 신청은 여전히 최소 3자.
+func TestMailSharedShortLocalPartAdminOK(t *testing.T) {
+	ts := setupTestServer(t)
+
+	// 관리자: 2자 "01" 공용 생성 OK
+	ts.createShared(t, "01", "01팀")
+
+	// 관리자도 1자는 불가 (형식 하한 2자)
+	admin := ts.login(testAdminEmail, testAdminPass)
+	if st, _ := ts.mailJSON("POST", "/api/admin/mail/shared", map[string]string{"local_part": "1", "display_name": "한자리"}, admin); st != http.StatusBadRequest {
+		t.Fatalf("1자 로컬파트는 400 이어야 함: got %d", st)
+	}
+
+	// 학생: 2자 개인 신청은 여전히 400 (최소 3자 유지)
+	token := ts.registerAndApprove("short@student.com", "pw12345678", "짧은주소", "2024702")
+	if st, r := ts.mailJSON("POST", "/api/mail/address", map[string]string{"local_part": "02"}, token); st != http.StatusBadRequest || r.Success {
+		t.Fatalf("학생의 2자 발급은 400 이어야 함: got %d", st)
+	}
+}

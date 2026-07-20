@@ -185,9 +185,13 @@ var reservedLocalParts = map[string]bool{
 // localPartRe — 소문자/숫자로 시작, 전체 3~30자, [a-z0-9._-] 만 허용.
 var localPartRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{2,29}$`)
 
+// localPartAdminRe — 관리자 공용 주소용 완화 형식: 최소 2자 (#170, 팀 메일 01~15 등).
+var localPartAdminRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{1,29}$`)
+
 // ValidateLocalPartFormat — 형식만 검증 (예약어 제외). 관리자 공용 주소 발급 경로용.
+// 학생/회사 신청(최소 3자)과 달리 특수 메일을 위해 최소 2자를 허용한다.
 func ValidateLocalPartFormat(lp string) error {
-	if !localPartRe.MatchString(lp) {
+	if !localPartAdminRe.MatchString(lp) {
 		return ErrInvalidLocalPart
 	}
 	if strings.Contains(lp, "..") { // 연속 점 금지
@@ -196,10 +200,10 @@ func ValidateLocalPartFormat(lp string) error {
 	return nil
 }
 
-// ValidateLocalPart — 발급 요청 local_part 검증(형식 + 예약어). 규칙 위반 시 도메인 에러 반환.
+// ValidateLocalPart — 발급 요청 local_part 검증(형식 + 예약어). 학생/회사 신청 경로용 (최소 3자).
 func ValidateLocalPart(lp string) error {
-	if err := ValidateLocalPartFormat(lp); err != nil {
-		return err
+	if !localPartRe.MatchString(lp) || strings.Contains(lp, "..") {
+		return ErrInvalidLocalPart
 	}
 	if reservedLocalParts[lp] {
 		return ErrReserved
