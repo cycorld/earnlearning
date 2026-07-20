@@ -1662,14 +1662,16 @@
   },
   {
     "slug": "166-student-mailbox",
-    "title": "학생마다 진짜 이메일 주소가 생겼다 — Cloudflare 수신 + 앱 내 메일함",
+    "title": "진짜 이메일 주소가 생겼다 — Cloudflare 수신 + 개인·회사·공용 메일함",
     "date": "2026-07-20",
     "tags": [
       "이메일",
       "Cloudflare",
       "Workers",
       "메일함",
-      "SES"
+      "SES",
+      "승인제",
+      "보안"
     ],
     "github": null
   }
