@@ -1688,6 +1688,17 @@
     "github": null
   },
   {
+    "slug": "170-shared-mail-short-localpart",
+    "title": "팀 메일 01@ ~ 15@ — 관리자 공용 메일함만 2글자 허용",
+    "date": "2026-07-21",
+    "tags": [
+      "이메일",
+      "공용메일함",
+      "검증"
+    ],
+    "github": null
+  },
+  {
     "slug": "171-mail-display-from",
     "title": "보낸사람이 암호문처럼 보이던 문제 — 봉투와 헤더, 두 개의 발신자",
     "date": "2026-07-21",
