@@ -187,3 +187,9 @@ The actual "admin sees a student onboarding form" symptom lives in **`FeedPage.t
 </task-notification>
 
 ---
+
+## 7. 2026-07-20 15:12
+
+머지 후 계속 진행해줘
+
+---
