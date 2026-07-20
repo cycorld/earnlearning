@@ -35,6 +35,7 @@ type Handlers struct {
 	Chat         *handler.ChatHandler
 	ChatProposal *handler.ChatProposalHandler
 	Milestone    *handler.MilestoneHandler
+	Mail         *handler.MailHandler
 }
 
 // Setup registers all routes on the given Echo instance.
@@ -83,6 +84,12 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	api.POST("/auth/forgot-password", h.Auth.ForgotPassword)
 	api.POST("/auth/reset-password", h.Auth.ResetPassword)
 	api.GET("/push/vapid-public-key", h.Notification.GetVAPIDPublicKey)
+
+	// #166 학생 메일함 inbound webhook (Cloudflare Email Worker → 여기).
+	// JWT 없음; X-Mail-Webhook-Secret 헤더로 인증 (핸들러 내부 검증).
+	if h.Mail != nil {
+		api.POST("/mail/inbound", h.Mail.Inbound)
+	}
 
 	// ================================================================
 	// Auth routes (JWT required, any status)
@@ -261,6 +268,16 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		approved.DELETE("/milestones/files/:id", h.Milestone.DeleteFile, middleware.RequireScope("write:posts"))
 	}
 
+	// #166 학생 메일함 (내부 전용, OAuth scope 없음). static 경로를 :id 보다 먼저 등록.
+	if h.Mail != nil {
+		approved.GET("/mail/address", h.Mail.GetAddress)
+		approved.POST("/mail/address", h.Mail.ClaimAddress)
+		approved.GET("/mail", h.Mail.ListBox)
+		approved.POST("/mail/send", h.Mail.Send)
+		approved.GET("/mail/attachments/:id", h.Mail.DownloadAttachment)
+		approved.GET("/mail/:id", h.Mail.GetEmail)
+	}
+
 	// Notifications (OAuth: read:notifications)
 	approved.GET("/notifications", h.Notification.GetNotifications, middleware.RequireScope("read:notifications"))
 	approved.PUT("/notifications/:id/read", h.Notification.MarkRead, middleware.RequireScope("read:notifications"))
@@ -331,6 +348,11 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		admin.GET("/milestones", h.Milestone.AdminListMilestones)
 		admin.POST("/milestones/:id/approve", h.Milestone.AdminApproveMilestone)
 		admin.POST("/milestones/:id/reject", h.Milestone.AdminRejectMilestone)
+	}
+
+	// #166 학생 메일함 admin (전체 메일 조회)
+	if h.Mail != nil {
+		admin.GET("/mail", h.Mail.AdminListMail)
 	}
 
 	// User Databases admin reconcile (#016)

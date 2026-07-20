@@ -12,6 +12,7 @@ import {
   Bell,
   CheckCheck,
   Loader2,
+  Mail,
   MessageCircle,
   Wallet,
   Building2,
@@ -61,6 +62,8 @@ function getNotifIcon(type: string) {
       return <ShieldCheck className="h-5 w-5 text-emerald-500" />
     case 'new_dm':
       return <MessageCircle className="h-5 w-5 text-teal-500" />
+    case 'mail_received':
+      return <Mail className="h-5 w-5 text-sky-500" />
     case 'job_applied':
     case 'job_accepted':
     case 'job_work_done':
@@ -117,6 +120,8 @@ function getReferencePath(refType: string, refId: number): string | null {
       return refId > 0 ? `/admin/proposals` : '/admin/proposals'
     case 'dm':
       return `/messages/${refId}`
+    case 'mail':
+      return '/mail'
     case 'user':
       return `/profile/${refId}`
     case 'milestone':

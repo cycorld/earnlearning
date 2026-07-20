@@ -1659,5 +1659,18 @@
       "격리"
     ],
     "github": null
+  },
+  {
+    "slug": "166-student-mailbox",
+    "title": "학생마다 진짜 이메일 주소가 생겼다 — Cloudflare 수신 + 앱 내 메일함",
+    "date": "2026-07-20",
+    "tags": [
+      "이메일",
+      "Cloudflare",
+      "Workers",
+      "메일함",
+      "SES"
+    ],
+    "github": null
   }
 ]

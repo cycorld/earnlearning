@@ -487,6 +487,47 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// #166 학생별 이메일 수신함 — 개인 주소 / 메일 / 첨부 (idempotent).
+	mailTables := []string{
+		`CREATE TABLE IF NOT EXISTS mail_addresses (
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id    INTEGER NOT NULL UNIQUE REFERENCES users(id),
+			local_part TEXT NOT NULL UNIQUE,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS emails (
+			id            INTEGER PRIMARY KEY AUTOINCREMENT,
+			owner_user_id INTEGER NOT NULL REFERENCES users(id),
+			direction     TEXT NOT NULL CHECK(direction IN ('in','out')),
+			from_addr     TEXT NOT NULL,
+			to_addr       TEXT NOT NULL,
+			subject       TEXT NOT NULL DEFAULT '',
+			body_text     TEXT NOT NULL DEFAULT '',
+			body_html     TEXT NOT NULL DEFAULT '',
+			message_id    TEXT NOT NULL DEFAULT '',
+			in_reply_to   TEXT NOT NULL DEFAULT '',
+			refs          TEXT NOT NULL DEFAULT '',
+			read          INTEGER NOT NULL DEFAULT 0,
+			created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_emails_owner ON emails(owner_user_id, created_at DESC)`,
+		`CREATE TABLE IF NOT EXISTS mail_attachments (
+			id          INTEGER PRIMARY KEY AUTOINCREMENT,
+			email_id    INTEGER NOT NULL REFERENCES emails(id),
+			filename    TEXT NOT NULL,
+			mime        TEXT NOT NULL DEFAULT '',
+			size        INTEGER NOT NULL DEFAULT 0,
+			stored_path TEXT NOT NULL,
+			created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_mail_attachments_email ON mail_attachments(email_id)`,
+	}
+	for _, stmt := range mailTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create mail tables: %w", err)
+		}
+	}
+
 	// #159 Phase 2 백필: 미배정(0) 도메인 엔티티를 소유자의 첫 멤버십 강의실로.
 	// grants 테이블은 위에서 생성되므로 반드시 마지막에 실행. 멱등 (0인 행만 갱신).
 	classroomBackfills := []string{

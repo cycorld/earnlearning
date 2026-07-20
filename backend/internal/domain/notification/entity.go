@@ -53,6 +53,9 @@ const (
 
 	// Mention (#132) — 게시글/댓글 본문 @멘션
 	NotifMention           NotifType = "mention"
+
+	// Mail (#166) — 학생 개인 메일함으로 새 메일 수신
+	NotifMailReceived      NotifType = "mail_received"
 )
 
 // PushEligibleTypes are notification types that should trigger push notifications.
@@ -87,6 +90,7 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifLLMBilled:          true,
 	NotifProposalSubmitted:  true,
 	NotifMention:            true,
+	NotifMailReceived:       true,
 }
 
 type Notification struct {

@@ -23,11 +23,17 @@ import (
 )
 
 const (
-	testJWTSecret  = "test-jwt-secret"
-	testAdminEmail = "admin@test.com"
-	testAdminPass  = "admin1234"
-	testUploadPath = "/tmp/earnlearning-test-uploads"
+	testJWTSecret         = "test-jwt-secret"
+	testAdminEmail        = "admin@test.com"
+	testAdminPass         = "admin1234"
+	testUploadPath        = "/tmp/earnlearning-test-uploads"
+	testMailWebhookSecret = "test-webhook-secret" // #166 mail inbound webhook
 )
+
+// testConfig — setupTestServer 옵션 (기본값 위에서 오버라이드).
+type testConfig struct {
+	mailWebhookSecret string
+}
 
 type testServer struct {
 	server      *httptest.Server
@@ -38,11 +44,17 @@ type testServer struct {
 	llmProxy    *fakeLLMProxy
 	milestoneUC *application.MilestoneUseCase // #120 — fake LLM 주입용
 	authUC      *application.AuthUseCase      // #128 — fake email sender 주입용
+	mailSpy     *spyMailSender                // #166 — 발신 SES 스파이
 }
 
 // setupTestServer creates a fresh test server with an in-memory-like temp DB.
-func setupTestServer(t *testing.T) *testServer {
+func setupTestServer(t *testing.T, opts ...func(*testConfig)) *testServer {
 	t.Helper()
+
+	tc := testConfig{mailWebhookSecret: testMailWebhookSecret}
+	for _, o := range opts {
+		o(&tc)
+	}
 
 	// Create temp DB
 	tmpFile, err := os.CreateTemp("", "earnlearning-test-*.db")
@@ -107,6 +119,11 @@ func setupTestServer(t *testing.T) *testServer {
 	milestoneUC := application.NewMilestoneUseCase(milestoneRepo, userRepo, companyRepo, grantRepo, notifUC)
 	milestoneUC.SetFileStorage(testUploadPath + "/private") // #125 비공개 첨부 (테스트용)
 
+	// #166 학생 메일함 (SES 는 스파이로 대체)
+	mailRepo := persistence.NewMailRepo(db)
+	mailSpy := &spyMailSender{}
+	mailUC := application.NewMailUseCase(mailRepo, mailSpy, notifUC, testUploadPath+"/private")
+
 	// DM
 	dmRepo := persistence.NewDMRepo(db)
 	dmUC := application.NewDMUseCase(dmRepo, userRepo, hub)
@@ -153,6 +170,7 @@ func setupTestServer(t *testing.T) *testServer {
 		UserDB:       handler.NewUserDBHandler(userDBUC),
 		LLM:          handler.NewLLMHandler(llmUC),
 		Milestone:    handler.NewMilestoneHandler(milestoneUC),
+		Mail:         handler.NewMailHandler(mailUC, tc.mailWebhookSecret),
 	}
 
 	e := echo.New()
@@ -162,7 +180,7 @@ func setupTestServer(t *testing.T) *testServer {
 	ts := httptest.NewServer(e)
 	t.Cleanup(func() { ts.Close() })
 
-	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy, milestoneUC: milestoneUC, authUC: authUC}
+	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy, milestoneUC: milestoneUC, authUC: authUC, mailSpy: mailSpy}
 }
 
 // injectMilestoneFakeLLM — milestone usecase 에 fake ChatLLMClient 주입 (#120).

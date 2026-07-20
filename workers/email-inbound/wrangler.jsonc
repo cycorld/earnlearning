@@ -1,0 +1,11 @@
+{
+  // #166 학생별 이메일 수신함 — Email Routing catch-all 을 받아 백엔드 웹훅으로 전달하는 Worker
+  "name": "earnlearning-email-inbound",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "vars": {
+    // 수신 웹훅 엔드포인트 (stage 검증 시 stage 도메인으로 배포 변수만 교체)
+    "BACKEND_INBOUND_URL": "https://earnlearning.com/api/mail/inbound"
+  }
+  // 시크릿: npx wrangler secret put MAIL_WEBHOOK_SECRET (백엔드 env 와 동일 값)
+}

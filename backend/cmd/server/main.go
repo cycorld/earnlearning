@@ -132,6 +132,10 @@ func main() {
 	milestoneUC := application.NewMilestoneUseCase(milestoneRepo, userRepo, companyRepo, grantRepo, notifUC)
 	milestoneUC.SetFileStorage(cfg.PrivateUploadPath) // #125 비공개 첨부 저장 경로
 
+	// #166 학생별 이메일 수신함 (개인 주소 + inbound webhook + SES 답장)
+	mailRepo := persistence.NewMailRepo(db)
+	mailUC := application.NewMailUseCase(mailRepo, emailSvc, notifUC, cfg.PrivateUploadPath)
+
 	// Task repo (reads tasks/ markdown files)
 	tasksPath := os.Getenv("TASKS_PATH")
 	if tasksPath == "" {
@@ -270,6 +274,7 @@ func main() {
 		DM:           handler.NewDMHandler(dmUC),
 		UserDB:       handler.NewUserDBHandler(userDBUC),
 		Milestone:    handler.NewMilestoneHandler(milestoneUC),
+		Mail:         handler.NewMailHandler(mailUC, cfg.MailWebhookSecret),
 	}
 	if llmUC != nil {
 		handlers.LLM = handler.NewLLMHandler(llmUC)
