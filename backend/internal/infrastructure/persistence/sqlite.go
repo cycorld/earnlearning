@@ -67,6 +67,15 @@ func RunMigrations(db *sql.DB) error {
 		`ALTER TABLE freelance_jobs ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE loans ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE grants ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
+		// #166 메일 승인 플로우 + 멀티 메일함(user/company/shared). 신규 CREATE 는 컬럼 포함;
+		// 이 ALTER 는 이전 CREATE 로 만들어진 로컬 개발 DB 보호용 (프로덕션 미배포). 에러 무시.
+		`ALTER TABLE mail_addresses ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'`,
+		`ALTER TABLE mail_addresses ADD COLUMN owner_type TEXT NOT NULL DEFAULT 'user'`,
+		`ALTER TABLE mail_addresses ADD COLUMN owner_id INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE mail_addresses ADD COLUMN display_name TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE emails ADD COLUMN address_id INTEGER NOT NULL DEFAULT 0`,
+		// owner_id 백필: 개인 주소는 owner_id = 기존 user_id (idempotent).
+		`UPDATE mail_addresses SET owner_id = user_id WHERE owner_type = 'user' AND owner_id = 0`,
 	}
 	for _, stmt := range alterStatements {
 		db.Exec(stmt) // ignore "duplicate column" errors
@@ -487,17 +496,26 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
-	// #166 학생별 이메일 수신함 — 개인 주소 / 메일 / 첨부 (idempotent).
+	// #166 멀티 메일함 — 주소(user/company/shared) / 메일 / 첨부 / 공용 권한 (idempotent).
+	// 프로덕션 미배포이므로 CREATE 를 멀티 메일함 구조로 재정의한다. 로컬 개발 DB 는 위 ALTER 로 보강됨.
 	mailTables := []string{
 		`CREATE TABLE IF NOT EXISTS mail_addresses (
-			id         INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id    INTEGER NOT NULL UNIQUE REFERENCES users(id),
-			local_part TEXT NOT NULL UNIQUE,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			id           INTEGER PRIMARY KEY AUTOINCREMENT,
+			owner_type   TEXT NOT NULL DEFAULT 'user',   -- 'user' | 'company' | 'shared'
+			owner_id     INTEGER NOT NULL DEFAULT 0,      -- user id | company id | 생성 관리자 id
+			user_id      INTEGER NOT NULL DEFAULT 0,      -- 알림 수신 책임 유저 (하위호환 유지)
+			local_part   TEXT NOT NULL UNIQUE,
+			display_name TEXT NOT NULL DEFAULT '',        -- shared 표시명
+			status       TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected'
+			created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
+		// 소유 주체별 1주소 (shared 는 관리자당 여러 개 허용 → 부분 인덱스로 제외).
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_mail_addresses_owner
+			ON mail_addresses(owner_type, owner_id) WHERE owner_type != 'shared'`,
 		`CREATE TABLE IF NOT EXISTS emails (
 			id            INTEGER PRIMARY KEY AUTOINCREMENT,
-			owner_user_id INTEGER NOT NULL REFERENCES users(id),
+			address_id    INTEGER NOT NULL DEFAULT 0,
+			owner_user_id INTEGER NOT NULL DEFAULT 0,
 			direction     TEXT NOT NULL CHECK(direction IN ('in','out')),
 			from_addr     TEXT NOT NULL,
 			to_addr       TEXT NOT NULL,
@@ -511,6 +529,7 @@ func RunMigrations(db *sql.DB) error {
 			created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_emails_owner ON emails(owner_user_id, created_at DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_emails_address ON emails(address_id, direction, created_at DESC)`,
 		`CREATE TABLE IF NOT EXISTS mail_attachments (
 			id          INTEGER PRIMARY KEY AUTOINCREMENT,
 			email_id    INTEGER NOT NULL REFERENCES emails(id),
@@ -521,6 +540,15 @@ func RunMigrations(db *sql.DB) error {
 			created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_mail_attachments_email ON mail_attachments(email_id)`,
+		// 공용(shared) 메일함 접근 권한. 회수는 revoked=1 (삭제 금지).
+		`CREATE TABLE IF NOT EXISTS mail_address_grants (
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			address_id INTEGER NOT NULL,
+			user_id    INTEGER NOT NULL,
+			revoked    INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(address_id, user_id)
+		)`,
 	}
 	for _, stmt := range mailTables {
 		if _, err := db.Exec(stmt); err != nil {

@@ -56,6 +56,10 @@ const (
 
 	// Mail (#166) — 학생 개인 메일함으로 새 메일 수신
 	NotifMailReceived      NotifType = "mail_received"
+
+	// Mail 주소 승인 플로우 (#166) — 관리자 승인/반려 결과 알림
+	NotifMailAddressApproved NotifType = "mail_address_approved"
+	NotifMailAddressRejected NotifType = "mail_address_rejected"
 )
 
 // PushEligibleTypes are notification types that should trigger push notifications.
@@ -91,6 +95,8 @@ var PushEligibleTypes = map[NotifType]bool{
 	NotifProposalSubmitted:  true,
 	NotifMention:            true,
 	NotifMailReceived:       true,
+	NotifMailAddressApproved: true,
+	NotifMailAddressRejected: true,
 }
 
 type Notification struct {

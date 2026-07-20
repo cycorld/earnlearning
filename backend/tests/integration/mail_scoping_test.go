@@ -12,8 +12,8 @@ func TestMailScoping(t *testing.T) {
 	ts := setupTestServer(t)
 	a := ts.registerAndApprove("scopea@student.com", "pw12345678", "스코프에이", "2024301")
 	b := ts.registerAndApprove("scopeb@student.com", "pw12345678", "스코프비", "2024302")
-	ts.claimMailAddress(t, a, "scopea")
-	ts.claimMailAddress(t, b, "scopeb")
+	aAddr := ts.claimMailAddress(t, a, "scopea")
+	bAddr := ts.claimMailAddress(t, b, "scopeb")
 
 	// 각자 1통씩 수신
 	ts.inbound(testMailWebhookSecret, map[string]interface{}{
@@ -24,7 +24,7 @@ func TestMailScoping(t *testing.T) {
 	})
 
 	// A 의 받은편지함: 1건 (자기 것만)
-	_, ra := ts.mailJSON("GET", "/api/mail?box=inbox", nil, a)
+	_, ra := ts.mailJSON("GET", "/api/mail?box=inbox&address_id="+strconv.Itoa(aAddr), nil, a)
 	var listA struct {
 		Emails []struct {
 			ID      int    `json:"id"`
@@ -38,7 +38,7 @@ func TestMailScoping(t *testing.T) {
 	}
 
 	// B 의 받은편지함에서 B 메일 id 확보
-	_, rb := ts.mailJSON("GET", "/api/mail?box=inbox", nil, b)
+	_, rb := ts.mailJSON("GET", "/api/mail?box=inbox&address_id="+strconv.Itoa(bAddr), nil, b)
 	var listB struct {
 		Emails []struct {
 			ID int `json:"id"`
@@ -46,6 +46,11 @@ func TestMailScoping(t *testing.T) {
 	}
 	json.Unmarshal(rb.Data, &listB)
 	bEmailID := listB.Emails[0].ID
+
+	// A 가 B 의 메일함(address_id)을 조회 → 403 (주소 소유권 없음)
+	if st, r := ts.mailJSON("GET", "/api/mail?box=inbox&address_id="+strconv.Itoa(bAddr), nil, a); st != http.StatusForbidden || r.Success {
+		t.Fatalf("A 가 B 메일함 목록 조회 시 403 이어야 함: got %d body=%s", st, string(r.Data))
+	}
 
 	// A 가 B 의 메일 id 로 상세 조회 → 403
 	st, r := ts.mailJSON("GET", "/api/mail/"+strconv.Itoa(bEmailID), nil, a)

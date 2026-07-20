@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -12,6 +13,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sesv2"
 	"github.com/aws/aws-sdk-go-v2/service/sesv2/types"
 )
+
+// ErrSenderDisabled — 발신기가 비활성(FROM_EMAIL 미설정 등)일 때 SendMailFrom 이 반환한다.
+// 조용한 성공(nil) 대신 명시적 실패로 처리해 "보냈다"는 거짓 성공 + 보낸편지함 저장을 막는다.
+// (주의: SendEmail 알림 경로는 기존대로 비활성 시 무시(nil) 유지 — 여기서 바꾸지 않는다.)
+var ErrSenderDisabled = errors.New("메일 발신기가 비활성화되어 있습니다")
 
 type SESService struct {
 	client    *sesv2.Client
@@ -133,7 +139,8 @@ type OutgoingMail struct {
 // 성공으로 처리한다. 어느 경로로 보냈는지 로그로 남긴다.
 func (s *SESService) SendMailFrom(m OutgoingMail) error {
 	if !s.enabled {
-		return nil
+		// 조용한 성공 금지: 미설정 프로덕션에서 학생에게 거짓 "발송 완료" + 보낸편지함 기록이 남는 것을 막는다.
+		return ErrSenderDisabled
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
