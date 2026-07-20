@@ -21,6 +21,7 @@ import {
   TrendingUp,
   ShieldCheck,
   Sparkles,
+  UserCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -55,6 +56,8 @@ function getNotifIcon(type: string) {
     case 'investment':
     case 'dividend':
       return <TrendingUp className="h-5 w-5 text-highlight" />
+    case 'user_approved':
+      return <UserCheck className="h-5 w-5 text-emerald-500" />
     case 'approval':
     case 'admin':
       return <ShieldCheck className="h-5 w-5 text-coral" />

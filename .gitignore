@@ -43,3 +43,4 @@ frontend/public/changelog
 # Backend binary
 backend/server
 .gstack/
+.claude/settings.local.json
