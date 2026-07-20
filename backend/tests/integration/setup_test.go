@@ -107,6 +107,7 @@ func setupTestServer(t *testing.T, opts ...func(*testConfig)) *testServer {
 	notifUC := application.NewNotificationUseCase(notifRepo, pushSvc, nil, hub)
 	postUC.SetNotificationUseCase(notifUC)
 	companyUC.SetNotificationUseCase(notifUC)
+	authUC.SetNotificationUseCase(notifUC) // #167 가입 승인 알림
 	freelanceUC := application.NewFreelanceUseCase(db, freelanceRepo, walletRepo, notifUC)
 	grantUC := application.NewGrantUseCase(db, grantRepo, walletRepo, notifUC)
 	investmentUC := application.NewInvestmentUseCase(db, investmentRepo, companyRepo, walletRepo)

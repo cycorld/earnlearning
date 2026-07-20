@@ -1732,5 +1732,17 @@
       "SPA"
     ],
     "github": null
+  },
+  {
+    "slug": "174-approval-status-refresh",
+    "title": "\"승인했는데 왜 아직 대기중이래요?\" — 오지 않는 이벤트를 기다린 화면",
+    "date": "2026-07-21",
+    "tags": [
+      "인증",
+      "JWT",
+      "버그수정",
+      "폴링"
+    ],
+    "github": null
   }
 ]
