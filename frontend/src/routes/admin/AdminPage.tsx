@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
+import { useAuth } from '@/hooks/use-auth'
+import type { Classroom } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,6 +34,31 @@ export default function AdminPage() {
     active_loans: 0,
   })
   const [loading, setLoading] = useState(true)
+
+  // #159 관리자 강의실 컨텍스트 — 최초 화면에서 강의실을 선택해 진입한다.
+  const { user, refreshUser } = useAuth()
+  const [classrooms, setClassrooms] = useState<Classroom[]>([])
+  const [switching, setSwitching] = useState(false)
+
+  useEffect(() => {
+    api
+      .get<Classroom[]>('/classrooms')
+      .then((list) => setClassrooms(list ?? []))
+      .catch(() => setClassrooms([]))
+  }, [])
+
+  const activeClassroom = classrooms.find((c) => c.id === user?.active_classroom_id)
+
+  const selectClassroom = async (id: number) => {
+    if (switching) return
+    setSwitching(true)
+    try {
+      await api.post(`/classrooms/${id}/activate`)
+      await refreshUser()
+    } finally {
+      setSwitching(false)
+    }
+  }
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -145,6 +172,40 @@ export default function AdminPage() {
         <ShieldCheck className="h-5 w-5 text-primary" />
         <h1 className="text-xl font-bold">관리자</h1>
       </div>
+
+      {/* #159 강의실 컨텍스트 선택 — 지원금·송금·대시보드가 이 강의실 기준으로 동작 */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <GraduationCap className="h-4 w-4 text-primary" />
+            관리 중인 강의실
+            {activeClassroom && (
+              <Badge variant="secondary" className="text-xs">{activeClassroom.name}</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {classrooms.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              강의실이 없습니다. 강의실 관리에서 새 강의실을 만들어주세요.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {classrooms.map((c) => (
+                <Button
+                  key={c.id}
+                  size="sm"
+                  variant={c.id === user?.active_classroom_id ? 'default' : 'outline'}
+                  disabled={switching}
+                  onClick={() => selectClassroom(c.id)}
+                >
+                  {c.name}
+                </Button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {loading ? (
         <div className="flex justify-center py-8">

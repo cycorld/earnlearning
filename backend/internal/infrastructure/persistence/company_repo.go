@@ -28,11 +28,11 @@ func (r *CompanyRepo) Create(c *company.Company) (int, error) {
 		listed = 1
 	}
 	res, err := r.db.Exec(`
-		INSERT INTO companies (owner_id, name, description, logo_url, initial_capital, total_capital, total_shares, valuation, listed, business_card, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO companies (owner_id, name, description, logo_url, initial_capital, total_capital, total_shares, valuation, listed, business_card, status, classroom_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		c.OwnerID, c.Name, c.Description, c.LogoURL,
 		c.InitialCapital, c.TotalCapital, c.TotalShares,
-		c.Valuation, listed, c.BusinessCard, c.Status,
+		c.Valuation, listed, c.BusinessCard, c.Status, c.ClassroomID,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: companies.name") {
@@ -52,11 +52,11 @@ func (r *CompanyRepo) FindByID(id int) (*company.Company, error) {
 	var listed int
 	err := r.db.QueryRow(`
 		SELECT id, owner_id, name, description, logo_url, initial_capital,
-		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at
+		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at, classroom_id
 		FROM companies WHERE id = ?`, id).Scan(
 		&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.LogoURL,
 		&c.InitialCapital, &c.TotalCapital, &c.TotalShares,
-		&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt,
+		&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt, &c.ClassroomID,
 	)
 	if err == sql.ErrNoRows {
 		return nil, company.ErrNotFound
@@ -71,7 +71,7 @@ func (r *CompanyRepo) FindByID(id int) (*company.Company, error) {
 func (r *CompanyRepo) FindByOwnerID(ownerID int) ([]*company.Company, error) {
 	rows, err := r.db.Query(`
 		SELECT id, owner_id, name, description, logo_url, initial_capital,
-		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at
+		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at, classroom_id
 		FROM companies WHERE owner_id = ? ORDER BY created_at DESC`, ownerID)
 	if err != nil {
 		return nil, fmt.Errorf("query companies: %w", err)
@@ -85,7 +85,7 @@ func (r *CompanyRepo) FindByOwnerID(ownerID int) ([]*company.Company, error) {
 		if err := rows.Scan(
 			&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.LogoURL,
 			&c.InitialCapital, &c.TotalCapital, &c.TotalShares,
-			&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt,
+			&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt, &c.ClassroomID,
 		); err != nil {
 			return nil, fmt.Errorf("scan company: %w", err)
 		}
@@ -95,11 +95,12 @@ func (r *CompanyRepo) FindByOwnerID(ownerID int) ([]*company.Company, error) {
 	return companies, nil
 }
 
-func (r *CompanyRepo) FindAll() ([]*company.Company, error) {
+// FindAll — 요청자 활성 강의실의 회사만 (#159). classroomID 0 = 빈 결과 (미소속).
+func (r *CompanyRepo) FindAll(classroomID int) ([]*company.Company, error) {
 	rows, err := r.db.Query(`
 		SELECT id, owner_id, name, description, logo_url, initial_capital,
-		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at
-		FROM companies ORDER BY created_at DESC`)
+		       total_capital, total_shares, valuation, listed, business_card, service_url, status, created_at, classroom_id
+		FROM companies WHERE classroom_id = ? ORDER BY created_at DESC`, classroomID)
 	if err != nil {
 		return nil, fmt.Errorf("query all companies: %w", err)
 	}
@@ -112,7 +113,7 @@ func (r *CompanyRepo) FindAll() ([]*company.Company, error) {
 		if err := rows.Scan(
 			&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.LogoURL,
 			&c.InitialCapital, &c.TotalCapital, &c.TotalShares,
-			&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt,
+			&c.Valuation, &listed, &c.BusinessCard, &c.ServiceURL, &c.Status, &c.CreatedAt, &c.ClassroomID,
 		); err != nil {
 			return nil, fmt.Errorf("scan company: %w", err)
 		}

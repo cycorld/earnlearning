@@ -98,6 +98,12 @@ func (uc *CompanyUsecase) CreateCompany(userID int, input CreateCompanyInput) (*
 		return nil, company.ErrMinCapital
 	}
 
+	// #159 회사는 설립자의 활성 강의실에 귀속 (0 = 무소속 스코프)
+	activeClassroom, err := uc.walletRepo.GetActiveClassroomID(userID)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check personal wallet balance
 	w, err := uc.walletRepo.FindByUserID(userID)
 	if err != nil {
@@ -127,6 +133,7 @@ func (uc *CompanyUsecase) CreateCompany(userID int, input CreateCompanyInput) (*
 		Listed:         false,
 		BusinessCard:   "{}",
 		Status:         "active",
+		ClassroomID:    activeClassroom,
 	}
 
 	companyID, err := uc.companyRepo.Create(c)
@@ -283,8 +290,13 @@ func (uc *CompanyUsecase) GetMyCompanies(userID int) ([]*MyCompanyItem, error) {
 	return items, nil
 }
 
-func (uc *CompanyUsecase) GetAllCompanies() ([]*company.Company, error) {
-	return uc.companyRepo.FindAll()
+// GetAllCompanies — 요청자의 활성 강의실 회사만 (#159).
+func (uc *CompanyUsecase) GetAllCompanies(requesterID int) ([]*company.Company, error) {
+	active, err := uc.walletRepo.GetActiveClassroomID(requesterID)
+	if err != nil {
+		return nil, err
+	}
+	return uc.companyRepo.FindAll(active)
 }
 
 // PublicCompanyItem 은 학생용 전체 기업 목록의 한 항목.
@@ -296,10 +308,13 @@ type PublicCompanyItem struct {
 	WalletBalance int    `json:"wallet_balance"`
 }
 
-// GetAllCompaniesWithOwners 는 모든 회사 + 소유자 정보를 반환한다.
-// 학생/관리자 누구나 호출 가능.
-func (uc *CompanyUsecase) GetAllCompaniesWithOwners() ([]*PublicCompanyItem, error) {
-	companies, err := uc.companyRepo.FindAll()
+// GetAllCompaniesWithOwners 는 요청자의 활성 강의실 회사 + 소유자 정보를 반환한다 (#159).
+func (uc *CompanyUsecase) GetAllCompaniesWithOwners(requesterID int) ([]*PublicCompanyItem, error) {
+	active, err := uc.walletRepo.GetActiveClassroomID(requesterID)
+	if err != nil {
+		return nil, err
+	}
+	companies, err := uc.companyRepo.FindAll(active)
 	if err != nil {
 		return nil, err
 	}
@@ -698,7 +713,8 @@ func (uc *CompanyUsecase) TransferFromCompany(actorID, companyID int, input Comp
 
 	switch input.TargetType {
 	case "user":
-		targetWallet, err := uc.walletRepo.FindByUserID(input.TargetID)
+		// #159 수신 지갑은 회사가 속한 강의실 지갑
+		targetWalletID, _, err := uc.walletRepo.EnsureClassroomWallet(input.TargetID, c.ClassroomID)
 		if err != nil {
 			return fmt.Errorf("받는 사람의 지갑을 찾을 수 없습니다")
 		}
@@ -711,7 +727,7 @@ func (uc *CompanyUsecase) TransferFromCompany(actorID, companyID int, input Comp
 			fmt.Sprintf("%s에게 송금: %s", targetName, desc), "user", input.TargetID); err != nil {
 			return err
 		}
-		if err := uc.walletRepo.Credit(targetWallet.ID, input.Amount, wallet.TxCompanyTransfer,
+		if err := uc.walletRepo.Credit(targetWalletID, input.Amount, wallet.TxCompanyTransfer,
 			fmt.Sprintf("[%s] 법인 송금 입금: %s", srcLabel, desc), "company", companyID); err != nil {
 			_ = uc.companyRepo.CreditCompanyWallet(srcWallet.ID, input.Amount,
 				string(wallet.TxCompanyTransfer),

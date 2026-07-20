@@ -69,6 +69,12 @@ func (uc *ClassroomUseCase) CreateClassroom(input CreateClassroomInput, creatorI
 		return nil, err
 	}
 
+	// #159 생성한 강의실을 생성자의 활성 강의실로 전환 (관리자가 만든 지원금 등이
+	// 이 강의실에 귀속되도록)
+	if err := uc.classroomRepo.SetActiveClassroom(creatorID, id); err != nil {
+		return nil, err
+	}
+
 	// Create default channels
 	for _, ch := range defaultChannels {
 		_, err := uc.classroomRepo.CreateChannel(&classroom.Channel{
@@ -134,17 +140,20 @@ func (uc *ClassroomUseCase) JoinClassroom(code string, userID int) (*classroom.C
 }
 
 // ActivateClassroom — 멤버인 강의실로 활성 컨텍스트 전환 (#159).
-func (uc *ClassroomUseCase) ActivateClassroom(userID, classroomID int) (*classroom.Classroom, error) {
+// 관리자는 멤버가 아니어도 전환 가능 (강의실 관리 컨텍스트 진입).
+func (uc *ClassroomUseCase) ActivateClassroom(userID, classroomID int, isAdmin bool) (*classroom.Classroom, error) {
 	c, err := uc.classroomRepo.FindByID(classroomID)
 	if err != nil {
 		return nil, err
 	}
-	isMember, err := uc.classroomRepo.IsMember(classroomID, userID)
-	if err != nil {
-		return nil, err
-	}
-	if !isMember {
-		return nil, classroom.ErrNotMember
+	if !isAdmin {
+		isMember, err := uc.classroomRepo.IsMember(classroomID, userID)
+		if err != nil {
+			return nil, err
+		}
+		if !isMember {
+			return nil, classroom.ErrNotMember
+		}
 	}
 	if err := uc.classroomRepo.SetActiveClassroom(userID, classroomID); err != nil {
 		return nil, err

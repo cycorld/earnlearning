@@ -28,6 +28,8 @@ type User struct {
 	Status     Status    `json:"status"`
 	Bio        string    `json:"bio"`
 	AvatarURL  string    `json:"avatar_url"`
+	// #159 활성(현재) 강의실. 0 = 미설정
+	ActiveClassroomID int       `json:"active_classroom_id"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }

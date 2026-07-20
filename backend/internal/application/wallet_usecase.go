@@ -111,7 +111,7 @@ type AdminTransferInput struct {
 	Description   string `json:"description"`
 }
 
-func (uc *WalletUseCase) AdminTransfer(input AdminTransferInput) (int, error) {
+func (uc *WalletUseCase) AdminTransfer(adminID int, input AdminTransferInput) (int, error) {
 	if input.Amount == 0 {
 		return 0, wallet.ErrInvalidAmount
 	}
@@ -130,16 +130,29 @@ func (uc *WalletUseCase) AdminTransfer(input AdminTransferInput) (int, error) {
 		userIDs = input.TargetUserIDs
 	}
 
+	// #159 관리자의 활성 강의실이 있으면 해당 강의실 지갑으로 송금
+	adminActive, _ := uc.walletRepo.GetActiveClassroomID(adminID)
+
 	successCount := 0
 	for _, uid := range userIDs {
-		w, err := uc.walletRepo.FindByUserID(uid)
-		if err != nil {
-			// try creating wallet
-			walletID, createErr := uc.walletRepo.CreateWallet(uid)
-			if createErr != nil {
+		var w *wallet.Wallet
+		if adminActive > 0 {
+			wid, _, err := uc.walletRepo.EnsureClassroomWallet(uid, adminActive)
+			if err != nil {
 				continue
 			}
-			w = &wallet.Wallet{ID: walletID, UserID: uid, Balance: 0}
+			w = &wallet.Wallet{ID: wid, UserID: uid}
+		} else {
+			var err error
+			w, err = uc.walletRepo.FindByUserID(uid)
+			if err != nil {
+				// try creating wallet
+				walletID, createErr := uc.walletRepo.CreateWallet(uid)
+				if createErr != nil {
+					continue
+				}
+				w = &wallet.Wallet{ID: walletID, UserID: uid, Balance: 0}
+			}
 		}
 
 		desc := input.Description
@@ -147,6 +160,7 @@ func (uc *WalletUseCase) AdminTransfer(input AdminTransferInput) (int, error) {
 			desc = "관리자 송금"
 		}
 
+		var err error
 		if input.Amount > 0 {
 			// Credit (admin adding money) — no balance check needed
 			err = uc.walletRepo.Credit(w.ID, input.Amount, wallet.TxAdminTransfer, desc, "", 0)
@@ -209,7 +223,8 @@ func (uc *WalletUseCase) SearchRecipients(senderID int, query string) ([]*Recipi
 	}
 
 	if uc.companyRepo != nil {
-		companies, err := uc.companyRepo.FindAll()
+		senderClassroom, _ := uc.walletRepo.GetActiveClassroomID(senderID)
+		companies, err := uc.companyRepo.FindAll(senderClassroom)
 		if err == nil {
 			for _, c := range companies {
 				if c.Status == "dissolved" {
@@ -298,6 +313,10 @@ func (uc *WalletUseCase) Transfer(senderID int, input TransferInput) error {
 		if c.Status == "dissolved" {
 			return fmt.Errorf("청산된 법인에는 송금할 수 없습니다")
 		}
+		// #159 타 강의실 법인 송금 차단
+		if c.ClassroomID != senderWallet.ClassroomID {
+			return fmt.Errorf("다른 강의실의 법인에는 송금할 수 없습니다")
+		}
 		cw, err := uc.companyRepo.FindCompanyWallet(companyID)
 		if err != nil {
 			return fmt.Errorf("법인 지갑을 찾을 수 없습니다")
@@ -326,9 +345,9 @@ func (uc *WalletUseCase) Transfer(senderID int, input TransferInput) error {
 		return nil
 	}
 
-	// Default: user → user
+	// Default: user → user — 수신 지갑은 송신자의 강의실 지갑 (#159)
 	receiverUserID := input.TargetUserID
-	receiverWallet, err := uc.walletRepo.FindByUserID(receiverUserID)
+	receiverWalletID, _, err := uc.walletRepo.EnsureClassroomWallet(receiverUserID, senderWallet.ClassroomID)
 	if err != nil {
 		return fmt.Errorf("받는 사람의 지갑을 찾을 수 없습니다")
 	}
@@ -347,7 +366,7 @@ func (uc *WalletUseCase) Transfer(senderID int, input TransferInput) error {
 	}
 
 	// Credit receiver
-	err = uc.walletRepo.Credit(receiverWallet.ID, input.Amount, wallet.TxTransfer,
+	err = uc.walletRepo.Credit(receiverWalletID, input.Amount, wallet.TxTransfer,
 		fmt.Sprintf("%s로부터 송금: %s", senderName, desc), "user", senderID)
 	if err != nil {
 		return err

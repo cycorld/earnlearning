@@ -29,5 +29,9 @@ type Repository interface {
 	GetTransactions(walletID int, filter TransactionFilter, page, limit int) ([]*Transaction, int, error)
 	// GetRankingForUser ranks wallets in the requester's active classroom (#159).
 	GetRankingForUser(requesterID, limit int) ([]*RankEntry, error)
+	// GetActiveClassroomID returns the user's active classroom (0 = none) (#159).
+	GetActiveClassroomID(userID int) (int, error)
+	// FindByUserAndClassroom returns the wallet for (user, classroom) (#159).
+	FindByUserAndClassroom(userID, classroomID int) (*Wallet, error)
 	GetAssetBreakdown(userID int) (*AssetBreakdown, error)
 }

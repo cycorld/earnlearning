@@ -1,7 +1,8 @@
 package grant
 
 type GrantFilter struct {
-	Status string
+	Status      string
+	ClassroomID int // #159 강의실 스코프
 }
 
 type Repository interface {

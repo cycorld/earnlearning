@@ -11,6 +11,15 @@ export interface User {
   wallet_balance?: number
   total_asset_value?: number
   company_count?: number
+  active_classroom_id?: number
+}
+
+export interface Classroom {
+  id: number
+  name: string
+  code: string
+  initial_capital: number
+  created_at?: string
 }
 
 export interface Wallet {

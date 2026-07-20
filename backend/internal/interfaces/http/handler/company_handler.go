@@ -205,7 +205,7 @@ func (h *CompanyHandler) GetMyCompanies(c echo.Context) error {
 //	@Success		200	{object}	APIResponse
 //	@Router			/admin/companies [get]
 func (h *CompanyHandler) ListAllCompanies(c echo.Context) error {
-	result, err := h.uc.GetAllCompanies()
+	result, err := h.uc.GetAllCompanies(middleware.GetUserID(c))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"success": false, "data": nil,
@@ -232,7 +232,7 @@ func (h *CompanyHandler) ListAllCompanies(c echo.Context) error {
 //	@Success		200	{object}	APIResponse
 //	@Router			/companies [get]
 func (h *CompanyHandler) ListCompaniesPublic(c echo.Context) error {
-	result, err := h.uc.GetAllCompaniesWithOwners()
+	result, err := h.uc.GetAllCompaniesWithOwners(middleware.GetUserID(c))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"success": false, "data": nil,

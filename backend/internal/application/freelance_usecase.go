@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/earnlearning/backend/internal/domain/company"
 	"github.com/earnlearning/backend/internal/domain/freelance"
 	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/wallet"
@@ -48,17 +49,23 @@ type ReviewJobInput struct {
 
 // --- Use case methods ---
 
-func (uc *FreelanceUseCase) ListJobs(status, skills string, minBudget, page, limit int) ([]*freelance.FreelanceJob, int, error) {
+// ListJobs — 요청자 활성 강의실의 의뢰만 (#159).
+func (uc *FreelanceUseCase) ListJobs(requesterID int, status, skills string, minBudget, page, limit int) ([]*freelance.FreelanceJob, int, error) {
 	if page < 1 {
 		page = 1
 	}
 	if limit < 1 || limit > 50 {
 		limit = 20
 	}
+	active, err := uc.walletRepo.GetActiveClassroomID(requesterID)
+	if err != nil {
+		return nil, 0, err
+	}
 	filter := freelance.JobFilter{
-		Status:    status,
-		Skills:    skills,
-		MinBudget: minBudget,
+		ClassroomID: active,
+		Status:      status,
+		Skills:      skills,
+		MinBudget:   minBudget,
 	}
 	return uc.repo.List(filter, page, limit)
 }
@@ -68,8 +75,15 @@ func (uc *FreelanceUseCase) CreateJob(input CreateJobInput, clientID int) (*free
 		return nil, fmt.Errorf("예산은 0보다 커야 합니다")
 	}
 
+	// #159 의뢰는 의뢰인의 활성 강의실에 귀속 (0 = 무소속 스코프)
+	active, err := uc.walletRepo.GetActiveClassroomID(clientID)
+	if err != nil {
+		return nil, err
+	}
+
 	job := &freelance.FreelanceJob{
 		ClientID:       clientID,
+		ClassroomID:    active,
 		Title:          input.Title,
 		Description:    input.Description,
 		Budget:         input.Budget,
@@ -132,6 +146,12 @@ func (uc *FreelanceUseCase) ApplyToJob(jobID int, input ApplyJobInput, userID in
 	if job.ClientID == userID {
 		return nil, freelance.ErrCannotApplyOwnJob
 	}
+	// #159 타 강의실 의뢰 지원 차단
+	if active, aerr := uc.walletRepo.GetActiveClassroomID(userID); aerr != nil {
+		return nil, aerr
+	} else if job.ClassroomID != active {
+		return nil, company.ErrWrongClassroom
+	}
 
 	existing, err := uc.repo.FindApplicationByJobAndUser(jobID, userID)
 	if err != nil {
@@ -183,17 +203,14 @@ func (uc *FreelanceUseCase) AcceptApplication(jobID, applicationID, userID int) 
 		return freelance.ErrApplicationNotFound
 	}
 
-	// Check client balance >= agreed price
-	clientWallet, err := uc.walletRepo.FindByUserID(userID)
+	// #159 에스크로는 의뢰 강의실 지갑에서 출금 (잔액 검증은 Debit 이 수행)
+	clientWalletID, _, err := uc.walletRepo.EnsureClassroomWallet(userID, job.ClassroomID)
 	if err != nil {
-		return freelance.ErrInsufficientFunds
-	}
-	if clientWallet.Balance < app.Price {
 		return freelance.ErrInsufficientFunds
 	}
 
 	// Debit escrow from client wallet
-	err = uc.walletRepo.Debit(clientWallet.ID, app.Price, wallet.TxFreelanceEscrow,
+	err = uc.walletRepo.Debit(clientWalletID, app.Price, wallet.TxFreelanceEscrow,
 		fmt.Sprintf("외주 에스크로: %s", job.Title), "freelance_job", job.ID)
 	if err != nil {
 		return err
@@ -284,12 +301,12 @@ func (uc *FreelanceUseCase) ApproveJob(jobID, userID int) error {
 		return freelance.ErrWorkNotCompleted
 	}
 
-	// Transfer escrow to freelancer wallet
-	freelancerWallet, err := uc.walletRepo.FindByUserID(*job.FreelancerID)
+	// Transfer escrow to freelancer wallet — 의뢰 강의실 지갑으로 (#159)
+	freelancerWalletID, _, err := uc.walletRepo.EnsureClassroomWallet(*job.FreelancerID, job.ClassroomID)
 	if err != nil {
 		return err
 	}
-	err = uc.walletRepo.Credit(freelancerWallet.ID, job.EscrowAmount, wallet.TxFreelancePay,
+	err = uc.walletRepo.Credit(freelancerWalletID, job.EscrowAmount, wallet.TxFreelancePay,
 		fmt.Sprintf("외주 대금: %s", job.Title), "freelance_job", job.ID)
 	if err != nil {
 		return err
@@ -337,9 +354,9 @@ func (uc *FreelanceUseCase) CancelJob(jobID, userID int) error {
 
 	// Refund escrow
 	if job.EscrowAmount > 0 {
-		clientWallet, err := uc.walletRepo.FindByUserID(job.ClientID)
-		if err == nil && clientWallet != nil {
-			_ = uc.walletRepo.Credit(clientWallet.ID, job.EscrowAmount, wallet.TxFreelanceEscrow,
+		clientWalletID, _, err := uc.walletRepo.EnsureClassroomWallet(job.ClientID, job.ClassroomID)
+		if err == nil {
+			_ = uc.walletRepo.Credit(clientWalletID, job.EscrowAmount, wallet.TxFreelanceEscrow,
 				fmt.Sprintf("에스크로 환불: %s", job.Title), "freelance_job", job.ID)
 			_ = uc.repo.SetEscrow(jobID, 0)
 		}

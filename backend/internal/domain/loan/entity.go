@@ -30,6 +30,7 @@ type Loan struct {
 	PenaltyRate  float64    `json:"penalty_rate"`
 	Purpose      string     `json:"purpose"`
 	Status       LoanStatus `json:"status"`
+	ClassroomID  int        `json:"classroom_id"` // #159 강의실 스코프
 	ApprovedBy   *int       `json:"approved_by"`
 	ApprovedAt   *time.Time `json:"approved_at"`
 	NextPayment  *time.Time `json:"next_payment"`

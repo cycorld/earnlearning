@@ -18,10 +18,10 @@ func NewFreelanceRepo(db *sql.DB) *FreelanceRepo {
 
 func (r *FreelanceRepo) Create(job *freelance.FreelanceJob) (int, error) {
 	res, err := r.db.Exec(`
-		INSERT INTO freelance_jobs (client_id, title, description, budget, deadline, required_skills, status, max_workers, auto_approve_application, price_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO freelance_jobs (client_id, title, description, budget, deadline, required_skills, status, max_workers, auto_approve_application, price_type, classroom_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		job.ClientID, job.Title, job.Description, job.Budget, job.Deadline, job.RequiredSkills, job.Status,
-		job.MaxWorkers, boolToInt(job.AutoApproveApplication), job.PriceType,
+		job.MaxWorkers, boolToInt(job.AutoApproveApplication), job.PriceType, job.ClassroomID,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("create freelance job: %w", err)
@@ -43,7 +43,7 @@ func (r *FreelanceRepo) FindByID(id int) (*freelance.FreelanceJob, error) {
 		SELECT j.id, j.client_id, j.title, j.description, j.budget, j.deadline,
 			   j.required_skills, j.status, j.freelancer_id, j.escrow_amount,
 			   j.agreed_price, j.work_completed, j.max_workers, j.auto_approve_application,
-			   j.price_type, j.created_at, j.completed_at,
+			   j.price_type, j.created_at, j.completed_at, j.classroom_id,
 			   u1.name, u1.student_id, u1.department,
 			   u2.name AS freelancer_name
 		FROM freelance_jobs j
@@ -53,7 +53,7 @@ func (r *FreelanceRepo) FindByID(id int) (*freelance.FreelanceJob, error) {
 		&job.ID, &job.ClientID, &job.Title, &job.Description, &job.Budget, &deadline,
 		&job.RequiredSkills, &job.Status, &freelancerID, &job.EscrowAmount,
 		&job.AgreedPrice, &job.WorkCompleted, &job.MaxWorkers, &autoApprove,
-		&job.PriceType, &job.CreatedAt, &completedAt,
+		&job.PriceType, &job.CreatedAt, &completedAt, &job.ClassroomID,
 		&clientName, &clientStudentID, &clientDepartment, &freelancerName,
 	)
 	job.AutoApproveApplication = autoApprove != 0
@@ -103,6 +103,9 @@ func (r *FreelanceRepo) List(filter freelance.JobFilter, page, limit int) ([]*fr
 		where = append(where, "j.budget >= ?")
 		args = append(args, filter.MinBudget)
 	}
+	// #159 강의실 스코프 (0 = 미소속 → 빈 결과)
+	where = append(where, "j.classroom_id = ?")
+	args = append(args, filter.ClassroomID)
 
 	whereClause := strings.Join(where, " AND ")
 
@@ -119,7 +122,7 @@ func (r *FreelanceRepo) List(filter freelance.JobFilter, page, limit int) ([]*fr
 		SELECT j.id, j.client_id, j.title, j.description, j.budget, j.deadline,
 			   j.required_skills, j.status, j.freelancer_id, j.escrow_amount,
 			   j.agreed_price, j.work_completed, j.max_workers, j.auto_approve_application,
-			   j.price_type, j.created_at, j.completed_at,
+			   j.price_type, j.created_at, j.completed_at, j.classroom_id,
 			   u.name, u.student_id, u.department,
 			   (SELECT COUNT(*) FROM job_applications WHERE job_id = j.id) AS application_count
 		FROM freelance_jobs j
@@ -146,7 +149,7 @@ func (r *FreelanceRepo) List(filter freelance.JobFilter, page, limit int) ([]*fr
 			&job.ID, &job.ClientID, &job.Title, &job.Description, &job.Budget, &deadline,
 			&job.RequiredSkills, &job.Status, &freelancerID, &job.EscrowAmount,
 			&job.AgreedPrice, &job.WorkCompleted, &job.MaxWorkers, &autoApprove,
-			&job.PriceType, &job.CreatedAt, &completedAt,
+			&job.PriceType, &job.CreatedAt, &completedAt, &job.ClassroomID,
 			&clientName, &clientStudentID, &clientDepartment, &appCount,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan freelance job: %w", err)

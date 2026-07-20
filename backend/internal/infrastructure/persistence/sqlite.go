@@ -62,6 +62,11 @@ func RunMigrations(db *sql.DB) error {
 		`ALTER TABLE notifications ADD COLUMN anchor TEXT NOT NULL DEFAULT ''`,
 		// #159 멀티 강의실 — 유저의 활성(현재) 강의실. 0 = 미설정
 		`ALTER TABLE users ADD COLUMN active_classroom_id INTEGER NOT NULL DEFAULT 0`,
+		// #159 Phase 2 — 금융 도메인 루트 엔티티 강의실 스코핑 (0 = 미배정, 백필로 채움)
+		`ALTER TABLE companies ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE freelance_jobs ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE loans ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE grants ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
 	}
 	for _, stmt := range alterStatements {
 		db.Exec(stmt) // ignore "duplicate column" errors
@@ -116,6 +121,7 @@ func RunMigrations(db *sql.DB) error {
 			description TEXT NOT NULL DEFAULT '',
 			reward INTEGER NOT NULL DEFAULT 0,
 			max_applicants INTEGER NOT NULL DEFAULT 0,
+			classroom_id INTEGER NOT NULL DEFAULT 0,
 			status TEXT NOT NULL DEFAULT 'open',
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
@@ -478,6 +484,28 @@ func RunMigrations(db *sql.DB) error {
 	for _, stmt := range passwordResetTables {
 		if _, err := db.Exec(stmt); err != nil {
 			return fmt.Errorf("create password_reset_tokens tables: %w", err)
+		}
+	}
+
+	// #159 Phase 2 백필: 미배정(0) 도메인 엔티티를 소유자의 첫 멤버십 강의실로.
+	// grants 테이블은 위에서 생성되므로 반드시 마지막에 실행. 멱등 (0인 행만 갱신).
+	classroomBackfills := []string{
+		`UPDATE companies SET classroom_id =
+			COALESCE((SELECT MIN(cm.classroom_id) FROM classroom_members cm WHERE cm.user_id = companies.owner_id), 0)
+			WHERE classroom_id = 0`,
+		`UPDATE freelance_jobs SET classroom_id =
+			COALESCE((SELECT MIN(cm.classroom_id) FROM classroom_members cm WHERE cm.user_id = freelance_jobs.client_id), 0)
+			WHERE classroom_id = 0`,
+		`UPDATE loans SET classroom_id =
+			COALESCE((SELECT MIN(cm.classroom_id) FROM classroom_members cm WHERE cm.user_id = loans.borrower_id), 0)
+			WHERE classroom_id = 0`,
+		`UPDATE grants SET classroom_id =
+			COALESCE((SELECT MIN(id) FROM classrooms), 0)
+			WHERE classroom_id = 0`,
+	}
+	for _, stmt := range classroomBackfills {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("classroom backfill: %w", err)
 		}
 	}
 

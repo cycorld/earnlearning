@@ -158,7 +158,7 @@ func (h *WalletHandler) AdminTransfer(c echo.Context) error {
 		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "잘못된 입력입니다")
 	}
 
-	count, err := h.walletUC.AdminTransfer(input)
+	count, err := h.walletUC.AdminTransfer(middleware.GetUserID(c), input)
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, "TRANSFER_FAILED", err.Error())
 	}

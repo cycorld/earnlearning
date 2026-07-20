@@ -41,8 +41,15 @@ func (uc *LoanUseCase) ApplyLoan(input ApplyLoanInput, userID int) (*loan.Loan, 
 		return nil, loan.ErrInvalidAmount
 	}
 
+	// #159 대출은 신청자의 활성 강의실에 귀속 (0 = 무소속 스코프)
+	active, err := uc.walletRepo.GetActiveClassroomID(userID)
+	if err != nil {
+		return nil, err
+	}
+
 	l := &loan.Loan{
 		BorrowerID:   userID,
+		ClassroomID:  active,
 		Amount:       input.Amount,
 		Remaining:    input.Amount,
 		InterestRate: 0, // set by admin on approval
@@ -58,8 +65,23 @@ func (uc *LoanUseCase) ApplyLoan(input ApplyLoanInput, userID int) (*loan.Loan, 
 	return uc.repo.FindByID(id)
 }
 
+// GetMyLoans — 활성 강의실의 대출만 (#159).
 func (uc *LoanUseCase) GetMyLoans(userID int) ([]*loan.Loan, error) {
-	return uc.repo.ListByUser(userID)
+	loans, err := uc.repo.ListByUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	active, err := uc.walletRepo.GetActiveClassroomID(userID)
+	if err != nil {
+		return nil, err
+	}
+	filtered := make([]*loan.Loan, 0, len(loans))
+	for _, l := range loans {
+		if l.ClassroomID == active {
+			filtered = append(filtered, l)
+		}
+	}
+	return filtered, nil
 }
 
 func (uc *LoanUseCase) ApproveLoan(loanID, adminUserID int, input ApproveLoanInput) (*loan.Loan, error) {
@@ -82,12 +104,12 @@ func (uc *LoanUseCase) ApproveLoan(loanID, adminUserID int, input ApproveLoanInp
 		return nil, err
 	}
 
-	// Credit borrower wallet
-	w, err := uc.walletRepo.FindByUserID(l.BorrowerID)
+	// Credit borrower wallet — 대출 강의실 지갑으로 (#159)
+	wID, _, err := uc.walletRepo.EnsureClassroomWallet(l.BorrowerID, l.ClassroomID)
 	if err != nil {
 		return nil, err
 	}
-	err = uc.walletRepo.Credit(w.ID, l.Amount, wallet.TxLoanDisburse,
+	err = uc.walletRepo.Credit(wID, l.Amount, wallet.TxLoanDisburse,
 		fmt.Sprintf("대출 지급: %d원", l.Amount), "loan", loanID)
 	if err != nil {
 		return nil, err
@@ -139,8 +161,8 @@ func (uc *LoanUseCase) RepayLoan(loanID, userID int, input RepayLoanInput) (*loa
 		return nil, loan.ErrInvalidAmount
 	}
 
-	// Check balance
-	w, err := uc.walletRepo.FindByUserID(userID)
+	// Check balance — 대출이 속한 강의실 지갑 기준 (#159)
+	w, err := uc.walletRepo.FindByUserAndClassroom(userID, l.ClassroomID)
 	if err != nil {
 		return nil, loan.ErrInsufficientFunds
 	}
@@ -257,8 +279,8 @@ func (uc *LoanUseCase) ProcessWeeklyInterest() (int, error) {
 			continue
 		}
 
-		// Try to auto-debit interest from borrower wallet
-		w, err := uc.walletRepo.FindByUserID(l.BorrowerID)
+		// Try to auto-debit interest from borrower wallet — 대출 강의실 지갑 (#159)
+		w, err := uc.walletRepo.FindByUserAndClassroom(l.BorrowerID, l.ClassroomID)
 		if err != nil {
 			// No wallet, set overdue
 			_ = uc.repo.UpdateStatus(l.ID, loan.StatusOverdue)

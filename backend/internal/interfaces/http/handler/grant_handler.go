@@ -41,7 +41,7 @@ func (h *GrantHandler) ListGrants(c echo.Context) error {
 		limit = 20
 	}
 
-	grants, total, err := h.uc.ListGrants(status, page, limit)
+	grants, total, err := h.uc.ListGrants(middleware.GetUserID(c), status, page, limit)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, errorResp("INTERNAL", err.Error()))
 	}

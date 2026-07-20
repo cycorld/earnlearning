@@ -26,7 +26,7 @@ func NewExchangeHandler(uc *application.ExchangeUseCase) *ExchangeHandler {
 //	@Success		200	{object}	APIResponse
 //	@Router			/exchange/companies [get]
 func (h *ExchangeHandler) ListCompanies(c echo.Context) error {
-	companies, err := h.uc.ListCompanies()
+	companies, err := h.uc.ListCompanies(middleware.GetUserID(c))
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "서버 오류가 발생했습니다")
 	}

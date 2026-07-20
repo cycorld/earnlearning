@@ -216,6 +216,10 @@ func (r *fakeWalletRepo) CreateWallet(int) (int, error) { return 0, nil }
 func (r *fakeWalletRepo) EnsureClassroomWallet(int, int) (int, bool, error) {
 	return 1, false, nil
 }
+func (r *fakeWalletRepo) GetActiveClassroomID(int) (int, error) { return 1, nil }
+func (r *fakeWalletRepo) FindByUserAndClassroom(int, int) (*wallet.Wallet, error) {
+	return &wallet.Wallet{ID: 1, UserID: 1, Balance: r.balance}, nil
+}
 func (r *fakeWalletRepo) Credit(int, int, wallet.TxType, string, string, int) error {
 	return nil
 }

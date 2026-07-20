@@ -71,6 +71,7 @@ type UserRef struct {
 type FreelanceJob struct {
 	ID             int        `json:"id"`
 	ClientID       int        `json:"-"`
+	ClassroomID    int        `json:"classroom_id"` // #159 강의실 스코프
 	Title          string     `json:"title"`
 	Description    string     `json:"description"`
 	Budget         int        `json:"budget"`

@@ -88,7 +88,8 @@ func (h *ClassroomHandler) ActivateClassroom(c echo.Context) error {
 	}
 
 	userID := middleware.GetUserID(c)
-	cr, err := h.classroomUC.ActivateClassroom(userID, id)
+	isAdmin := middleware.GetUserRole(c) == "admin"
+	cr, err := h.classroomUC.ActivateClassroom(userID, id, isAdmin)
 	if err != nil {
 		if err == classroom.ErrNotMember {
 			return errorResponse(c, http.StatusForbidden, "NOT_MEMBER", err.Error())

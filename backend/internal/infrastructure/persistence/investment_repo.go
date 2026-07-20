@@ -106,6 +106,9 @@ func (r *InvestmentRepo) ListRounds(filter investment.RoundFilter, page, limit i
 		where = append(where, "ir.status = ?")
 		args = append(args, filter.Status)
 	}
+	// #159 회사 강의실 스코프 (0 = 미소속 → 빈 결과)
+	where = append(where, "ir.company_id IN (SELECT id FROM companies WHERE classroom_id = ?)")
+	args = append(args, filter.ClassroomID)
 
 	whereClause := strings.Join(where, " AND ")
 

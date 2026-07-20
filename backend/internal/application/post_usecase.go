@@ -170,7 +170,7 @@ func (uc *PostUsecase) CreatePost(userID int, role string, input CreatePostInput
 
 	// 게시글 작성 보상: 작성자에게 PostRewardAmount 지급 (#123)
 	// (과제는 CreateAssignment, 자동 게시글은 repo 직접 호출 경로라 보상 제외)
-	_ = uc.creditOrDebitUser(userID, PostRewardAmount, true,
+	_ = uc.creditOrDebitUser(userID, p.ChannelID, PostRewardAmount, true,
 		wallet.TxPostReward, "게시글 작성 보상", "post", postID)
 
 	// 게시글 본문 @멘션 알림 (#132)
@@ -252,7 +252,7 @@ func (uc *PostUsecase) DeletePost(postID, userID int, role string) error {
 	}
 
 	// 게시글 작성 보상 회수: 작성자/관리자 삭제 모두 작성자 지갑에서 회수 (#123, 어뷰징 방지)
-	_ = uc.creditOrDebitUser(p.AuthorID, PostRewardAmount, false,
+	_ = uc.creditOrDebitUser(p.AuthorID, p.ChannelID, PostRewardAmount, false,
 		wallet.TxPostReward, "게시글 삭제 보상 회수", "post", postID)
 
 	return nil
@@ -296,7 +296,7 @@ func (uc *PostUsecase) LikePost(postID, userID int) (*LikePostResult, error) {
 
 		// Debit reward from post author (skip if self-like)
 		if p.AuthorID != userID {
-			if err := uc.creditOrDebitUser(p.AuthorID, LikeRewardAmount, false,
+			if err := uc.creditOrDebitUser(p.AuthorID, p.ChannelID, LikeRewardAmount, false,
 				wallet.TxLikeReward, "좋아요 취소 보상 회수", "post", postID); err == nil {
 				result.Reward = -LikeRewardAmount
 			}
@@ -314,7 +314,7 @@ func (uc *PostUsecase) LikePost(postID, userID int) (*LikePostResult, error) {
 
 	// Credit reward to post author (skip if self-like)
 	if p.AuthorID != userID {
-		if err := uc.creditOrDebitUser(p.AuthorID, LikeRewardAmount, true,
+		if err := uc.creditOrDebitUser(p.AuthorID, p.ChannelID, LikeRewardAmount, true,
 			wallet.TxLikeReward, "좋아요 보상", "post", postID); err == nil {
 			result.Reward = LikeRewardAmount
 		}
@@ -324,24 +324,37 @@ func (uc *PostUsecase) LikePost(postID, userID int) (*LikePostResult, error) {
 }
 
 // creditOrDebitUser credits or debits a user's wallet, creating one if needed.
-func (uc *PostUsecase) creditOrDebitUser(userID, amount int, isCredit bool,
+// #159: 보상은 채널이 속한 강의실 지갑으로 지급/회수한다 (활성 강의실과 무관).
+func (uc *PostUsecase) creditOrDebitUser(userID, channelID, amount int, isCredit bool,
 	txType wallet.TxType, desc, refType string, refID int) error {
-	w, err := uc.walletRepo.FindByUserID(userID)
-	if err != nil {
-		// Try to create wallet
-		walletID, createErr := uc.walletRepo.CreateWallet(userID)
-		if createErr != nil {
-			return createErr
+	classroomID := 0
+	if ch, err := uc.postRepo.FindChannelByID(channelID); err == nil && ch != nil {
+		classroomID = ch.ClassroomID
+	}
+
+	var walletID int
+	if classroomID > 0 {
+		id, _, err := uc.walletRepo.EnsureClassroomWallet(userID, classroomID)
+		if err != nil {
+			return err
 		}
-		if isCredit {
-			return uc.walletRepo.Credit(walletID, amount, txType, desc, refType, refID)
+		walletID = id
+	} else {
+		w, err := uc.walletRepo.FindByUserID(userID)
+		if err != nil {
+			id, createErr := uc.walletRepo.CreateWallet(userID)
+			if createErr != nil {
+				return createErr
+			}
+			walletID = id
+		} else {
+			walletID = w.ID
 		}
-		return uc.walletRepo.Debit(walletID, amount, txType, desc, refType, refID)
 	}
 	if isCredit {
-		return uc.walletRepo.Credit(w.ID, amount, txType, desc, refType, refID)
+		return uc.walletRepo.Credit(walletID, amount, txType, desc, refType, refID)
 	}
-	return uc.walletRepo.Debit(w.ID, amount, txType, desc, refType, refID)
+	return uc.walletRepo.Debit(walletID, amount, txType, desc, refType, refID)
 }
 
 type CreateCommentInput struct {
@@ -392,7 +405,7 @@ func (uc *PostUsecase) CreateComment(userID int, input CreateCommentInput) (*pos
 	// Notify post author about the new comment (skip if self-comment)
 	if p.AuthorID != userID {
 		// Credit comment reward to post author
-		_ = uc.creditOrDebitUser(p.AuthorID, CommentRewardAmount, true,
+		_ = uc.creditOrDebitUser(p.AuthorID, p.ChannelID, CommentRewardAmount, true,
 			wallet.TxCommentReward, "댓글 보상", "post", input.PostID)
 
 		// 글 작성자가 댓글에서 멘션됐으면 mention 알림이 이미 갔으므로 new_comment 생략 (#132 중복 방지)
@@ -564,30 +577,18 @@ func (uc *PostUsecase) GradeAssignment(input GradeAssignmentInput) error {
 		reward = assignment.RewardAmount * input.Grade / assignment.MaxScore
 	}
 
-	// Credit student's personal wallet if reward > 0
+	// Credit student's personal wallet if reward > 0 — 과제 채널 강의실 지갑으로 (#159)
 	rewarded := false
 	if reward > 0 {
-		// Ensure wallet exists, create if not
-		w, err := uc.walletRepo.FindByUserID(submission.StudentID)
-		if err != nil {
-			// Try to create wallet
-			walletID, createErr := uc.walletRepo.CreateWallet(submission.StudentID)
-			if createErr != nil {
-				return uc.postRepo.UpdateSubmissionGrade(input.SubmissionID, input.Grade, false)
-			}
-			err = uc.walletRepo.Credit(walletID, reward, wallet.TxAssignReward,
-				fmt.Sprintf("과제 보상 (점수: %d/%d)", input.Grade, assignment.MaxScore),
-				"submission", submission.ID)
-			if err == nil {
-				rewarded = true
-			}
-		} else {
-			err = uc.walletRepo.Credit(w.ID, reward, wallet.TxAssignReward,
-				fmt.Sprintf("과제 보상 (점수: %d/%d)", input.Grade, assignment.MaxScore),
-				"submission", submission.ID)
-			if err == nil {
-				rewarded = true
-			}
+		channelID := 0
+		if ap, perr := uc.postRepo.FindPostByID(assignment.PostID); perr == nil && ap != nil {
+			channelID = ap.ChannelID
+		}
+		if err := uc.creditOrDebitUser(submission.StudentID, channelID, reward, true,
+			wallet.TxAssignReward,
+			fmt.Sprintf("과제 보상 (점수: %d/%d)", input.Grade, assignment.MaxScore),
+			"submission", submission.ID); err == nil {
+			rewarded = true
 		}
 	}
 
@@ -632,7 +633,7 @@ func (uc *PostUsecase) DeleteComment(commentID, userID int, role string) error {
 
 	// Reclaim comment reward from post author (only if commenter != post author)
 	if p.AuthorID != c.AuthorID {
-		_ = uc.creditOrDebitUser(p.AuthorID, CommentRewardAmount, false,
+		_ = uc.creditOrDebitUser(p.AuthorID, p.ChannelID, CommentRewardAmount, false,
 			wallet.TxCommentReward, "댓글 삭제 보상 회수", "post", c.PostID)
 	}
 

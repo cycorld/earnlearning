@@ -67,6 +67,22 @@ func (r *WalletRepo) CreateWallet(userID int) (int, error) {
 	return int(id), nil
 }
 
+// FindByUserAndClassroom — (user, classroom) 지갑 조회 (#159).
+func (r *WalletRepo) FindByUserAndClassroom(userID, classroomID int) (*wallet.Wallet, error) {
+	w := &wallet.Wallet{}
+	err := r.db.QueryRow(
+		"SELECT id, user_id, classroom_id, balance FROM wallets WHERE user_id = ? AND classroom_id = ?",
+		userID, classroomID,
+	).Scan(&w.ID, &w.UserID, &w.ClassroomID, &w.Balance)
+	if err == sql.ErrNoRows {
+		return nil, wallet.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return w, nil
+}
+
 // EnsureClassroomWallet returns the wallet for (user, classroom).
 // 없으면 미배정(classroom_id=0) 지갑을 해당 강의실로 귀속시키거나 새로 만든다.
 // isNew=true 면 이 강의실에 처음 묶인 지갑 → 호출부에서 초기자본을 지급해야 한다.
@@ -231,6 +247,18 @@ func (r *WalletRepo) GetTransactions(walletID int, filter wallet.TransactionFilt
 		txs = append(txs, t)
 	}
 	return txs, total, rows.Err()
+}
+
+// GetActiveClassroomID — 유저의 활성 강의실 (0 = 미설정) (#159).
+func (r *WalletRepo) GetActiveClassroomID(userID int) (int, error) {
+	var id int
+	err := r.db.QueryRow(
+		"SELECT COALESCE(active_classroom_id, 0) FROM users WHERE id = ?", userID,
+	).Scan(&id)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	return id, err
 }
 
 // GetRankingForUser ranks student wallets in the requester's active classroom (#159).

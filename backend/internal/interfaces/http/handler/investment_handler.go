@@ -157,7 +157,7 @@ func (h *InvestmentHandler) ListRounds(c echo.Context) error {
 	page, _ := strconv.Atoi(c.QueryParam("page"))
 	limit, _ := strconv.Atoi(c.QueryParam("limit"))
 
-	rounds, total, err := h.uc.ListRounds(companyID, status, page, limit)
+	rounds, total, err := h.uc.ListRounds(middleware.GetUserID(c), companyID, status, page, limit)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, errorResp("INTERNAL", err.Error()))
 	}

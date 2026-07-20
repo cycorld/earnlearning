@@ -11,6 +11,9 @@ var (
 	ErrAlreadyShareholder = errors.New("이미 주주입니다")
 	ErrWalletNotFound     = errors.New("회사 지갑을 찾을 수 없습니다")
 	ErrDisclosureNotFound = errors.New("공시를 찾을 수 없습니다")
+	// #159 멀티 강의실
+	ErrNoClassroom    = errors.New("강의실에 소속되어야 수행할 수 있습니다")
+	ErrWrongClassroom = errors.New("다른 강의실의 항목입니다")
 	ErrProposalNotFound   = errors.New("안건을 찾을 수 없습니다")
 	ErrProposalClosed     = errors.New("이미 종료된 안건입니다")
 	ErrNotShareholder     = errors.New("주주만 투표할 수 있습니다")

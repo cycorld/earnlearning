@@ -40,10 +40,10 @@ func (r *UserRepo) Create(u *user.User) (int, error) {
 func (r *UserRepo) FindByID(id int) (*user.User, error) {
 	u := &user.User{}
 	err := r.db.QueryRow(
-		`SELECT id, email, password, name, department, student_id, role, status, bio, avatar_url, created_at, updated_at
+		`SELECT id, email, password, name, department, student_id, role, status, bio, avatar_url, COALESCE(active_classroom_id, 0), created_at, updated_at
 		 FROM users WHERE id = ?`, id,
 	).Scan(&u.ID, &u.Email, &u.Password, &u.Name, &u.Department, &u.StudentID,
-		&u.Role, &u.Status, &u.Bio, &u.AvatarURL, &u.CreatedAt, &u.UpdatedAt)
+		&u.Role, &u.Status, &u.Bio, &u.AvatarURL, &u.ActiveClassroomID, &u.CreatedAt, &u.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, user.ErrNotFound
 	}

@@ -1,6 +1,7 @@
 package freelance
 
 type JobFilter struct {
+	ClassroomID int // #159 강의실 스코프
 	Status string
 	Skills string
 	MinBudget int

@@ -43,8 +43,13 @@ func (uc *ExchangeUseCase) notify(userID int, notifType notification.NotifType, 
 	}
 }
 
-func (uc *ExchangeUseCase) ListCompanies() ([]*exchange.ListedCompany, error) {
-	return uc.exchangeRepo.GetListedCompanies()
+// ListCompanies — 요청자 활성 강의실의 상장사만 (#159).
+func (uc *ExchangeUseCase) ListCompanies(requesterID int) ([]*exchange.ListedCompany, error) {
+	active, err := uc.walletRepo.GetActiveClassroomID(requesterID)
+	if err != nil {
+		return nil, err
+	}
+	return uc.exchangeRepo.GetListedCompanies(active)
 }
 
 func (uc *ExchangeUseCase) GetOrderbook(companyID int) (*exchange.Orderbook, error) {
@@ -77,7 +82,8 @@ func (uc *ExchangeUseCase) GetPosition(companyID, userID int) (*Position, error)
 	}
 
 	pos := &Position{}
-	if w, err := uc.walletRepo.FindByUserID(userID); err == nil && w != nil {
+	// #159 잔액은 회사가 속한 강의실 지갑 기준
+	if w, err := uc.walletRepo.FindByUserAndClassroom(userID, c.ClassroomID); err == nil && w != nil {
 		pos.Balance = w.Balance
 	}
 	pendingBuy, err := uc.exchangeRepo.GetPendingBuyTotal(userID)
@@ -136,6 +142,15 @@ func (uc *ExchangeUseCase) PlaceOrder(input PlaceOrderInput, userID int) (*Place
 	}
 	if !comp.Listed {
 		return nil, exchange.ErrCompanyNotListed
+	}
+
+	// #159 타 강의실 종목 주문 차단
+	active, err := uc.walletRepo.GetActiveClassroomID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if comp.ClassroomID != active {
+		return nil, company.ErrWrongClassroom
 	}
 
 	orderType := exchange.OrderType(input.OrderType)
@@ -342,22 +357,23 @@ func (uc *ExchangeUseCase) runMatching(order *exchange.StockOrder, comp *company
 			return nil, err
 		}
 
-		// Debit buyer wallet
-		buyerWallet, err := walletRepo.FindByUserID(match.BuyOrder.UserID)
+		// Debit buyer wallet — 회사가 속한 강의실 지갑으로 정산 (#159:
+		// 주문 후 활성 강의실을 바꿔도 원 강의실 지갑에서 결제)
+		buyerWalletID, _, err := walletRepo.EnsureClassroomWallet(match.BuyOrder.UserID, comp.ClassroomID)
 		if err != nil {
 			return nil, err
 		}
-		if err := walletRepo.Debit(buyerWallet.ID, trade.TotalAmount, wallet.TxStockBuy,
+		if err := walletRepo.Debit(buyerWalletID, trade.TotalAmount, wallet.TxStockBuy,
 			fmt.Sprintf("%s 주식 %d주 매수", comp.Name, match.Shares), "trade", tradeID); err != nil {
 			return nil, err
 		}
 
-		// Credit seller wallet
-		sellerWallet, err := walletRepo.FindByUserID(match.SellOrder.UserID)
+		// Credit seller wallet — 회사 강의실 지갑으로 정산 (#159)
+		sellerWalletID, _, err := walletRepo.EnsureClassroomWallet(match.SellOrder.UserID, comp.ClassroomID)
 		if err != nil {
 			return nil, err
 		}
-		if err := walletRepo.Credit(sellerWallet.ID, trade.TotalAmount, wallet.TxStockSell,
+		if err := walletRepo.Credit(sellerWalletID, trade.TotalAmount, wallet.TxStockSell,
 			fmt.Sprintf("%s 주식 %d주 매도", comp.Name, match.Shares), "trade", tradeID); err != nil {
 			return nil, err
 		}
