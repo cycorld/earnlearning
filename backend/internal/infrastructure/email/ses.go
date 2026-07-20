@@ -184,28 +184,35 @@ func (s *SESService) SendMailFrom(m OutgoingMail) error {
 		return nil
 	}
 
-	// 미인증 발신자 거부면 설정 From 으로 폴백 재시도.
-	if isUnverifiedIdentity(err) {
+	// From 신원 사용 불가(미인증 또는 IAM 제한)면 설정 From 으로 폴백 재시도.
+	if cannotUseFromIdentity(err) {
+		log.Printf("email: student-from unusable (%v) — falling back to %s", err, s.fromEmail)
 		replyTo := m.ReplyTo
 		_, ferr := s.client.SendEmail(ctx, build(s.fromEmail, replyTo))
 		if ferr != nil {
+			log.Printf("email: fallback send failed to=%s: %v", m.To, ferr)
 			return fmt.Errorf("ses send (fallback) to %s: %w", m.To, ferr)
 		}
-		log.Printf("email: sent from=%q to=%s subject=%q (fallback replyto=%s; student-from unverified)", s.fromEmail, m.To, m.Subject, replyTo)
+		log.Printf("email: sent from=%q to=%s subject=%q (fallback replyto=%s)", s.fromEmail, m.To, m.Subject, replyTo)
 		return nil
 	}
 
+	log.Printf("email: send failed from=%q to=%s: %v", m.FromDisplay, m.To, err)
 	return fmt.Errorf("ses send from %q to %s: %w", m.FromDisplay, m.To, err)
 }
 
-// isUnverifiedIdentity — SES 가 미인증 발신자 신원으로 거부했는지 판별.
-func isUnverifiedIdentity(err error) bool {
+// cannotUseFromIdentity — 지정한 From 신원으로 발송할 수 없는 거부인지 판별 (#168).
+//   - 미인증 신원: "Email address is not verified" / MessageRejected
+//   - IAM 정책이 특정 identity 만 허용: AccessDeniedException ("not authorized to perform")
+func cannotUseFromIdentity(err error) bool {
 	if err == nil {
 		return false
 	}
 	msg := err.Error()
 	return strings.Contains(msg, "Email address is not verified") ||
-		strings.Contains(msg, "MessageRejected")
+		strings.Contains(msg, "MessageRejected") ||
+		strings.Contains(msg, "AccessDeniedException") ||
+		strings.Contains(msg, "not authorized to perform")
 }
 
 func strPtr(s string) *string {

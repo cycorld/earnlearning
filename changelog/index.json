@@ -1674,5 +1674,17 @@
       "보안"
     ],
     "github": null
+  },
+  {
+    "slug": "168-mail-send-fallback",
+    "title": "메일이 502로 안 나가던 밤 — IAM 권한과 폴백 이야기",
+    "date": "2026-07-21",
+    "tags": [
+      "이메일",
+      "SES",
+      "IAM",
+      "트러블슈팅"
+    ],
+    "github": null
   }
 ]
