@@ -1708,5 +1708,17 @@
       "트러블슈팅"
     ],
     "github": null
+  },
+  {
+    "slug": "172-mail-html-body",
+    "title": "빈 본문의 정체 — HTML 전용 메일과 샌드박스 iframe",
+    "date": "2026-07-21",
+    "tags": [
+      "이메일",
+      "보안",
+      "XSS",
+      "UI"
+    ],
+    "github": null
   }
 ]

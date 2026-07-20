@@ -221,6 +221,16 @@ func EmailFor(localPart string) string {
 	return localPart + "@" + Domain
 }
 
+// htmlTagRe — 스니펫용 단순 태그 제거 (렌더링 아님 — 표시는 프론트 sandbox iframe 담당).
+var htmlTagRe = regexp.MustCompile(`(?s)<style.*?</style>|<script.*?</script>|<[^>]*>`)
+
+// StripHTMLTags — HTML 전용 메일의 스니펫 폴백용 태그 제거 (#172).
+func StripHTMLTags(s string) string {
+	out := htmlTagRe.ReplaceAllString(s, " ")
+	out = strings.NewReplacer("&nbsp;", " ", "&amp;", "&", "&lt;", "<", "&gt;", ">", "&quot;", `"`, "&#39;", "'").Replace(out)
+	return strings.Join(strings.Fields(out), " ")
+}
+
 // Snippet — 본문 앞부분을 룬(rune) 기준 n 글자로 자른다 (한글 안전).
 func Snippet(s string, n int) string {
 	r := []rune(s)

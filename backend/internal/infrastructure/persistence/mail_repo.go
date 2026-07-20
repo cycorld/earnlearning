@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"database/sql"
+	"strings"
 
 	"github.com/earnlearning/backend/internal/domain/mail"
 )
@@ -357,7 +358,7 @@ func (r *MailRepo) ListEmails(addressID int, direction string, limit, offset int
 	}
 
 	rows, err := r.db.Query(
-		`SELECT e.id, e.direction, e.from_addr, e.header_from, e.header_from_name, e.to_addr, e.subject, e.body_text, e.read, e.created_at,
+		`SELECT e.id, e.direction, e.from_addr, e.header_from, e.header_from_name, e.to_addr, e.subject, e.body_text, e.body_html, e.read, e.created_at,
 			EXISTS(SELECT 1 FROM mail_attachments a WHERE a.email_id = e.id) AS has_attachments
 		 FROM emails e
 		 WHERE e.address_id = ? AND e.direction = ?
@@ -384,7 +385,7 @@ func (r *MailRepo) ListAllEmails(limit, offset int) ([]*mail.EmailListItem, int,
 	}
 
 	rows, err := r.db.Query(
-		`SELECT e.id, e.direction, e.from_addr, e.header_from, e.header_from_name, e.to_addr, e.subject, e.body_text, e.read, e.created_at,
+		`SELECT e.id, e.direction, e.from_addr, e.header_from, e.header_from_name, e.to_addr, e.subject, e.body_text, e.body_html, e.read, e.created_at,
 			EXISTS(SELECT 1 FROM mail_attachments a WHERE a.email_id = e.id) AS has_attachments,
 			e.owner_user_id, COALESCE(u.name, '')
 		 FROM emails e
@@ -410,21 +411,26 @@ func scanListItems(rows *sql.Rows, withOwner bool) ([]*mail.EmailListItem, error
 	var items []*mail.EmailListItem
 	for rows.Next() {
 		it := &mail.EmailListItem{}
-		var bodyText string
+		var bodyText, bodyHTML string
 		var readVal int
 		var hasAttach int
 		if withOwner {
 			if err := rows.Scan(&it.ID, &it.Direction, &it.FromAddr, &it.HeaderFrom, &it.HeaderFromName, &it.ToAddr, &it.Subject,
-				&bodyText, &readVal, &it.CreatedAt, &hasAttach, &it.OwnerUserID, &it.OwnerName); err != nil {
+				&bodyText, &bodyHTML, &readVal, &it.CreatedAt, &hasAttach, &it.OwnerUserID, &it.OwnerName); err != nil {
 				return nil, err
 			}
 		} else {
 			if err := rows.Scan(&it.ID, &it.Direction, &it.FromAddr, &it.HeaderFrom, &it.HeaderFromName, &it.ToAddr, &it.Subject,
-				&bodyText, &readVal, &it.CreatedAt, &hasAttach); err != nil {
+				&bodyText, &bodyHTML, &readVal, &it.CreatedAt, &hasAttach); err != nil {
 				return nil, err
 			}
 		}
-		it.Snippet = mail.Snippet(bodyText, snippetLen)
+		// HTML 전용 메일(text 파트 없음)은 태그 제거 텍스트로 스니펫 폴백 (#172).
+		src := bodyText
+		if strings.TrimSpace(src) == "" && bodyHTML != "" {
+			src = mail.StripHTMLTags(bodyHTML)
+		}
+		it.Snippet = mail.Snippet(src, snippetLen)
 		it.Read = readVal == 1
 		it.HasAttachments = hasAttach == 1
 		items = append(items, it)
