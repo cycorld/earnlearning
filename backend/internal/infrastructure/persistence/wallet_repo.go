@@ -21,11 +21,18 @@ func (r *WalletRepo) WithTx(tx *sql.Tx) wallet.Repository {
 	return &WalletRepo{db: tx}
 }
 
+// FindByUserID resolves the user's wallet for their active classroom (#159).
+// Priority: active classroom wallet → unassigned(classroom_id=0) → lowest classroom_id.
 func (r *WalletRepo) FindByUserID(userID int) (*wallet.Wallet, error) {
 	w := &wallet.Wallet{}
 	err := r.db.QueryRow(
-		"SELECT id, user_id, balance FROM wallets WHERE user_id = ?", userID,
-	).Scan(&w.ID, &w.UserID, &w.Balance)
+		`SELECT w.id, w.user_id, w.classroom_id, w.balance
+		 FROM wallets w
+		 JOIN users u ON u.id = w.user_id
+		 WHERE w.user_id = ?
+		 ORDER BY (w.classroom_id = u.active_classroom_id) DESC, w.classroom_id ASC
+		 LIMIT 1`, userID,
+	).Scan(&w.ID, &w.UserID, &w.ClassroomID, &w.Balance)
 	if err == sql.ErrNoRows {
 		return nil, wallet.ErrNotFound
 	}
@@ -35,9 +42,12 @@ func (r *WalletRepo) FindByUserID(userID int) (*wallet.Wallet, error) {
 	return w, nil
 }
 
+// CreateWallet creates a wallet scoped to the user's active classroom (0 if none).
 func (r *WalletRepo) CreateWallet(userID int) (int, error) {
 	result, err := r.db.Exec(
-		"INSERT INTO wallets (user_id, balance) VALUES (?, 0)", userID,
+		`INSERT INTO wallets (user_id, classroom_id, balance)
+		 VALUES (?, (SELECT COALESCE(active_classroom_id, 0) FROM users WHERE id = ?), 0)`,
+		userID, userID,
 	)
 	if err != nil {
 		// If wallet already exists, return the existing one
@@ -55,6 +65,57 @@ func (r *WalletRepo) CreateWallet(userID int) (int, error) {
 		return 0, err
 	}
 	return int(id), nil
+}
+
+// EnsureClassroomWallet returns the wallet for (user, classroom).
+// 없으면 미배정(classroom_id=0) 지갑을 해당 강의실로 귀속시키거나 새로 만든다.
+// isNew=true 면 이 강의실에 처음 묶인 지갑 → 호출부에서 초기자본을 지급해야 한다.
+func (r *WalletRepo) EnsureClassroomWallet(userID, classroomID int) (int, bool, error) {
+	var id int
+	err := r.db.QueryRow(
+		"SELECT id FROM wallets WHERE user_id = ? AND classroom_id = ?", userID, classroomID,
+	).Scan(&id)
+	if err == nil {
+		return id, false, nil
+	}
+	if err != sql.ErrNoRows {
+		return 0, false, err
+	}
+
+	// 미배정 지갑 귀속 (승인 시 만들어진 지갑 재사용)
+	res, err := r.db.Exec(
+		"UPDATE wallets SET classroom_id = ? WHERE user_id = ? AND classroom_id = 0", classroomID, userID,
+	)
+	if err == nil {
+		if n, _ := res.RowsAffected(); n > 0 {
+			if err := r.db.QueryRow(
+				"SELECT id FROM wallets WHERE user_id = ? AND classroom_id = ?", userID, classroomID,
+			).Scan(&id); err != nil {
+				return 0, false, err
+			}
+			return id, true, nil
+		}
+	} else if !strings.Contains(err.Error(), "UNIQUE constraint failed") {
+		return 0, false, err
+	}
+
+	res, err = r.db.Exec(
+		"INSERT INTO wallets (user_id, classroom_id, balance) VALUES (?, ?, 0)", userID, classroomID,
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			err = r.db.QueryRow(
+				"SELECT id FROM wallets WHERE user_id = ? AND classroom_id = ?", userID, classroomID,
+			).Scan(&id)
+			return id, false, err
+		}
+		return 0, false, err
+	}
+	newID, err := res.LastInsertId()
+	if err != nil {
+		return 0, false, err
+	}
+	return int(newID), true, nil
 }
 
 func (r *WalletRepo) Credit(walletID int, amount int, txType wallet.TxType, description, refType string, refID int) error {
@@ -172,14 +233,16 @@ func (r *WalletRepo) GetTransactions(walletID int, filter wallet.TransactionFilt
 	return txs, total, rows.Err()
 }
 
-func (r *WalletRepo) GetRanking(limit int) ([]*wallet.RankEntry, error) {
+// GetRankingForUser ranks student wallets in the requester's active classroom (#159).
+func (r *WalletRepo) GetRankingForUser(requesterID, limit int) ([]*wallet.RankEntry, error) {
 	rows, err := r.db.Query(
 		`SELECT u.id, u.name, w.balance
 		 FROM wallets w
 		 INNER JOIN users u ON u.id = w.user_id
 		 WHERE u.role = 'student' AND u.status = 'approved'
+		   AND w.classroom_id = (SELECT COALESCE(active_classroom_id, 0) FROM users WHERE id = ?)
 		 ORDER BY w.balance DESC
-		 LIMIT ?`, limit,
+		 LIMIT ?`, requesterID, limit,
 	)
 	if err != nil {
 		return nil, err
@@ -203,8 +266,14 @@ func (r *WalletRepo) GetRanking(limit int) ([]*wallet.RankEntry, error) {
 func (r *WalletRepo) GetAssetBreakdown(userID int) (*wallet.AssetBreakdown, error) {
 	ab := &wallet.AssetBreakdown{}
 
-	// Cash: wallet balance
-	err := r.db.QueryRow("SELECT COALESCE(balance, 0) FROM wallets WHERE user_id = ?", userID).Scan(&ab.Cash)
+	// Cash: 활성 강의실 지갑 잔액 (#159 — FindByUserID 와 동일한 우선순위)
+	err := r.db.QueryRow(
+		`SELECT COALESCE(w.balance, 0)
+		 FROM wallets w
+		 JOIN users u ON u.id = w.user_id
+		 WHERE w.user_id = ?
+		 ORDER BY (w.classroom_id = u.active_classroom_id) DESC, w.classroom_id ASC
+		 LIMIT 1`, userID).Scan(&ab.Cash)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}

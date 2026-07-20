@@ -82,6 +82,14 @@ func (r *ClassroomRepo) IsMember(classroomID, userID int) (bool, error) {
 	return count > 0, nil
 }
 
+// SetActiveClassroom — 유저의 현재(활성) 강의실 컨텍스트 저장 (#159).
+func (r *ClassroomRepo) SetActiveClassroom(userID, classroomID int) error {
+	_, err := r.db.Exec(
+		"UPDATE users SET active_classroom_id = ? WHERE id = ?", classroomID, userID,
+	)
+	return err
+}
+
 func (r *ClassroomRepo) GetMembers(classroomID int) ([]*classroom.ClassroomMember, error) {
 	rows, err := r.db.Query(
 		`SELECT id, classroom_id, user_id, joined_at
@@ -159,7 +167,7 @@ func (r *ClassroomRepo) GetMemberDashboard(classroomID int) ([]*classroom.Member
 			COALESCE((SELECT GROUP_CONCAT(name, ', ') FROM companies WHERE owner_id = u.id AND status = 'active'), '') AS company_names
 		FROM classroom_members cm
 		JOIN users u ON u.id = cm.user_id
-		LEFT JOIN wallets w ON w.user_id = u.id
+		LEFT JOIN wallets w ON w.user_id = u.id AND w.classroom_id = cm.classroom_id
 		WHERE cm.classroom_id = ? AND u.role = 'student'
 		ORDER BY total_asset DESC`,
 		classroomID, classroomID,

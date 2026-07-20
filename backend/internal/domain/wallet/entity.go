@@ -34,9 +34,10 @@ const (
 )
 
 type Wallet struct {
-	ID      int `json:"id"`
-	UserID  int `json:"user_id"`
-	Balance int `json:"balance"`
+	ID          int `json:"id"`
+	UserID      int `json:"user_id"`
+	ClassroomID int `json:"classroom_id"` // #159 강의실별 지갑 (0 = 미배정)
+	Balance     int `json:"balance"`
 }
 
 type Transaction struct {

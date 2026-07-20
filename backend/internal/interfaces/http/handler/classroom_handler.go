@@ -70,6 +70,35 @@ func (h *ClassroomHandler) JoinClassroom(c echo.Context) error {
 	return successResponse(c, http.StatusOK, classroom)
 }
 
+// ActivateClassroom godoc
+//
+//	@Summary		활성 강의실 전환
+//	@Description	멤버로 속한 강의실을 현재(활성) 강의실로 전환 (#159)
+//	@Tags			Classroom
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"클래스룸 ID"
+//	@Success		200	{object}	APIResponse
+//	@Failure		403	{object}	APIResponse
+//	@Router			/classrooms/{id}/activate [post]
+func (h *ClassroomHandler) ActivateClassroom(c echo.Context) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_ID", "유효하지 않은 ID입니다")
+	}
+
+	userID := middleware.GetUserID(c)
+	cr, err := h.classroomUC.ActivateClassroom(userID, id)
+	if err != nil {
+		if err == classroom.ErrNotMember {
+			return errorResponse(c, http.StatusForbidden, "NOT_MEMBER", err.Error())
+		}
+		return errorResponse(c, http.StatusNotFound, "NOT_FOUND", err.Error())
+	}
+
+	return successResponse(c, http.StatusOK, cr)
+}
+
 // GetClassroom godoc
 //
 //	@Summary		클래스룸 상세 조회

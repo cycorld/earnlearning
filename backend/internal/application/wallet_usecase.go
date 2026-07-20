@@ -41,7 +41,7 @@ func (uc *WalletUseCase) GetWallet(userID int) (*WalletResponse, error) {
 	// Calculate rank
 	rank := 0
 	totalStudents := 0
-	rankings, err := uc.walletRepo.GetRanking(1000) // get all rankings
+	rankings, err := uc.walletRepo.GetRankingForUser(userID, 1000) // 활성 강의실 내 전체 랭킹 (#159)
 	if err == nil {
 		totalStudents = len(rankings)
 		for _, r := range rankings {
@@ -356,9 +356,9 @@ func (uc *WalletUseCase) Transfer(senderID int, input TransferInput) error {
 	return nil
 }
 
-func (uc *WalletUseCase) GetRanking(limit int) ([]*wallet.RankEntry, error) {
+func (uc *WalletUseCase) GetRanking(userID, limit int) ([]*wallet.RankEntry, error) {
 	if limit < 1 || limit > 100 {
 		limit = 20
 	}
-	return uc.walletRepo.GetRanking(limit)
+	return uc.walletRepo.GetRankingForUser(userID, limit)
 }

@@ -102,33 +102,53 @@ func (uc *ClassroomUseCase) JoinClassroom(code string, userID int) (*classroom.C
 		return nil, err
 	}
 	if isMember {
-		return c, nil // already a member, idempotent
+		// already a member, idempotent — 재조인도 활성 강의실 전환으로 취급 (#159)
+		if err := uc.classroomRepo.SetActiveClassroom(userID, c.ID); err != nil {
+			return nil, err
+		}
+		return c, nil
 	}
 
 	if err := uc.classroomRepo.AddMember(c.ID, userID); err != nil {
 		return nil, err
 	}
 
-	// Create wallet if not exists, then credit initial capital
-	w, err := uc.walletRepo.FindByUserID(userID)
+	// #159 강의실별 지갑: 이 강의실 전용 지갑을 확보하고, 처음 귀속된 경우에만
+	// 해당 강의실의 초기자본을 지급한다 (강의 간 잔액 혼합·중복 지급 차단).
+	walletID, isNew, err := uc.walletRepo.EnsureClassroomWallet(userID, c.ID)
 	if err != nil {
-		// wallet doesn't exist, create one
-		walletID, createErr := uc.walletRepo.CreateWallet(userID)
-		if createErr != nil {
-			return nil, createErr
-		}
-		err = uc.walletRepo.Credit(walletID, c.InitialCapital, wallet.TxInitialCapital, "초기 자본금 지급", "classroom", c.ID)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// wallet exists, credit initial capital
-		err = uc.walletRepo.Credit(w.ID, c.InitialCapital, wallet.TxInitialCapital, "초기 자본금 지급", "classroom", c.ID)
-		if err != nil {
+		return nil, err
+	}
+	if isNew {
+		if err := uc.walletRepo.Credit(walletID, c.InitialCapital, wallet.TxInitialCapital, "초기 자본금 지급", "classroom", c.ID); err != nil {
 			return nil, err
 		}
 	}
 
+	// 조인한 강의실을 활성 컨텍스트로 전환
+	if err := uc.classroomRepo.SetActiveClassroom(userID, c.ID); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// ActivateClassroom — 멤버인 강의실로 활성 컨텍스트 전환 (#159).
+func (uc *ClassroomUseCase) ActivateClassroom(userID, classroomID int) (*classroom.Classroom, error) {
+	c, err := uc.classroomRepo.FindByID(classroomID)
+	if err != nil {
+		return nil, err
+	}
+	isMember, err := uc.classroomRepo.IsMember(classroomID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !isMember {
+		return nil, classroom.ErrNotMember
+	}
+	if err := uc.classroomRepo.SetActiveClassroom(userID, classroomID); err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 
