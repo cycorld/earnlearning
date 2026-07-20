@@ -100,6 +100,20 @@ func (s *WebPushService) FormatPayload(n *notification.Notification) PushPayload
 	return PushPayload{
 		Title: n.Title,
 		Body:  n.Body,
-		URL:   fmt.Sprintf("/%s/%d", n.ReferenceType, n.ReferenceID),
+		URL:   clickURL(n),
 	}
+}
+
+// clickURL — 알림 클릭 이동 경로. 일반식 /<reference_type>/<id> 가 라우트에 없으면
+// SPA catch-all 로 홈에 떨어지므로, 매핑이 다른 타입은 여기서 분기한다 (#173).
+func clickURL(n *notification.Notification) string {
+	switch n.NotifType {
+	case notification.NotifMailReceived:
+		// reference_id = 메일 id → 메일함에서 해당 메일 바로 열기
+		return fmt.Sprintf("/mail?open=%d", n.ReferenceID)
+	case notification.NotifMailAddressApproved, notification.NotifMailAddressRejected:
+		// reference_id = 주소 id → 메일함 홈
+		return "/mail"
+	}
+	return fmt.Sprintf("/%s/%d", n.ReferenceType, n.ReferenceID)
 }

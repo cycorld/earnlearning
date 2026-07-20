@@ -1720,5 +1720,17 @@
       "UI"
     ],
     "github": null
+  },
+  {
+    "slug": "173-mail-noti-deeplink",
+    "title": "알림을 눌렀는데 홈이 뜬다 — 없는 라우트와 딥링크",
+    "date": "2026-07-21",
+    "tags": [
+      "알림",
+      "이메일",
+      "딥링크",
+      "SPA"
+    ],
+    "github": null
   }
 ]

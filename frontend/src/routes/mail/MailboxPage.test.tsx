@@ -471,3 +471,62 @@ describe('MailboxPage 메일함 선택기', () => {
     expect(screen.getByRole('tab', { name: /홍길동/ })).toBeDisabled()
   })
 })
+
+// ─── #173 알림 딥링크 (?open=<메일id>) ───────────────────────
+import { MemoryRouter } from 'react-router-dom'
+import { render } from '@testing-library/react'
+
+const companyApproved2 = {
+  address_id: 2,
+  kind: 'company',
+  company_id: 7,
+  name: '길동컴퍼니',
+  local_part: 'gil-co',
+  email: 'gil-co@earnlearning.com',
+  status: 'approved',
+}
+
+describe('MailboxPage 딥링크 (#173)', () => {
+  beforeEach(() => {
+    mockApiGet.mockReset()
+    mockApiPost.mockReset()
+  })
+
+  it('?open=<id> 로 진입하면 소속 메일함을 선택하고 해당 메일 상세를 연다', async () => {
+    const deepDetail = {
+      ...inboxDetail,
+      id: 9,
+      address_id: 2,
+      subject: '회사로 온 메일',
+      body_text: '딥링크 본문',
+      to_addr: 'gil-co@earnlearning.com',
+    }
+    mockApiGet.mockImplementation((url: string) => {
+      if (url === '/mail/mailboxes')
+        return Promise.resolve({ mailboxes: [personalApproved, companyApproved2] })
+      if (url === '/mail/address')
+        return Promise.resolve({ local_part: 'me123', email: 'me123@earnlearning.com', status: 'approved' })
+      if (url === '/mail/9') return Promise.resolve(deepDetail)
+      if (url.startsWith('/mail?')) return Promise.resolve({ emails: [], total: 0 })
+      return Promise.resolve(null)
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/mail?open=9']}>
+        <MailboxPage />
+      </MemoryRouter>,
+    )
+
+    // 상세가 열리고
+    await waitFor(() => {
+      expect(screen.getByText('딥링크 본문')).toBeInTheDocument()
+    })
+    // 소속(회사) 메일함 스코프로 목록을 조회했는지
+    await waitFor(() => {
+      const listCalls = mockApiGet.mock.calls
+        .map((c) => String(c[0]))
+        .filter((u) => u.startsWith('/mail?'))
+      expect(listCalls.some((u) => u.includes('address_id=2'))).toBe(true)
+    })
+  })
+})
