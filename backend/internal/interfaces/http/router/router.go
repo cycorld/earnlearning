@@ -268,14 +268,17 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		approved.DELETE("/milestones/files/:id", h.Milestone.DeleteFile, middleware.RequireScope("write:posts"))
 	}
 
-	// #166 학생 메일함 (내부 전용, OAuth scope 없음). static 경로를 :id 보다 먼저 등록.
+	// #166 학생/회사/공용 메일함 (내부 전용). OAuth 토큰 접근 차단(RejectOAuth). static 경로를 :id 보다 먼저 등록.
 	if h.Mail != nil {
-		approved.GET("/mail/address", h.Mail.GetAddress)
-		approved.POST("/mail/address", h.Mail.ClaimAddress)
-		approved.GET("/mail", h.Mail.ListBox)
-		approved.POST("/mail/send", h.Mail.Send)
-		approved.GET("/mail/attachments/:id", h.Mail.DownloadAttachment)
-		approved.GET("/mail/:id", h.Mail.GetEmail)
+		mailGroup := approved.Group("", middleware.RejectOAuth())
+		mailGroup.GET("/mail/mailboxes", h.Mail.GetMailboxes)
+		mailGroup.GET("/mail/address", h.Mail.GetAddress)
+		mailGroup.POST("/mail/address", h.Mail.ClaimAddress)
+		mailGroup.POST("/companies/:id/mail-address", h.Mail.ClaimCompanyAddress)
+		mailGroup.GET("/mail", h.Mail.ListBox)
+		mailGroup.POST("/mail/send", h.Mail.Send)
+		mailGroup.GET("/mail/attachments/:id", h.Mail.DownloadAttachment)
+		mailGroup.GET("/mail/:id", h.Mail.GetEmail)
 	}
 
 	// Notifications (OAuth: read:notifications)
@@ -350,9 +353,17 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 		admin.POST("/milestones/:id/reject", h.Milestone.AdminRejectMilestone)
 	}
 
-	// #166 학생 메일함 admin (전체 메일 조회)
+	// #166 메일 admin — 전체 메일 조회 + 주소 승인/반려 + 공용 메일함 관리 (내부 전용, OAuth 차단).
 	if h.Mail != nil {
-		admin.GET("/mail", h.Mail.AdminListMail)
+		adminMail := admin.Group("", middleware.RejectOAuth())
+		adminMail.GET("/mail", h.Mail.AdminListMail)
+		adminMail.GET("/mail/addresses", h.Mail.AdminListAddresses)
+		adminMail.POST("/mail/addresses/:id/approve", h.Mail.AdminApproveAddress)
+		adminMail.POST("/mail/addresses/:id/reject", h.Mail.AdminRejectAddress)
+		adminMail.GET("/mail/shared", h.Mail.AdminListShared)
+		adminMail.POST("/mail/shared", h.Mail.AdminCreateShared)
+		adminMail.POST("/mail/shared/:addressId/grants", h.Mail.AdminGrantShared)
+		adminMail.POST("/mail/shared/:addressId/grants/:userId/revoke", h.Mail.AdminRevokeShared)
 	}
 
 	// User Databases admin reconcile (#016)

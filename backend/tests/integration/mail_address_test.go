@@ -64,13 +64,14 @@ func TestMailAddressClaim(t *testing.T) {
 	var before struct {
 		LocalPart *string `json:"local_part"`
 		Email     *string `json:"email"`
+		Status    *string `json:"status"`
 	}
 	json.Unmarshal(r.Data, &before)
-	if before.LocalPart != nil || before.Email != nil {
+	if before.LocalPart != nil || before.Email != nil || before.Status != nil {
 		t.Fatalf("발급 전에는 null 이어야 함: %s", string(r.Data))
 	}
 
-	// 발급: 201
+	// 발급: 201, status=pending (아직 승인 안 됨)
 	status, r = ts.mailJSON("POST", "/api/mail/address", map[string]string{"local_part": "jane99"}, token)
 	if status != http.StatusCreated || !r.Success {
 		t.Fatalf("주소 발급 실패: status=%d body=%s err=%v", status, string(r.Data), r.Error)
@@ -78,6 +79,7 @@ func TestMailAddressClaim(t *testing.T) {
 	var after struct {
 		LocalPart string `json:"local_part"`
 		Email     string `json:"email"`
+		Status    string `json:"status"`
 	}
 	json.Unmarshal(r.Data, &after)
 	if after.LocalPart != "jane99" {
@@ -86,11 +88,14 @@ func TestMailAddressClaim(t *testing.T) {
 	if after.Email != "jane99@earnlearning.com" {
 		t.Fatalf("email 불일치: %q", after.Email)
 	}
+	if after.Status != "pending" {
+		t.Fatalf("발급 직후 status 는 pending 이어야 함: %q", after.Status)
+	}
 
-	// 발급 후 조회: 값 반환
+	// 발급 후 조회: 값 + pending 상태 반환
 	status, r = ts.mailJSON("GET", "/api/mail/address", nil, token)
 	json.Unmarshal(r.Data, &after)
-	if status != http.StatusOK || after.LocalPart != "jane99" {
+	if status != http.StatusOK || after.LocalPart != "jane99" || after.Status != "pending" {
 		t.Fatalf("발급 후 조회 실패: status=%d body=%s", status, string(r.Data))
 	}
 }
@@ -146,16 +151,18 @@ func TestMailAddressDuplicate(t *testing.T) {
 	}
 }
 
-// TestMailAddressImmutable — 이미 주소가 있으면 재발급 불가(409).
+// TestMailAddressImmutable — 승인된 주소는 변경 불가(409). 승인 전에는 변경 가능하므로
+// 먼저 관리자 승인까지 마친 뒤 재발급을 시도한다.
 func TestMailAddressImmutable(t *testing.T) {
 	ts := setupTestServer(t)
 	token := ts.registerAndApprove("immut@student.com", "pw12345678", "불변", "2024103")
 
-	if status, _ := ts.mailJSON("POST", "/api/mail/address", map[string]string{"local_part": "first"}, token); status != http.StatusCreated {
-		t.Fatalf("첫 발급 실패: status=%d", status)
-	}
+	// 발급(pending) → 관리자 승인(approved)
+	ts.claimMailAddress(t, token, "first")
+
+	// 승인 후 재발급 시도 → 409 (불변)
 	status, r := ts.mailJSON("POST", "/api/mail/address", map[string]string{"local_part": "second"}, token)
 	if status != http.StatusConflict || r.Success {
-		t.Fatalf("재발급은 409 이어야 함: status=%d body=%s", status, string(r.Data))
+		t.Fatalf("승인된 주소 재발급은 409 이어야 함: status=%d body=%s", status, string(r.Data))
 	}
 }

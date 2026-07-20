@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   ArrowLeft,
+  Building2,
   Check,
+  Clock,
   Copy,
   Download,
   Loader2,
@@ -9,11 +11,14 @@ import {
   Paperclip,
   Reply,
   Send,
+  User,
+  Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api } from '@/lib/api'
 import { getToken } from '@/lib/auth'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -23,9 +28,33 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 
 // ─── 타입 (백엔드 계약과 1:1) ────────────────────────────────
-interface MailAddress {
+// status: null(미신청) | 'pending'(승인대기) | 'rejected'(반려) | 'approved'(승인)
+type AddressStatus = null | 'pending' | 'rejected' | 'approved'
+
+// GET /api/mail/mailboxes 의 각 항목
+// kind: 'user'(개인) | 'company'(내 회사) | 'shared'(관리자가 부여한 공용 메일함)
+type MailboxKind = 'user' | 'company' | 'shared'
+
+interface Mailbox {
+  address_id: number
+  kind: MailboxKind
+  company_id: number | null
+  name: string
   local_part: string | null
   email: string | null
+  status: AddressStatus
+}
+
+const KIND_LABEL: Record<MailboxKind, string> = {
+  user: '개인',
+  company: '회사',
+  shared: '공용',
+}
+
+function kindIcon(kind: MailboxKind) {
+  if (kind === 'company') return <Building2 className="h-3 w-3" />
+  if (kind === 'shared') return <Users className="h-3 w-3" />
+  return <User className="h-3 w-3" />
 }
 
 interface MailListItem {
@@ -103,18 +132,26 @@ async function downloadAttachment(att: MailAttachment) {
 }
 
 export default function MailboxPage() {
-  const [addr, setAddr] = useState<MailAddress | null>(null)
-  const [loadingAddr, setLoadingAddr] = useState(true)
+  const [mailboxes, setMailboxes] = useState<Mailbox[] | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    api
-      .get<MailAddress>('/mail/address')
-      .then((a) => setAddr(a ?? { local_part: null, email: null }))
-      .catch(() => setAddr({ local_part: null, email: null }))
-      .finally(() => setLoadingAddr(false))
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await api.get<{ mailboxes: Mailbox[] }>('/mail/mailboxes')
+      setMailboxes(data?.mailboxes ?? [])
+    } catch {
+      setMailboxes([])
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  if (loadingAddr) {
+  useEffect(() => {
+    load()
+  }, [load])
+
+  if (loading) {
     return (
       <div className="flex justify-center py-16">
         <Spinner />
@@ -122,33 +159,54 @@ export default function MailboxPage() {
     )
   }
 
-  if (!addr?.email) {
-    return <ClaimAddressView onClaimed={setAddr} />
+  const boxes = mailboxes ?? []
+  const approved = boxes.filter((b) => b.status === 'approved')
+  const personal = boxes.find((b) => b.kind === 'user') ?? null
+
+  // 사용 가능한(승인된) 메일함이 하나도 없으면 개인 주소 신청/상태 화면
+  if (approved.length === 0) {
+    if (personal) {
+      return <PersonalStatusView personal={personal} onChanged={load} />
+    }
+    return <ClaimAddressView mode="new" onClaimed={load} />
   }
 
-  return <Mailbox address={addr.email} />
+  return <MailboxShell boxes={boxes} />
 }
 
-// ─── 주소 만들기 ─────────────────────────────────────────────
-function ClaimAddressView({ onClaimed }: { onClaimed: (a: MailAddress) => void }) {
-  const [localPart, setLocalPart] = useState('')
+// ─── 개인 주소 신청 / 재신청 폼 ──────────────────────────────
+type ClaimMode = 'new' | 'rejected' | 'change'
+
+function ClaimAddressView({
+  mode,
+  initialLocalPart = '',
+  onClaimed,
+  onCancel,
+}: {
+  mode: ClaimMode
+  initialLocalPart?: string
+  onClaimed: () => void
+  onCancel?: () => void
+}) {
+  const [localPart, setLocalPart] = useState(initialLocalPart)
   const [submitting, setSubmitting] = useState(false)
 
   const trimmed = localPart.trim().toLowerCase()
   const valid = LOCAL_PART_RE.test(trimmed)
   const showError = trimmed.length > 0 && !valid
 
+  const heading =
+    mode === 'change' ? '주소 변경(재신청)' : '내 이메일 주소 신청'
+
   const submit = async () => {
     if (!valid) return
     setSubmitting(true)
     try {
-      const a = await api.post<MailAddress>('/mail/address', {
-        local_part: trimmed,
-      })
-      toast.success('이메일 주소를 만들었습니다.')
-      onClaimed(a)
+      await api.post('/mail/address', { local_part: trimmed })
+      toast.success('이메일 주소를 신청했습니다. 관리자 승인 후 사용할 수 있어요.')
+      onClaimed()
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '주소 생성에 실패했습니다.'
+      const msg = e instanceof Error ? e.message : '주소 신청에 실패했습니다.'
       toast.error(msg)
     } finally {
       setSubmitting(false)
@@ -159,13 +217,20 @@ function ClaimAddressView({ onClaimed }: { onClaimed: (a: MailAddress) => void }
     <div className="mx-auto max-w-lg space-y-5 p-4">
       <div className="flex items-center gap-2">
         <Mail className="h-6 w-6 text-primary" />
-        <h1 className="text-lg font-bold">내 이메일 주소 만들기</h1>
+        <h1 className="text-lg font-bold">{heading}</h1>
       </div>
 
       <Card>
         <CardContent className="space-y-4 p-4">
+          {mode === 'rejected' && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+              이전 주소 신청이 반려되었습니다. 다른 주소로 다시 신청해주세요.
+            </div>
+          )}
+
           <p className="text-sm text-muted-foreground">
-            나만의 이메일 주소를 정하면 앱 안에서 메일을 주고받을 수 있어요.
+            나만의 이메일 주소를 신청하면 관리자 승인 후 앱 안에서 메일을 주고받을 수
+            있어요.
           </p>
 
           <div className="space-y-1.5">
@@ -199,24 +264,181 @@ function ClaimAddressView({ onClaimed }: { onClaimed: (a: MailAddress) => void }
           </div>
 
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            한 번 정하면 바꿀 수 없습니다. 신중히 정해주세요.
+            승인 후에는 변경할 수 없습니다. 신중히 정해주세요.
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              onClick={submit}
+              disabled={!valid || submitting}
+            >
+              {submitting ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-1 h-4 w-4" />
+              )}
+              이 주소로 신청하기
+            </Button>
+            {onCancel && (
+              <Button variant="ghost" onClick={onCancel} disabled={submitting}>
+                취소
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── 개인 주소 상태(승인 대기 / 반려) 화면 ───────────────────
+function PersonalStatusView({
+  personal,
+  onChanged,
+}: {
+  personal: Mailbox
+  onChanged: () => void
+}) {
+  const [changing, setChanging] = useState(false)
+
+  // 반려·미신청 상태이거나 변경(재신청) 모드면 폼을 보여준다.
+  if (personal.status !== 'pending' || changing) {
+    const mode: ClaimMode =
+      personal.status === 'rejected'
+        ? 'rejected'
+        : changing
+          ? 'change'
+          : 'new'
+    return (
+      <ClaimAddressView
+        mode={mode}
+        initialLocalPart={personal.local_part ?? ''}
+        onClaimed={onChanged}
+        onCancel={changing ? () => setChanging(false) : undefined}
+      />
+    )
+  }
+
+  // 승인 대기 화면
+  return (
+    <div className="mx-auto max-w-lg space-y-5 p-4">
+      <div className="flex items-center gap-2">
+        <Mail className="h-6 w-6 text-primary" />
+        <h1 className="text-lg font-bold">이메일 주소 신청</h1>
+      </div>
+
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+            <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">
+              {personal.email}
+            </span>
+          </div>
+
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              관리자 승인 대기 중입니다. 승인되면 이 주소로 메일을 주고받을 수 있어요.
+            </span>
           </div>
 
           <Button
+            variant="outline"
             className="w-full"
-            onClick={submit}
-            disabled={!valid || submitting}
+            onClick={() => setChanging(true)}
           >
-            {submitting ? (
-              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="mr-1 h-4 w-4" />
-            )}
-            이 주소로 만들기
+            주소 변경(재신청)
           </Button>
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// ─── 메일함 셸: 메일함 선택기 + 선택된 메일함 ────────────────
+function MailboxShell({ boxes }: { boxes: Mailbox[] }) {
+  const approved = boxes.filter((b) => b.status === 'approved')
+  const [selectedId, setSelectedId] = useState<number>(approved[0].address_id)
+
+  // 선택된 메일함이 사라진 경우(재조회 등) 첫 승인 메일함으로 복귀
+  const exists = boxes.some(
+    (b) => b.address_id === selectedId && b.status === 'approved',
+  )
+  const effectiveId = exists ? selectedId : approved[0].address_id
+
+  return (
+    <Mailbox
+      key={effectiveId}
+      boxes={boxes}
+      selectedId={effectiveId}
+      onSelect={setSelectedId}
+    />
+  )
+}
+
+// ─── 메일함 선택기 ───────────────────────────────────────────
+function MailboxSelector({
+  boxes,
+  value,
+  onChange,
+}: {
+  boxes: Mailbox[]
+  value: number
+  onChange: (id: number) => void
+}) {
+  if (boxes.length === 0) return null
+
+  // 메일함이 하나뿐이면 전환할 게 없으니 비대화형 헤더로 이름·구분·주소를 보여준다.
+  if (boxes.length === 1) {
+    const b = boxes[0]
+    return (
+      <div className="flex flex-col items-start gap-0.5 rounded-md border bg-muted/40 px-3 py-2">
+        <span className="flex items-center gap-1 text-xs font-medium">
+          {kindIcon(b.kind)}
+          {b.name}
+          <Badge variant="outline" className="px-1 py-0 text-[10px]">
+            {KIND_LABEL[b.kind]}
+          </Badge>
+        </span>
+        <span className="text-[10px] text-muted-foreground">{b.email}</span>
+      </div>
+    )
+  }
+
+  return (
+    <Tabs value={String(value)} onValueChange={(v) => onChange(Number(v))}>
+      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
+        {boxes.map((b) => (
+          <TabsTrigger
+            key={b.address_id}
+            value={String(b.address_id)}
+            disabled={b.status !== 'approved'}
+            className="flex flex-col items-start gap-0.5 py-1.5"
+          >
+            <span className="flex items-center gap-1 text-xs font-medium">
+              {kindIcon(b.kind)}
+              {b.name}
+              <Badge variant="outline" className="px-1 py-0 text-[10px]">
+                {KIND_LABEL[b.kind]}
+              </Badge>
+              {b.status === 'pending' && (
+                <Badge variant="secondary" className="px-1 py-0 text-[10px]">
+                  대기중
+                </Badge>
+              )}
+              {b.status === 'rejected' && (
+                <Badge variant="destructive" className="px-1 py-0 text-[10px]">
+                  반려됨
+                </Badge>
+              )}
+            </span>
+            <span className="text-[10px] text-muted-foreground">{b.email}</span>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   )
 }
 
@@ -227,7 +449,21 @@ type ComposeInit = {
   inReplyToId: number | null
 }
 
-function Mailbox({ address }: { address: string }) {
+function Mailbox({
+  boxes,
+  selectedId,
+  onSelect,
+}: {
+  boxes: Mailbox[]
+  selectedId: number
+  onSelect: (id: number) => void
+}) {
+  const selected =
+    boxes.find((b) => b.address_id === selectedId) ??
+    boxes.find((b) => b.status === 'approved')!
+  const address = selected.email ?? ''
+  const addressId = selected.address_id
+
   const [box, setBox] = useState<Box>('inbox')
   const [emails, setEmails] = useState<MailListItem[]>([])
   const [total, setTotal] = useState(0)
@@ -237,12 +473,15 @@ function Mailbox({ address }: { address: string }) {
   const [detail, setDetail] = useState<MailDetail | null>(null)
   const [compose, setCompose] = useState<ComposeInit | null>(null)
 
-  const fetchBox = useCallback(async (b: Box, offset: number) => {
-    const data = await api.get<MailListResponse>(
-      `/mail?box=${b}&limit=${PAGE_SIZE}&offset=${offset}`,
-    )
-    return data ?? { emails: [], total: 0 }
-  }, [])
+  const fetchBox = useCallback(
+    async (b: Box, offset: number) => {
+      const data = await api.get<MailListResponse>(
+        `/mail?box=${b}&limit=${PAGE_SIZE}&offset=${offset}&address_id=${addressId}`,
+      )
+      return data ?? { emails: [], total: 0 }
+    },
+    [addressId],
+  )
 
   const loadBox = useCallback(
     async (b: Box) => {
@@ -310,6 +549,7 @@ function Mailbox({ address }: { address: string }) {
     return (
       <ComposeView
         init={compose}
+        addressId={addressId}
         onCancel={() => setCompose(null)}
         onSent={handleSent}
       />
@@ -339,6 +579,8 @@ function Mailbox({ address }: { address: string }) {
           <Send className="mr-1 h-4 w-4" />새 메일
         </Button>
       </div>
+
+      <MailboxSelector boxes={boxes} value={selectedId} onChange={onSelect} />
 
       <AddressBar address={address} />
 
@@ -549,10 +791,12 @@ function DetailView({
 // ─── 작성 ────────────────────────────────────────────────────
 function ComposeView({
   init,
+  addressId,
   onCancel,
   onSent,
 }: {
   init: ComposeInit
+  addressId: number
   onCancel: () => void
   onSent: () => void
 }) {
@@ -569,6 +813,7 @@ function ComposeView({
     setSending(true)
     try {
       await api.post('/mail/send', {
+        address_id: addressId,
         to: to.trim(),
         subject: subject.trim(),
         body_text: bodyText,

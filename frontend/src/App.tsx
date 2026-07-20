@@ -65,6 +65,7 @@ import LlmPage from '@/routes/llm/LlmPage'
 // Admin pages
 import AdminPage from '@/routes/admin/AdminPage'
 import AdminUsersPage from '@/routes/admin/AdminUsersPage'
+import AdminMailAddressesPage from '@/routes/admin/AdminMailAddressesPage'
 import AdminClassroomPage from '@/routes/admin/AdminClassroomPage'
 import AdminLoansPage from '@/routes/admin/AdminLoansPage'
 import AdminKpiPage from '@/routes/admin/AdminKpiPage'
@@ -143,6 +144,7 @@ export default function App() {
               <Route element={<AdminGuard />}>
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/mail-addresses" element={<AdminMailAddressesPage />} />
                 <Route path="/admin/classroom" element={<AdminClassroomPage />} />
                 <Route path="/admin/classroom/:id" element={<AdminClassroomDetailPage />} />
                 <Route path="/admin/loans" element={<AdminLoansPage />} />

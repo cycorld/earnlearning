@@ -19,6 +19,7 @@ import {
   Sparkles,
   FileText,
   Award,
+  Mail,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
@@ -26,12 +27,14 @@ import { Spinner } from '@/components/ui/spinner'
 interface AdminStats {
   pending_users: number
   active_loans: number
+  pending_mail: number
 }
 
 export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats>({
     pending_users: 0,
     active_loans: 0,
+    pending_mail: 0,
   })
   const [loading, setLoading] = useState(true)
 
@@ -63,7 +66,7 @@ export default function AdminPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [pendingUsers, loans] = await Promise.all([
+        const [pendingUsers, loans, pendingMail] = await Promise.all([
           api
             .get<any[]>('/admin/users/pending')
             .then((d) => d?.length ?? 0)
@@ -72,8 +75,16 @@ export default function AdminPage() {
             .get<any[]>('/admin/loans')
             .then((d) => d?.filter((l: any) => l.status === 'active').length ?? 0)
             .catch(() => 0),
+          api
+            .get<any[]>('/admin/mail/addresses?status=pending')
+            .then((d) => d?.length ?? 0)
+            .catch(() => 0),
         ])
-        setStats({ pending_users: pendingUsers, active_loans: loans })
+        setStats({
+          pending_users: pendingUsers,
+          active_loans: loans,
+          pending_mail: pendingMail,
+        })
       } catch {
         // ignore
       } finally {
@@ -91,6 +102,14 @@ export default function AdminPage() {
       href: '/admin/users',
       color: 'bg-info/15 text-info',
       badge: stats.pending_users > 0 ? `${stats.pending_users}명 대기` : null,
+    },
+    {
+      title: '메일 주소 승인',
+      description: '학생·회사 메일 주소 신청 승인/반려',
+      icon: Mail,
+      href: '/admin/mail-addresses',
+      color: 'bg-sky-100 text-sky-600',
+      badge: stats.pending_mail > 0 ? `${stats.pending_mail}건 대기` : null,
     },
     {
       title: '강의실 관리',

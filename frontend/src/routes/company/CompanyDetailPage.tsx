@@ -26,6 +26,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { DisclosureSection } from './DisclosureSection'
 import { ProposalSection } from './ProposalSection'
 import { InvestmentRoundSection } from './InvestmentRoundSection'
+import { CompanyMailSection } from './CompanyMailSection'
 
 export default function CompanyDetailPage() {
   const { id } = useParams()
@@ -270,6 +271,9 @@ export default function CompanyDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Company email (대표 전용) */}
+      {isOwner && <CompanyMailSection companyId={Number(id)} />}
 
       {/* Disclosures */}
       <DisclosureSection companyId={Number(id)} isOwner={!!isOwner} />

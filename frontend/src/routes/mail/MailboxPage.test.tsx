@@ -40,11 +40,22 @@ beforeAll(() => {
 
 const now = new Date().toISOString()
 
+// 승인된 개인 메일함 (address_id 필수 계약)
+const personalApproved = {
+  address_id: 1,
+  kind: 'user',
+  company_id: null,
+  name: '홍길동',
+  local_part: 'me123',
+  email: 'me123@earnlearning.com',
+  status: 'approved',
+}
+
 const inboxEmail = {
   id: 1,
   direction: 'inbox',
   from_addr: 'alice@earnlearning.com',
-  to_addr: 'me@earnlearning.com',
+  to_addr: 'me123@earnlearning.com',
   subject: '안녕하세요',
   snippet: '첫 메일이에요',
   read: false,
@@ -61,11 +72,11 @@ const inboxDetail = {
   attachments: [{ id: 10, filename: 'report.pdf', mime: 'application/pdf', size: 2048 }],
 }
 
-// 주소가 있는 상태 + 기본 목록 응답
+// 승인 개인 메일함 + 기본 목록 응답
 function setupClaimed(sentEmails: unknown[] = []) {
   mockApiGet.mockImplementation((path: string) => {
-    if (path === '/mail/address')
-      return Promise.resolve({ local_part: 'me', email: 'me@earnlearning.com' })
+    if (path === '/mail/mailboxes')
+      return Promise.resolve({ mailboxes: [personalApproved] })
     if (path.startsWith('/mail?box=inbox'))
       return Promise.resolve({ emails: [inboxEmail], total: 1 })
     if (path.startsWith('/mail?box=sent'))
@@ -81,28 +92,44 @@ beforeEach(() => {
 })
 
 describe('MailboxPage', () => {
-  it('주소가 없으면 주소 만들기 화면을 보여준다', async () => {
-    mockApiGet.mockResolvedValue({ local_part: null, email: null })
+  it('메일함이 없으면 주소 신청 화면을 보여준다', async () => {
+    mockApiGet.mockResolvedValue({ mailboxes: [] })
     renderWithProviders(<MailboxPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('내 이메일 주소 만들기')).toBeInTheDocument()
+      expect(screen.getByText('내 이메일 주소 신청')).toBeInTheDocument()
     })
-    expect(screen.getByText(/한 번 정하면 바꿀 수 없습니다/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/승인 후에는 변경할 수 없습니다/),
+    ).toBeInTheDocument()
   })
 
-  it('주소를 만들면 POST 후 메일함으로 전환된다', async () => {
-    // 최초엔 null, 생성 후 메일함이 뜨도록 이후 목록 응답도 준비
+  it('주소를 신청하면 POST 후 승인 대기 화면으로 전환된다', async () => {
+    // 최초엔 빈 메일함, 신청 후 재조회에서 pending 개인 메일함이 나오도록
+    let mailboxesResp: { mailboxes: unknown[] } = { mailboxes: [] }
     mockApiGet.mockImplementation((path: string) => {
-      if (path === '/mail/address')
-        return Promise.resolve({ local_part: null, email: null })
-      if (path.startsWith('/mail?box=inbox'))
-        return Promise.resolve({ emails: [], total: 0 })
+      if (path === '/mail/mailboxes') return Promise.resolve(mailboxesResp)
       return Promise.resolve({ emails: [], total: 0 })
     })
-    mockApiPost.mockResolvedValue({
-      local_part: 'jane99',
-      email: 'jane99@earnlearning.com',
+    mockApiPost.mockImplementation(() => {
+      mailboxesResp = {
+        mailboxes: [
+          {
+            address_id: 5,
+            kind: 'user',
+            company_id: null,
+            name: '홍길동',
+            local_part: 'jane99',
+            email: 'jane99@earnlearning.com',
+            status: 'pending',
+          },
+        ],
+      }
+      return Promise.resolve({
+        local_part: 'jane99',
+        email: 'jane99@earnlearning.com',
+        status: 'pending',
+      })
     })
 
     const user = userEvent.setup()
@@ -110,17 +137,101 @@ describe('MailboxPage', () => {
 
     const input = await screen.findByPlaceholderText('jane99')
     await user.type(input, 'jane99')
-    await user.click(screen.getByRole('button', { name: /이 주소로 만들기/ }))
+    await user.click(screen.getByRole('button', { name: /이 주소로 신청하기/ }))
 
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith('/mail/address', {
         local_part: 'jane99',
       })
     })
-    // 메일함(받은편지함 탭) 으로 전환
+    // 메일함이 아니라 승인 대기 화면으로 전환
+    await waitFor(() => {
+      expect(screen.getByText(/관리자 승인 대기 중/)).toBeInTheDocument()
+    })
+    expect(screen.queryByText('받은편지함')).not.toBeInTheDocument()
+  })
+
+  it('pending 상태면 승인 대기 화면을 보여준다 (메일함 아님)', async () => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/mail/mailboxes')
+        return Promise.resolve({
+          mailboxes: [
+            {
+              address_id: 3,
+              kind: 'user',
+              company_id: null,
+              name: '홍길동',
+              local_part: 'me123',
+              email: 'me123@earnlearning.com',
+              status: 'pending',
+            },
+          ],
+        })
+      return Promise.resolve({ emails: [], total: 0 })
+    })
+    renderWithProviders(<MailboxPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/관리자 승인 대기 중/)).toBeInTheDocument()
+    })
+    expect(screen.getByText('me123@earnlearning.com')).toBeInTheDocument()
+    expect(screen.queryByText('받은편지함')).not.toBeInTheDocument()
+  })
+
+  it('rejected 상태면 재신청 폼을 보여주고 재신청하면 POST 한다', async () => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/mail/mailboxes')
+        return Promise.resolve({
+          mailboxes: [
+            {
+              address_id: 4,
+              kind: 'user',
+              company_id: null,
+              name: '홍길동',
+              local_part: 'me123',
+              email: 'me123@earnlearning.com',
+              status: 'rejected',
+            },
+          ],
+        })
+      return Promise.resolve({ emails: [], total: 0 })
+    })
+    mockApiPost.mockResolvedValue({
+      local_part: 'me123',
+      email: 'me123@earnlearning.com',
+      status: 'pending',
+    })
+
+    const user = userEvent.setup()
+    renderWithProviders(<MailboxPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/반려되었습니다/)).toBeInTheDocument()
+    })
+    // 이전 local_part 로 프리필됨
+    const input = (await screen.findByPlaceholderText('jane99')) as HTMLInputElement
+    expect(input.value).toBe('me123')
+
+    await user.click(screen.getByRole('button', { name: /이 주소로 신청하기/ }))
+
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledWith('/mail/address', {
+        local_part: 'me123',
+      })
+    })
+  })
+
+  it('승인된 메일함이면 메일함을 렌더한다', async () => {
+    setupClaimed()
+    renderWithProviders(<MailboxPage />)
+
     await waitFor(() => {
       expect(screen.getByText('받은편지함')).toBeInTheDocument()
     })
+    // 목록 조회 시 address_id 를 함께 보낸다
+    expect(mockApiGet).toHaveBeenCalledWith(
+      expect.stringContaining('address_id=1'),
+    )
   })
 
   it('목록의 읽지 않은 메일은 굵게 + 점 표시된다', async () => {
@@ -176,6 +287,7 @@ describe('MailboxPage', () => {
 
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith('/mail/send', {
+        address_id: 1,
         to: 'alice@earnlearning.com',
         subject: 'Re: 안녕하세요',
         body_text: '',
@@ -188,7 +300,7 @@ describe('MailboxPage', () => {
     const sentItem = {
       id: 2,
       direction: 'sent',
-      from_addr: 'me@earnlearning.com',
+      from_addr: 'me123@earnlearning.com',
       to_addr: 'bob@earnlearning.com',
       subject: '보낸 제목',
       snippet: '보낸 내용',
@@ -212,6 +324,7 @@ describe('MailboxPage', () => {
 
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith('/mail/send', {
+        address_id: 1,
         to: 'bob@earnlearning.com',
         subject: '보낸 제목',
         body_text: '',
@@ -222,5 +335,139 @@ describe('MailboxPage', () => {
     await waitFor(() => {
       expect(screen.getByText('bob@earnlearning.com')).toBeInTheDocument()
     })
+  })
+})
+
+describe('MailboxPage 메일함 선택기', () => {
+  const companyApproved = {
+    address_id: 2,
+    kind: 'company',
+    company_id: 7,
+    name: '에이컴퍼니',
+    local_part: 'acompany',
+    email: 'acompany@earnlearning.com',
+    status: 'approved',
+  }
+
+  it('여러 메일함을 보여주고 전환 시 address_id 를 바꿔 조회한다', async () => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/mail/mailboxes')
+        return Promise.resolve({ mailboxes: [personalApproved, companyApproved] })
+      return Promise.resolve({ emails: [], total: 0 })
+    })
+
+    const user = userEvent.setup()
+    renderWithProviders(<MailboxPage />)
+
+    // 기본 선택 = 첫 승인 메일함(개인, address_id=1)
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith(
+        expect.stringContaining('address_id=1'),
+      )
+    })
+    // 두 메일함 탭이 모두 노출
+    expect(screen.getByRole('tab', { name: /홍길동/ })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /에이컴퍼니/ })).toBeInTheDocument()
+
+    // 회사 메일함으로 전환
+    await user.click(screen.getByRole('tab', { name: /에이컴퍼니/ }))
+
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith(
+        expect.stringContaining('address_id=2'),
+      )
+    })
+  })
+
+  const sharedApproved = {
+    address_id: 9,
+    kind: 'shared',
+    company_id: null,
+    name: '고객지원',
+    local_part: 'support',
+    email: 'support@earnlearning.com',
+    status: 'approved',
+  }
+
+  it('메일함이 하나면 이름과 구분 뱃지를 비대화형 헤더로 보여준다', async () => {
+    const sharedOnly = {
+      address_id: 12,
+      kind: 'shared',
+      company_id: null,
+      name: '언러닝 안내',
+      local_part: 'hello',
+      email: 'hello@earnlearning.com',
+      status: 'approved',
+    }
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/mail/mailboxes')
+        return Promise.resolve({ mailboxes: [sharedOnly] })
+      return Promise.resolve({ emails: [], total: 0 })
+    })
+
+    renderWithProviders(<MailboxPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('언러닝 안내')).toBeInTheDocument()
+    })
+    // 공용 구분 뱃지 노출
+    expect(screen.getByText('공용')).toBeInTheDocument()
+    // 메일함이 하나뿐이면 선택 탭은 렌더하지 않는다
+    expect(
+      screen.queryByRole('tab', { name: /언러닝 안내/ }),
+    ).not.toBeInTheDocument()
+    // 메일함은 사용 가능
+    expect(screen.getByText('받은편지함')).toBeInTheDocument()
+  })
+
+  it('공용 메일함을 공용 뱃지와 함께 보여주고 전환 시 해당 address_id 로 조회한다', async () => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/mail/mailboxes')
+        return Promise.resolve({ mailboxes: [personalApproved, sharedApproved] })
+      return Promise.resolve({ emails: [], total: 0 })
+    })
+
+    const user = userEvent.setup()
+    renderWithProviders(<MailboxPage />)
+
+    // 공용 메일함 탭 + 공용 뱃지 노출
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /고객지원/ })).toBeInTheDocument()
+    })
+    expect(screen.getByText('공용')).toBeInTheDocument()
+
+    // 공용 메일함으로 전환 → address_id=9 로 조회
+    await user.click(screen.getByRole('tab', { name: /고객지원/ }))
+
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith(
+        expect.stringContaining('address_id=9'),
+      )
+    })
+  })
+
+  it('개인 pending + 회사 approved 이면 회사 메일함을 사용할 수 있다', async () => {
+    const personalPending = {
+      ...personalApproved,
+      status: 'pending',
+    }
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/mail/mailboxes')
+        return Promise.resolve({ mailboxes: [personalPending, companyApproved] })
+      return Promise.resolve({ emails: [], total: 0 })
+    })
+
+    renderWithProviders(<MailboxPage />)
+
+    // 회사 메일함이 기본 선택되어 목록 조회
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith(
+        expect.stringContaining('address_id=2'),
+      )
+    })
+    // 메일함 UI 노출
+    expect(screen.getByText('받은편지함')).toBeInTheDocument()
+    // 개인 탭은 대기중이라 비활성
+    expect(screen.getByRole('tab', { name: /홍길동/ })).toBeDisabled()
   })
 })

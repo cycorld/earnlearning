@@ -13,6 +13,8 @@ import {
   CheckCheck,
   Loader2,
   Mail,
+  MailCheck,
+  MailX,
   MessageCircle,
   Wallet,
   Building2,
@@ -64,6 +66,10 @@ function getNotifIcon(type: string) {
       return <MessageCircle className="h-5 w-5 text-teal-500" />
     case 'mail_received':
       return <Mail className="h-5 w-5 text-sky-500" />
+    case 'mail_address_approved':
+      return <MailCheck className="h-5 w-5 text-emerald-500" />
+    case 'mail_address_rejected':
+      return <MailX className="h-5 w-5 text-coral" />
     case 'job_applied':
     case 'job_accepted':
     case 'job_work_done':

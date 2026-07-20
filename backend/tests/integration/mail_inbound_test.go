@@ -9,12 +9,45 @@ import (
 	"testing"
 )
 
-// claimMailAddress — 유저 토큰으로 주소를 발급하고 email id 카운터 리셋 편의용.
-func (ts *testServer) claimMailAddress(t *testing.T, token, localPart string) {
+// claimMailAddress — 유저 토큰으로 개인 주소를 발급(pending)한 뒤 관리자 승인까지 마치고,
+// 사용 가능한(approved) 주소의 address_id 를 반환한다.
+func (ts *testServer) claimMailAddress(t *testing.T, token, localPart string) int {
 	t.Helper()
 	status, r := ts.mailJSON("POST", "/api/mail/address", map[string]string{"local_part": localPart}, token)
 	if status != http.StatusCreated {
 		t.Fatalf("주소 %q 발급 실패: status=%d body=%s", localPart, status, string(r.Data))
+	}
+	id := ts.adminFindAddressID(t, localPart, "pending")
+	ts.approveMailAddressID(t, id)
+	return id
+}
+
+// adminFindAddressID — 관리자 승인 목록에서 local_part 로 address id 를 찾는다.
+func (ts *testServer) adminFindAddressID(t *testing.T, localPart, status string) int {
+	t.Helper()
+	admin := ts.login(testAdminEmail, testAdminPass)
+	_, r := ts.mailJSON("GET", "/api/admin/mail/addresses?status="+status, nil, admin)
+	var items []struct {
+		ID        int    `json:"id"`
+		LocalPart string `json:"local_part"`
+	}
+	json.Unmarshal(r.Data, &items)
+	for _, it := range items {
+		if it.LocalPart == localPart {
+			return it.ID
+		}
+	}
+	t.Fatalf("관리자 목록(status=%s)에서 %q 를 찾지 못함: %s", status, localPart, string(r.Data))
+	return 0
+}
+
+// approveMailAddressID — 관리자 권한으로 주소를 승인한다.
+func (ts *testServer) approveMailAddressID(t *testing.T, addressID int) {
+	t.Helper()
+	admin := ts.login(testAdminEmail, testAdminPass)
+	status, r := ts.mailJSON("POST", "/api/admin/mail/addresses/"+strconv.Itoa(addressID)+"/approve", nil, admin)
+	if status != http.StatusOK {
+		t.Fatalf("주소 %d 승인 실패: status=%d body=%s", addressID, status, string(r.Data))
 	}
 }
 
@@ -66,7 +99,7 @@ func TestMailInboundDelivery(t *testing.T) {
 	ts := setupTestServer(t)
 	alice := ts.registerAndApprove("alice@student.com", "pw12345678", "앨리스", "2024201")
 	bob := ts.registerAndApprove("bob@student.com", "pw12345678", "밥", "2024202")
-	ts.claimMailAddress(t, alice, "alice")
+	aliceAddr := ts.claimMailAddress(t, alice, "alice")
 
 	attachContent := "hello attachment 첨부내용"
 	status, body := ts.inbound(testMailWebhookSecret, map[string]interface{}{
@@ -95,7 +128,7 @@ func TestMailInboundDelivery(t *testing.T) {
 	}
 
 	// 받은편지함에 표시
-	_, r := ts.mailJSON("GET", "/api/mail?box=inbox&limit=20&offset=0", nil, alice)
+	_, r := ts.mailJSON("GET", "/api/mail?box=inbox&limit=20&offset=0&address_id="+strconv.Itoa(aliceAddr), nil, alice)
 	var list struct {
 		Emails []struct {
 			ID             int    `json:"id"`
@@ -155,7 +188,7 @@ func TestMailInboundDelivery(t *testing.T) {
 	attID := detail.Attachments[0].ID
 
 	// 상세 조회 후 목록에서 읽음 처리 확인
-	_, r = ts.mailJSON("GET", "/api/mail?box=inbox", nil, alice)
+	_, r = ts.mailJSON("GET", "/api/mail?box=inbox&address_id="+strconv.Itoa(aliceAddr), nil, alice)
 	json.Unmarshal(r.Data, &list)
 	if !list.Emails[0].Read {
 		t.Fatalf("상세 조회 후 read=1 이어야 함")

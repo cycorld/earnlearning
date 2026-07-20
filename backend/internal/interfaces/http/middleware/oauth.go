@@ -37,6 +37,23 @@ func OAuthBearerAuth(oauthUC *application.OAuthUseCase) echo.MiddlewareFunc {
 	}
 }
 
+// RejectOAuth blocks requests authenticated via OAuth bearer tokens.
+// 내부 전용 API(예: 메일함) 보호용. OAuth 토큰은 컨텍스트에 oauth_scopes 를 세팅하므로
+// 그 키가 있으면 1st-party 세션 JWT 가 아니라 OAuth 토큰이라는 뜻 → 403.
+func RejectOAuth() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if _, ok := c.Get("oauth_scopes").([]string); ok {
+				return c.JSON(http.StatusForbidden, map[string]interface{}{
+					"success": false, "data": nil,
+					"error": map[string]string{"code": "OAUTH_FORBIDDEN", "message": "내부 전용 API 입니다 (OAuth 접근 불가)"},
+				})
+			}
+			return next(c)
+		}
+	}
+}
+
 // RequireScope checks that the OAuth token has the required scope.
 // JWT users (no oauth_scopes) are always allowed through.
 func RequireScope(scope string) echo.MiddlewareFunc {
