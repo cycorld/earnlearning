@@ -46,7 +46,7 @@ func (h *FreelanceHandler) ListJobs(c echo.Context) error {
 		limit = 20
 	}
 
-	jobs, total, err := h.uc.ListJobs(status, skills, minBudget, page, limit)
+	jobs, total, err := h.uc.ListJobs(middleware.GetUserID(c), status, skills, minBudget, page, limit)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, errorResp("INTERNAL", err.Error()))
 	}

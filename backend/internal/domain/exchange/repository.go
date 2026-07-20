@@ -24,7 +24,7 @@ type Repository interface {
 	GetOrderbook(companyID int) (*Orderbook, error)
 	GetCompanyTrades(companyID, limit int) ([]*StockTrade, error)
 	GetUserOrders(userID int, status string, companyID int, page, limit int) ([]*StockOrder, int, error)
-	GetListedCompanies() ([]*ListedCompany, error)
+	GetListedCompanies(classroomID int) ([]*ListedCompany, error)
 
 	// Pending order calculations
 	GetPendingBuyTotal(userID int) (int, error)

@@ -69,6 +69,12 @@ func (uc *ClassroomUseCase) CreateClassroom(input CreateClassroomInput, creatorI
 		return nil, err
 	}
 
+	// #159 생성한 강의실을 생성자의 활성 강의실로 전환 (관리자가 만든 지원금 등이
+	// 이 강의실에 귀속되도록)
+	if err := uc.classroomRepo.SetActiveClassroom(creatorID, id); err != nil {
+		return nil, err
+	}
+
 	// Create default channels
 	for _, ch := range defaultChannels {
 		_, err := uc.classroomRepo.CreateChannel(&classroom.Channel{
@@ -102,33 +108,56 @@ func (uc *ClassroomUseCase) JoinClassroom(code string, userID int) (*classroom.C
 		return nil, err
 	}
 	if isMember {
-		return c, nil // already a member, idempotent
+		// already a member, idempotent — 재조인도 활성 강의실 전환으로 취급 (#159)
+		if err := uc.classroomRepo.SetActiveClassroom(userID, c.ID); err != nil {
+			return nil, err
+		}
+		return c, nil
 	}
 
 	if err := uc.classroomRepo.AddMember(c.ID, userID); err != nil {
 		return nil, err
 	}
 
-	// Create wallet if not exists, then credit initial capital
-	w, err := uc.walletRepo.FindByUserID(userID)
+	// #159 강의실별 지갑: 이 강의실 전용 지갑을 확보하고, 처음 귀속된 경우에만
+	// 해당 강의실의 초기자본을 지급한다 (강의 간 잔액 혼합·중복 지급 차단).
+	walletID, isNew, err := uc.walletRepo.EnsureClassroomWallet(userID, c.ID)
 	if err != nil {
-		// wallet doesn't exist, create one
-		walletID, createErr := uc.walletRepo.CreateWallet(userID)
-		if createErr != nil {
-			return nil, createErr
-		}
-		err = uc.walletRepo.Credit(walletID, c.InitialCapital, wallet.TxInitialCapital, "초기 자본금 지급", "classroom", c.ID)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// wallet exists, credit initial capital
-		err = uc.walletRepo.Credit(w.ID, c.InitialCapital, wallet.TxInitialCapital, "초기 자본금 지급", "classroom", c.ID)
-		if err != nil {
+		return nil, err
+	}
+	if isNew {
+		if err := uc.walletRepo.Credit(walletID, c.InitialCapital, wallet.TxInitialCapital, "초기 자본금 지급", "classroom", c.ID); err != nil {
 			return nil, err
 		}
 	}
 
+	// 조인한 강의실을 활성 컨텍스트로 전환
+	if err := uc.classroomRepo.SetActiveClassroom(userID, c.ID); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// ActivateClassroom — 멤버인 강의실로 활성 컨텍스트 전환 (#159).
+// 관리자는 멤버가 아니어도 전환 가능 (강의실 관리 컨텍스트 진입).
+func (uc *ClassroomUseCase) ActivateClassroom(userID, classroomID int, isAdmin bool) (*classroom.Classroom, error) {
+	c, err := uc.classroomRepo.FindByID(classroomID)
+	if err != nil {
+		return nil, err
+	}
+	if !isAdmin {
+		isMember, err := uc.classroomRepo.IsMember(classroomID, userID)
+		if err != nil {
+			return nil, err
+		}
+		if !isMember {
+			return nil, classroom.ErrNotMember
+		}
+	}
+	if err := uc.classroomRepo.SetActiveClassroom(userID, classroomID); err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 

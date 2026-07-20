@@ -19,9 +19,9 @@ func NewLoanRepo(db *sql.DB) *LoanRepo {
 
 func (r *LoanRepo) Create(l *loan.Loan) (int, error) {
 	res, err := r.db.Exec(`
-		INSERT INTO loans (borrower_id, amount, remaining, interest_rate, penalty_rate, purpose, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		l.BorrowerID, l.Amount, l.Remaining, l.InterestRate, l.PenaltyRate, l.Purpose, l.Status,
+		INSERT INTO loans (borrower_id, amount, remaining, interest_rate, penalty_rate, purpose, status, classroom_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		l.BorrowerID, l.Amount, l.Remaining, l.InterestRate, l.PenaltyRate, l.Purpose, l.Status, l.ClassroomID,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("create loan: %w", err)
@@ -38,13 +38,13 @@ func (r *LoanRepo) FindByID(id int) (*loan.Loan, error) {
 
 	err := r.db.QueryRow(`
 		SELECT l.id, l.borrower_id, l.amount, l.remaining, l.interest_rate, l.penalty_rate,
-			   l.purpose, l.status, l.approved_by, l.approved_at, l.next_payment, l.created_at,
+			   l.purpose, l.status, l.approved_by, l.approved_at, l.next_payment, l.created_at, l.classroom_id,
 			   u.name AS borrower_name
 		FROM loans l
 		JOIN users u ON u.id = l.borrower_id
 		WHERE l.id = ?`, id).Scan(
 		&l.ID, &l.BorrowerID, &l.Amount, &l.Remaining, &l.InterestRate, &l.PenaltyRate,
-		&l.Purpose, &l.Status, &approvedBy, &approvedAt, &nextPayment, &l.CreatedAt,
+		&l.Purpose, &l.Status, &approvedBy, &approvedAt, &nextPayment, &l.CreatedAt, &l.ClassroomID,
 		&l.BorrowerName,
 	)
 	if err == sql.ErrNoRows {
@@ -70,7 +70,7 @@ func (r *LoanRepo) FindByID(id int) (*loan.Loan, error) {
 func (r *LoanRepo) ListByUser(userID int) ([]*loan.Loan, error) {
 	rows, err := r.db.Query(`
 		SELECT l.id, l.borrower_id, l.amount, l.remaining, l.interest_rate, l.penalty_rate,
-			   l.purpose, l.status, l.approved_by, l.approved_at, l.next_payment, l.created_at,
+			   l.purpose, l.status, l.approved_by, l.approved_at, l.next_payment, l.created_at, l.classroom_id,
 			   u.name AS borrower_name
 		FROM loans l
 		JOIN users u ON u.id = l.borrower_id
@@ -109,7 +109,7 @@ func (r *LoanRepo) ListAll(filter loan.LoanFilter, page, limit int) ([]*loan.Loa
 
 	rows, err := r.db.Query(`
 		SELECT l.id, l.borrower_id, l.amount, l.remaining, l.interest_rate, l.penalty_rate,
-			   l.purpose, l.status, l.approved_by, l.approved_at, l.next_payment, l.created_at,
+			   l.purpose, l.status, l.approved_by, l.approved_at, l.next_payment, l.created_at, l.classroom_id,
 			   u.name AS borrower_name
 		FROM loans l
 		JOIN users u ON u.id = l.borrower_id
@@ -138,7 +138,7 @@ func (r *LoanRepo) scanLoans(rows *sql.Rows) ([]*loan.Loan, error) {
 
 		if err := rows.Scan(
 			&l.ID, &l.BorrowerID, &l.Amount, &l.Remaining, &l.InterestRate, &l.PenaltyRate,
-			&l.Purpose, &l.Status, &approvedBy, &approvedAt, &nextPayment, &l.CreatedAt,
+			&l.Purpose, &l.Status, &approvedBy, &approvedAt, &nextPayment, &l.CreatedAt, &l.ClassroomID,
 			&l.BorrowerName,
 		); err != nil {
 			return nil, fmt.Errorf("scan loan: %w", err)
@@ -188,7 +188,7 @@ func (r *LoanRepo) UpdateNextPayment(id int, next *time.Time) error {
 func (r *LoanRepo) ListActiveLoans() ([]*loan.Loan, error) {
 	rows, err := r.db.Query(`
 		SELECT l.id, l.borrower_id, l.amount, l.remaining, l.interest_rate, l.penalty_rate,
-			   l.purpose, l.status, l.approved_by, l.approved_at, l.next_payment, l.created_at,
+			   l.purpose, l.status, l.approved_by, l.approved_at, l.next_payment, l.created_at, l.classroom_id,
 			   u.name AS borrower_name
 		FROM loans l
 		JOIN users u ON u.id = l.borrower_id

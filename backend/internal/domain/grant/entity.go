@@ -32,6 +32,7 @@ type Grant struct {
 	Description   string      `json:"description"`
 	Reward        int         `json:"reward"`
 	MaxApplicants int         `json:"max_applicants"` // 0 = unlimited
+	ClassroomID   int         `json:"classroom_id"` // #159 강의실 스코프
 	Status        GrantStatus `json:"status"`
 	CreatedAt     time.Time   `json:"created_at"`
 

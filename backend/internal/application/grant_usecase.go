@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/earnlearning/backend/internal/domain/company"
 	"github.com/earnlearning/backend/internal/domain/grant"
 	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/wallet"
@@ -41,8 +42,15 @@ func (uc *GrantUseCase) CreateGrant(input CreateGrantInput, adminID int) (*grant
 		return nil, fmt.Errorf("보상은 0보다 커야 합니다")
 	}
 
+	// #159 지원금은 관리자의 활성 강의실에 귀속 (0 = 무소속 스코프)
+	active, err := uc.walletRepo.GetActiveClassroomID(adminID)
+	if err != nil {
+		return nil, err
+	}
+
 	g := &grant.Grant{
 		AdminID:       adminID,
+		ClassroomID:   active,
 		Title:         input.Title,
 		Description:   input.Description,
 		Reward:        input.Reward,
@@ -76,14 +84,19 @@ func (uc *GrantUseCase) GetGrant(grantID int) (*grant.Grant, error) {
 	return g, nil
 }
 
-func (uc *GrantUseCase) ListGrants(status string, page, limit int) ([]*grant.Grant, int, error) {
+// ListGrants — 요청자 활성 강의실의 지원금만 (#159).
+func (uc *GrantUseCase) ListGrants(requesterID int, status string, page, limit int) ([]*grant.Grant, int, error) {
 	if page < 1 {
 		page = 1
 	}
 	if limit < 1 || limit > 50 {
 		limit = 20
 	}
-	filter := grant.GrantFilter{Status: status}
+	active, err := uc.walletRepo.GetActiveClassroomID(requesterID)
+	if err != nil {
+		return nil, 0, err
+	}
+	filter := grant.GrantFilter{Status: status, ClassroomID: active}
 	return uc.repo.List(filter, page, limit)
 }
 
@@ -97,6 +110,12 @@ func (uc *GrantUseCase) ApplyToGrant(grantID int, input ApplyGrantInput, userID 
 	}
 	if g.AdminID == userID {
 		return nil, grant.ErrCannotApplyOwnGrant
+	}
+	// #159 타 강의실 지원금 지원 차단
+	if active, aerr := uc.walletRepo.GetActiveClassroomID(userID); aerr != nil {
+		return nil, aerr
+	} else if g.ClassroomID != active {
+		return nil, company.ErrWrongClassroom
 	}
 
 	existing, err := uc.repo.FindApplicationByGrantAndUser(grantID, userID)
@@ -153,25 +172,25 @@ func (uc *GrantUseCase) ApproveApplication(grantID, applicationID, adminID int) 
 		return err
 	}
 
-	// Credit reward to applicant's wallet from admin's wallet
-	adminWallet, err := uc.walletRepo.FindByUserID(adminID)
+	// #159 보상 자금 이동은 지원금이 속한 강의실 지갑 기준
+	adminWalletID, _, err := uc.walletRepo.EnsureClassroomWallet(adminID, g.ClassroomID)
 	if err != nil {
 		return err
 	}
 
 	// Debit from admin
-	err = uc.walletRepo.Debit(adminWallet.ID, g.Reward, wallet.TxFreelanceEscrow,
+	err = uc.walletRepo.Debit(adminWalletID, g.Reward, wallet.TxFreelanceEscrow,
 		fmt.Sprintf("정부과제 보상: %s", g.Title), "grant", g.ID)
 	if err != nil {
 		return err
 	}
 
-	// Credit to applicant
-	applicantWallet, err := uc.walletRepo.FindByUserID(app.UserID)
+	// Credit to applicant — 지원금 강의실 지갑으로 (#159)
+	applicantWalletID, _, err := uc.walletRepo.EnsureClassroomWallet(app.UserID, g.ClassroomID)
 	if err != nil {
 		return err
 	}
-	err = uc.walletRepo.Credit(applicantWallet.ID, g.Reward, wallet.TxFreelancePay,
+	err = uc.walletRepo.Credit(applicantWalletID, g.Reward, wallet.TxFreelancePay,
 		fmt.Sprintf("정부과제 보상: %s", g.Title), "grant", g.ID)
 	if err != nil {
 		return err
@@ -211,22 +230,22 @@ func (uc *GrantUseCase) RevokeApplication(grantID, applicationID, adminID int) e
 		return err
 	}
 
-	// Rollback money: debit from student, credit to admin
-	applicantWallet, err := uc.walletRepo.FindByUserID(app.UserID)
+	// Rollback money: debit from student, credit to admin — 지원금 강의실 지갑 기준 (#159)
+	applicantWalletID, _, err := uc.walletRepo.EnsureClassroomWallet(app.UserID, g.ClassroomID)
 	if err != nil {
 		return err
 	}
-	err = uc.walletRepo.Debit(applicantWallet.ID, g.Reward, wallet.TxFreelanceEscrow,
+	err = uc.walletRepo.Debit(applicantWalletID, g.Reward, wallet.TxFreelanceEscrow,
 		fmt.Sprintf("정부과제 승인 취소: %s", g.Title), "grant", g.ID)
 	if err != nil {
 		return err
 	}
 
-	adminWallet, err := uc.walletRepo.FindByUserID(adminID)
+	adminWalletID2, _, err := uc.walletRepo.EnsureClassroomWallet(adminID, g.ClassroomID)
 	if err != nil {
 		return err
 	}
-	err = uc.walletRepo.Credit(adminWallet.ID, g.Reward, wallet.TxFreelancePay,
+	err = uc.walletRepo.Credit(adminWalletID2, g.Reward, wallet.TxFreelancePay,
 		fmt.Sprintf("정부과제 승인 취소 환불: %s", g.Title), "grant", g.ID)
 	if err != nil {
 		return err

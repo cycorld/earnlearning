@@ -577,13 +577,14 @@ func (uc *CompanyUsecase) executeLiquidationCore(p *company.Proposal, c *company
 
 	// Credit each shareholder's personal wallet
 	for _, payout := range payouts {
-		w, err := uc.walletRepo.FindByUserID(payout.UserID)
+		// #159 분배금은 회사 강의실 지갑으로
+		wID, _, err := uc.walletRepo.EnsureClassroomWallet(payout.UserID, c.ClassroomID)
 		if err != nil {
 			// This shouldn't happen for approved users but we log + continue
 			continue
 		}
 		desc := fmt.Sprintf("[%s] 청산 분배금 (지분 %d주)", c.Name, payout.Shares)
-		if err := uc.walletRepo.Credit(w.ID, payout.Amount, wallet.TxLiquidationPayout, desc, "proposal", p.ID); err != nil {
+		if err := uc.walletRepo.Credit(wID, payout.Amount, wallet.TxLiquidationPayout, desc, "proposal", p.ID); err != nil {
 			return nil, fmt.Errorf("주주 %d 분배금 지급 실패: %w", payout.UserID, err)
 		}
 	}

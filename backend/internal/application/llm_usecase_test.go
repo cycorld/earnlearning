@@ -213,6 +213,13 @@ func (r *fakeWalletRepo) FindByUserID(int) (*wallet.Wallet, error) {
 	return &wallet.Wallet{ID: 1, UserID: 1, Balance: r.balance}, nil
 }
 func (r *fakeWalletRepo) CreateWallet(int) (int, error) { return 0, nil }
+func (r *fakeWalletRepo) EnsureClassroomWallet(int, int) (int, bool, error) {
+	return 1, false, nil
+}
+func (r *fakeWalletRepo) GetActiveClassroomID(int) (int, error) { return 1, nil }
+func (r *fakeWalletRepo) FindByUserAndClassroom(int, int) (*wallet.Wallet, error) {
+	return &wallet.Wallet{ID: 1, UserID: 1, Balance: r.balance}, nil
+}
 func (r *fakeWalletRepo) Credit(int, int, wallet.TxType, string, string, int) error {
 	return nil
 }
@@ -233,7 +240,7 @@ func (r *fakeWalletRepo) Debit(wid, amount int, tx wallet.TxType, desc, refType 
 func (r *fakeWalletRepo) GetTransactions(int, wallet.TransactionFilter, int, int) ([]*wallet.Transaction, int, error) {
 	return nil, 0, nil
 }
-func (r *fakeWalletRepo) GetRanking(int) ([]*wallet.RankEntry, error) {
+func (r *fakeWalletRepo) GetRankingForUser(int, int) ([]*wallet.RankEntry, error) {
 	return nil, nil
 }
 func (r *fakeWalletRepo) GetAssetBreakdown(int) (*wallet.AssetBreakdown, error) {

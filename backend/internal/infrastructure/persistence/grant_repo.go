@@ -18,9 +18,9 @@ func NewGrantRepo(db *sql.DB) *GrantRepo {
 
 func (r *GrantRepo) Create(g *grant.Grant) (int, error) {
 	res, err := r.db.Exec(`
-		INSERT INTO grants (admin_id, title, description, reward, max_applicants, status)
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		g.AdminID, g.Title, g.Description, g.Reward, g.MaxApplicants, g.Status,
+		INSERT INTO grants (admin_id, title, description, reward, max_applicants, status, classroom_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		g.AdminID, g.Title, g.Description, g.Reward, g.MaxApplicants, g.Status, g.ClassroomID,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("create grant: %w", err)
@@ -35,12 +35,12 @@ func (r *GrantRepo) FindByID(id int) (*grant.Grant, error) {
 
 	err := r.db.QueryRow(`
 		SELECT g.id, g.admin_id, g.title, g.description, g.reward, g.max_applicants,
-			   g.status, g.created_at, u.name AS admin_name
+			   g.status, g.created_at, g.classroom_id, u.name AS admin_name
 		FROM grants g
 		JOIN users u ON u.id = g.admin_id
 		WHERE g.id = ?`, id).Scan(
 		&g.ID, &g.AdminID, &g.Title, &g.Description, &g.Reward, &g.MaxApplicants,
-		&g.Status, &g.CreatedAt, &adminName,
+		&g.Status, &g.CreatedAt, &g.ClassroomID, &adminName,
 	)
 	if err == sql.ErrNoRows {
 		return nil, grant.ErrGrantNotFound
@@ -61,6 +61,9 @@ func (r *GrantRepo) List(filter grant.GrantFilter, page, limit int) ([]*grant.Gr
 		where = append(where, "g.status = ?")
 		args = append(args, filter.Status)
 	}
+	// #159 강의실 스코프 (0 = 미소속 → 빈 결과)
+	where = append(where, "g.classroom_id = ?")
+	args = append(args, filter.ClassroomID)
 
 	whereClause := strings.Join(where, " AND ")
 
@@ -75,7 +78,7 @@ func (r *GrantRepo) List(filter grant.GrantFilter, page, limit int) ([]*grant.Gr
 
 	rows, err := r.db.Query(`
 		SELECT g.id, g.admin_id, g.title, g.description, g.reward, g.max_applicants,
-			   g.status, g.created_at, u.name AS admin_name,
+			   g.status, g.created_at, g.classroom_id, u.name AS admin_name,
 			   (SELECT COUNT(*) FROM grant_applications WHERE grant_id = g.id) AS application_count,
 			   (SELECT COUNT(*) FROM grant_applications WHERE grant_id = g.id AND status = 'approved') AS approved_count
 		FROM grants g
@@ -96,7 +99,7 @@ func (r *GrantRepo) List(filter grant.GrantFilter, page, limit int) ([]*grant.Gr
 
 		if err := rows.Scan(
 			&g.ID, &g.AdminID, &g.Title, &g.Description, &g.Reward, &g.MaxApplicants,
-			&g.Status, &g.CreatedAt, &adminName, &appCount, &approvedCount,
+			&g.Status, &g.CreatedAt, &g.ClassroomID, &adminName, &appCount, &approvedCount,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan grant: %w", err)
 		}

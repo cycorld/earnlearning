@@ -353,6 +353,7 @@ type userResponse struct {
 	Status     string    `json:"status"`
 	Bio        string    `json:"bio"`
 	AvatarURL  string    `json:"avatar_url"`
+	ActiveClassroomID int `json:"active_classroom_id"`
 	CreatedAt  string    `json:"created_at"`
 }
 
@@ -367,6 +368,7 @@ func userToResponse(u *user.User, viewerRole string) userResponse {
 		Status:     string(u.Status),
 		Bio:        u.Bio,
 		AvatarURL:  u.AvatarURL,
+		ActiveClassroomID: u.ActiveClassroomID,
 		CreatedAt:  u.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 }

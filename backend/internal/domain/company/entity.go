@@ -16,6 +16,7 @@ type Company struct {
 	BusinessCard   string    `json:"business_card"`
 	ServiceURL     string    `json:"service_url"`
 	Status         string    `json:"status"`
+	ClassroomID    int       `json:"classroom_id"` // #159 강의실 스코프
 	CreatedAt      time.Time `json:"created_at"`
 }
 

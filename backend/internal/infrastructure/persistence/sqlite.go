@@ -60,9 +60,29 @@ func RunMigrations(db *sql.DB) error {
 		`ALTER TABLE student_milestones ADD COLUMN ai_evaluated_at DATETIME`,
 		// #132 멘션 알림 — 클릭 이동 시 페이지 내 anchor (예: comment-12)
 		`ALTER TABLE notifications ADD COLUMN anchor TEXT NOT NULL DEFAULT ''`,
+		// #159 멀티 강의실 — 유저의 활성(현재) 강의실. 0 = 미설정
+		`ALTER TABLE users ADD COLUMN active_classroom_id INTEGER NOT NULL DEFAULT 0`,
+		// #159 Phase 2 — 금융 도메인 루트 엔티티 강의실 스코핑 (0 = 미배정, 백필로 채움)
+		`ALTER TABLE companies ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE freelance_jobs ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE loans ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE grants ADD COLUMN classroom_id INTEGER NOT NULL DEFAULT 0`,
 	}
 	for _, stmt := range alterStatements {
 		db.Exec(stmt) // ignore "duplicate column" errors
+	}
+
+	// #159 강의실별 지갑: wallets UNIQUE(user_id) → UNIQUE(user_id, classroom_id) 리빌드
+	if err := migrateWalletsPerClassroom(db); err != nil {
+		return fmt.Errorf("migrate wallets per classroom: %w", err)
+	}
+
+	// #159 활성 강의실 백필: 미설정(0) 유저를 첫 멤버십 강의실로
+	_, err = db.Exec(`UPDATE users SET active_classroom_id =
+		COALESCE((SELECT MIN(cm.classroom_id) FROM classroom_members cm WHERE cm.user_id = users.id), 0)
+		WHERE active_classroom_id = 0`)
+	if err != nil {
+		return fmt.Errorf("backfill active_classroom_id: %w", err)
 	}
 
 	// Create company_disclosures table (idempotent)
@@ -101,6 +121,7 @@ func RunMigrations(db *sql.DB) error {
 			description TEXT NOT NULL DEFAULT '',
 			reward INTEGER NOT NULL DEFAULT 0,
 			max_applicants INTEGER NOT NULL DEFAULT 0,
+			classroom_id INTEGER NOT NULL DEFAULT 0,
 			status TEXT NOT NULL DEFAULT 'open',
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
@@ -466,5 +487,90 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// #159 Phase 2 백필: 미배정(0) 도메인 엔티티를 소유자의 첫 멤버십 강의실로.
+	// grants 테이블은 위에서 생성되므로 반드시 마지막에 실행. 멱등 (0인 행만 갱신).
+	classroomBackfills := []string{
+		`UPDATE companies SET classroom_id =
+			COALESCE((SELECT MIN(cm.classroom_id) FROM classroom_members cm WHERE cm.user_id = companies.owner_id), 0)
+			WHERE classroom_id = 0`,
+		`UPDATE freelance_jobs SET classroom_id =
+			COALESCE((SELECT MIN(cm.classroom_id) FROM classroom_members cm WHERE cm.user_id = freelance_jobs.client_id), 0)
+			WHERE classroom_id = 0`,
+		`UPDATE loans SET classroom_id =
+			COALESCE((SELECT MIN(cm.classroom_id) FROM classroom_members cm WHERE cm.user_id = loans.borrower_id), 0)
+			WHERE classroom_id = 0`,
+		`UPDATE grants SET classroom_id =
+			COALESCE((SELECT MIN(id) FROM classrooms), 0)
+			WHERE classroom_id = 0`,
+	}
+	for _, stmt := range classroomBackfills {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("classroom backfill: %w", err)
+		}
+	}
+
 	return nil
+}
+
+// migrateWalletsPerClassroom — wallets 를 유저 전역 지갑(UNIQUE user_id)에서
+// 강의실별 지갑(UNIQUE(user_id, classroom_id))으로 리빌드한다 (#159).
+// SQLite 는 ALTER 로 UNIQUE 제약을 제거할 수 없어 새 테이블 복사 방식 사용.
+// - id 를 보존해 transactions.wallet_id 참조가 그대로 유효
+// - 기존 지갑의 classroom_id 는 유저의 첫 멤버십 강의실로 백필 (없으면 0 = 미배정;
+//   미배정 지갑은 첫 강의실 조인 시 해당 강의실로 귀속됨)
+// - 구 테이블은 wallets_legacy_159 로 보존 (DROP 금지 규칙)
+func migrateWalletsPerClassroom(db *sql.DB) error {
+	var hasCol int
+	if err := db.QueryRow(
+		`SELECT COUNT(*) FROM pragma_table_info('wallets') WHERE name = 'classroom_id'`,
+	).Scan(&hasCol); err != nil {
+		return fmt.Errorf("inspect wallets schema: %w", err)
+	}
+	if hasCol > 0 {
+		return nil // 이미 리빌드됨
+	}
+
+	// RENAME 시 transactions 의 FK 선언이 wallets_legacy_159 로 따라가지 않도록.
+	// foreign_keys=ON 상태에서는 legacy_alter_table 과 무관하게 참조가 재작성되므로
+	// 마이그레이션 동안 둘 다 조정한다 (트랜잭션 밖에서만 유효).
+	// 새 wallets 가 id 를 보존하므로 기존 참조는 계속 유효하다.
+	if _, err := db.Exec(`PRAGMA foreign_keys = OFF`); err != nil {
+		return err
+	}
+	defer db.Exec(`PRAGMA foreign_keys = ON`)
+	if _, err := db.Exec(`PRAGMA legacy_alter_table = ON`); err != nil {
+		return err
+	}
+	defer db.Exec(`PRAGMA legacy_alter_table = OFF`)
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmts := []string{
+		`CREATE TABLE wallets_new (
+			id           INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id      INTEGER NOT NULL REFERENCES users(id),
+			classroom_id INTEGER NOT NULL DEFAULT 0,
+			balance      INTEGER NOT NULL DEFAULT 0,
+			UNIQUE(user_id, classroom_id)
+		)`,
+		`INSERT INTO wallets_new (id, user_id, classroom_id, balance)
+		 SELECT w.id, w.user_id,
+		        COALESCE((SELECT MIN(cm.classroom_id) FROM classroom_members cm WHERE cm.user_id = w.user_id), 0),
+		        w.balance
+		 FROM wallets w`,
+		`ALTER TABLE wallets RENAME TO wallets_legacy_159`,
+		`ALTER TABLE wallets_new RENAME TO wallets`,
+		`CREATE INDEX IF NOT EXISTS idx_wallets_user ON wallets(user_id)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := tx.Exec(stmt); err != nil {
+			return fmt.Errorf("wallets rebuild %q: %w", stmt[:30], err)
+		}
+	}
+
+	return tx.Commit()
 }

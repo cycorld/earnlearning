@@ -152,6 +152,12 @@ func (uc *InvestmentUseCase) Invest(roundID, userID, shares int) (*investment.In
 	if c.OwnerID == userID {
 		return nil, investment.ErrCannotInvestOwnCompany
 	}
+	// #159 타 강의실 회사 투자 차단
+	if active, aerr := uc.walletRepo.GetActiveClassroomID(userID); aerr != nil {
+		return nil, aerr
+	} else if c.ClassroomID != active {
+		return nil, company.ErrWrongClassroom
+	}
 
 	// Compute remaining shares = new_shares - sum(investments.shares)
 	sold, err := uc.repo.SumSharesByRound(round.ID)
@@ -415,11 +421,12 @@ func (uc *InvestmentUseCase) CancelRoundAndRefund(roundID, userID int) (*investm
 	// Refund each investor and shrink their shareholdings.
 	totalSharesReturned := 0
 	for _, inv := range investments {
-		w, err := uc.walletRepo.FindByUserID(inv.UserID)
+		// #159 환불은 회사 강의실 지갑으로
+		wID, _, err := uc.walletRepo.EnsureClassroomWallet(inv.UserID, c.ClassroomID)
 		if err != nil {
 			continue
 		}
-		if err := uc.walletRepo.Credit(w.ID, inv.Amount, wallet.TxInvestment,
+		if err := uc.walletRepo.Credit(wID, inv.Amount, wallet.TxInvestment,
 			fmt.Sprintf("%s 라운드 취소 — 환불", c.Name),
 			"investment_round", round.ID,
 		); err != nil {
@@ -468,16 +475,22 @@ func (uc *InvestmentUseCase) CancelRoundAndRefund(roundID, userID int) (*investm
 	return uc.repo.FindRoundByID(roundID)
 }
 
-func (uc *InvestmentUseCase) ListRounds(companyID int, status string, page, limit int) ([]*investment.InvestmentRound, int, error) {
+// ListRounds — 요청자 활성 강의실의 라운드만 (#159).
+func (uc *InvestmentUseCase) ListRounds(requesterID, companyID int, status string, page, limit int) ([]*investment.InvestmentRound, int, error) {
 	if page < 1 {
 		page = 1
 	}
 	if limit < 1 || limit > 50 {
 		limit = 20
 	}
+	active, err := uc.walletRepo.GetActiveClassroomID(requesterID)
+	if err != nil {
+		return nil, 0, err
+	}
 	filter := investment.RoundFilter{
-		CompanyID: companyID,
-		Status:    status,
+		CompanyID:   companyID,
+		Status:      status,
+		ClassroomID: active,
 	}
 	return uc.repo.ListRounds(filter, page, limit)
 }
@@ -596,12 +609,13 @@ func (uc *InvestmentUseCase) ExecuteDividend(input ExecuteDividendInput, userID 
 			continue
 		}
 
-		// Credit shareholder's wallet
-		shWallet, err := uc.walletRepo.FindByUserID(sh.UserID)
+		// Credit shareholder's wallet — 회사 강의실 지갑으로 (#159:
+		// 수령자가 활성 강의실을 바꿔도 배당은 원 강의실 지갑에 지급)
+		shWalletID, _, err := uc.walletRepo.EnsureClassroomWallet(sh.UserID, c.ClassroomID)
 		if err != nil {
 			continue // skip if no wallet
 		}
-		err = uc.walletRepo.Credit(shWallet.ID, payAmount, wallet.TxDividend,
+		err = uc.walletRepo.Credit(shWalletID, payAmount, wallet.TxDividend,
 			fmt.Sprintf("%s 배당금", c.Name), "dividend", dividendID)
 		if err != nil {
 			continue

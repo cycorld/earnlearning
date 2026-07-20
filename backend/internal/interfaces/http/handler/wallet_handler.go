@@ -158,7 +158,7 @@ func (h *WalletHandler) AdminTransfer(c echo.Context) error {
 		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "잘못된 입력입니다")
 	}
 
-	count, err := h.walletUC.AdminTransfer(input)
+	count, err := h.walletUC.AdminTransfer(middleware.GetUserID(c), input)
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, "TRANSFER_FAILED", err.Error())
 	}
@@ -182,7 +182,7 @@ func (h *WalletHandler) AdminTransfer(c echo.Context) error {
 func (h *WalletHandler) GetRanking(c echo.Context) error {
 	limit := intQuery(c, "limit", 20)
 
-	entries, err := h.walletUC.GetRanking(limit)
+	entries, err := h.walletUC.GetRanking(middleware.GetUserID(c), limit)
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "서버 오류가 발생했습니다")
 	}

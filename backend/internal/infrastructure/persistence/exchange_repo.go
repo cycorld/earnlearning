@@ -256,7 +256,8 @@ func (r *ExchangeRepo) GetUserOrders(userID int, status string, companyID int, p
 	return orders, total, nil
 }
 
-func (r *ExchangeRepo) GetListedCompanies() ([]*exchange.ListedCompany, error) {
+// GetListedCompanies — 해당 강의실의 상장사만 (#159).
+func (r *ExchangeRepo) GetListedCompanies(classroomID int) ([]*exchange.ListedCompany, error) {
 	rows, err := r.db.Query(`
 		SELECT c.id, c.name, c.logo_url, c.total_shares,
 			CAST(COALESCE(
@@ -273,8 +274,8 @@ func (r *ExchangeRepo) GetListedCompanies() ([]*exchange.ListedCompany, error) {
 				END, 0) as change_percent,
 			COALESCE((SELECT SUM(shares) FROM stock_trades WHERE company_id = c.id AND created_at >= datetime('now', '-24 hours')), 0) as volume_24h
 		FROM companies c
-		WHERE c.listed = 1 AND c.status = 'active'
-		ORDER BY c.name`)
+		WHERE c.listed = 1 AND c.status = 'active' AND c.classroom_id = ?
+		ORDER BY c.name`, classroomID)
 	if err != nil {
 		return nil, fmt.Errorf("get listed companies: %w", err)
 	}

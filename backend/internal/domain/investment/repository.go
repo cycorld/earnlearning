@@ -1,8 +1,9 @@
 package investment
 
 type RoundFilter struct {
-	CompanyID int
-	Status    string
+	CompanyID   int
+	Status      string
+	ClassroomID int // #159 회사의 강의실 스코프
 }
 
 type Repository interface {

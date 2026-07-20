@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { useWebSocket } from '@/hooks/use-ws'
+import ClassroomSwitcher from './ClassroomSwitcher'
 
 export default function Header() {
   const { user } = useAuth()
@@ -53,15 +54,18 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center justify-between px-4">
-        <Link to="/feed" className="flex items-center gap-2">
-          <img src="/favicon.svg" alt="" aria-hidden className="h-7 w-7" />
-          <span className="text-lg font-bold tracking-tight text-primary">EarnLearning</span>
-          <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-            {__BUILD_NUMBER__ !== 'dev' ? `#${__BUILD_NUMBER__}` : 'dev'}
-            {' · '}
-            {__COMMIT_SHA__ !== 'local' ? __COMMIT_SHA__.slice(0, 7) : 'local'}
-          </span>
-        </Link>
+        <div className="flex min-w-0 items-center gap-2">
+          <Link to="/feed" className="flex shrink-0 items-center gap-2">
+            <img src="/favicon.svg" alt="" aria-hidden className="h-7 w-7" />
+            <span className="text-lg font-bold tracking-tight text-primary">EarnLearning</span>
+            <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+              {__BUILD_NUMBER__ !== 'dev' ? `#${__BUILD_NUMBER__}` : 'dev'}
+              {' · '}
+              {__COMMIT_SHA__ !== 'local' ? __COMMIT_SHA__.slice(0, 7) : 'local'}
+            </span>
+          </Link>
+          <ClassroomSwitcher />
+        </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" asChild className="relative">
             <Link to="/messages">
