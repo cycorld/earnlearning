@@ -1732,5 +1732,17 @@
       "SPA"
     ],
     "github": null
+  },
+  {
+    "slug": "175-founder-equity-double-count",
+    "title": "회사를 세우면 돈이 두 배? — 같은 지분을 두 번 센 총자산",
+    "date": "2026-07-22",
+    "tags": [
+      "버그수정",
+      "자산",
+      "밸류에이션",
+      "TDD"
+    ],
+    "github": null
   }
 ]

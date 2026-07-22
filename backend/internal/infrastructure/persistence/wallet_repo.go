@@ -347,6 +347,9 @@ func (r *WalletRepo) GetAssetBreakdown(userID int) (*wallet.AssetBreakdown, erro
 		return nil, err
 	}
 
-	ab.Total = ab.Cash + ab.StockValue + ab.CompanyEquity - ab.TotalDebt
+	// #164 총자산 = 현금 + 주식가치 − 부채. CompanyEquity(회사지갑 지분)는 주식가치와
+	// 같은 지분을 다른 방식으로 평가한 값이라 합산하면 이중계상 (회사 설립만으로 자산 2배).
+	// 참고 지표로 계산·노출은 유지하되 총자산에는 넣지 않는다.
+	ab.Total = ab.Cash + ab.StockValue - ab.TotalDebt
 	return ab, nil
 }
