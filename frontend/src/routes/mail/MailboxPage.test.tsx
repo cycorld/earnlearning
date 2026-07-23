@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '@/test/test-utils'
 import MailboxPage from './MailboxPage'
@@ -528,5 +528,113 @@ describe('MailboxPage 딥링크 (#173)', () => {
         .filter((u) => u.startsWith('/mail?'))
       expect(listCalls.some((u) => u.includes('address_id=2'))).toBe(true)
     })
+  })
+})
+
+// ─── #178 반응형 메일함 UI ───────────────────────────────────
+describe('#178 반응형 메일함 UI', () => {
+  const companyApproved = {
+    address_id: 2,
+    kind: 'company',
+    company_id: 7,
+    name: '에이컴퍼니',
+    local_part: 'acompany',
+    email: 'acompany@earnlearning.com',
+    status: 'approved',
+  }
+
+  it('a. 여러 메일함이면 모바일 네이티브 select 를 렌더한다(탭과 별개)', async () => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/mail/mailboxes')
+        return Promise.resolve({ mailboxes: [personalApproved, companyApproved] })
+      return Promise.resolve({ emails: [], total: 0 })
+    })
+
+    const { container } = renderWithProviders(<MailboxPage />)
+
+    // 모바일 select 는 라벨로 접근 가능한 combobox 다
+    const select = (await screen.findByLabelText('메일함 선택')) as HTMLSelectElement
+    expect(select).toBeInTheDocument()
+    // 메일함마다 옵션 하나씩
+    expect(within(select).getAllByRole('option')).toHaveLength(2)
+    // select 래퍼는 모바일 전용(sm:hidden)
+    expect(select.closest('div')!.classList.contains('sm:hidden')).toBe(true)
+    // 탭 래퍼는 데스크톱 전용(hidden sm:block)
+    const tab = screen.getByRole('tab', { name: /홍길동/ })
+    const tabsWrapper = tab.closest('.sm\\:block')!
+    expect(tabsWrapper).not.toBeNull()
+    expect(tabsWrapper.classList.contains('hidden')).toBe(true)
+    expect(container.querySelector('.sm\\:hidden')).not.toBeNull()
+  })
+
+  it('b. 모바일 select 로 회사 메일함을 고르면 address_id=2 로 목록을 재조회한다', async () => {
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/mail/mailboxes')
+        return Promise.resolve({ mailboxes: [personalApproved, companyApproved] })
+      return Promise.resolve({ emails: [], total: 0 })
+    })
+
+    const user = userEvent.setup()
+    renderWithProviders(<MailboxPage />)
+
+    const select = (await screen.findByLabelText('메일함 선택')) as HTMLSelectElement
+    // 기본은 첫 승인 메일함(개인, address_id=1)
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith(
+        expect.stringContaining('address_id=1'),
+      )
+    })
+
+    await user.selectOptions(select, '2')
+
+    await waitFor(() => {
+      expect(mockApiGet).toHaveBeenCalledWith(
+        expect.stringContaining('address_id=2'),
+      )
+    })
+  })
+
+  it('c. 승인 대기 메일함은 비활성 옵션(승인 대기중), 승인 메일함은 활성 옵션이다', async () => {
+    const companyPending = { ...companyApproved, status: 'pending' }
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/mail/mailboxes')
+        return Promise.resolve({ mailboxes: [personalApproved, companyPending] })
+      return Promise.resolve({ emails: [], total: 0 })
+    })
+
+    renderWithProviders(<MailboxPage />)
+
+    // 대기중 옵션: 텍스트에 '승인 대기중' 포함 + 비활성
+    const pendingOption = await screen.findByRole('option', { name: /승인 대기중/ })
+    expect(pendingOption).toBeDisabled()
+    // 승인 옵션(개인): 활성
+    const approvedOption = screen.getByRole('option', { name: /홍길동/ })
+    expect(approvedOption).not.toBeDisabled()
+  })
+
+  it('d. 목록·상세·작성 화면 컨테이너가 데스크톱에서 넓어진다(md:max-w-4xl)', async () => {
+    setupClaimed([])
+    const user = userEvent.setup()
+    const { container } = renderWithProviders(<MailboxPage />)
+
+    // 목록 화면 컨테이너
+    await waitFor(() => {
+      expect(screen.getByText('안녕하세요')).toBeInTheDocument()
+    })
+    expect(container.querySelector('.md\\:max-w-4xl')).not.toBeNull()
+
+    // 메일 행을 열면 상세 화면 컨테이너
+    await user.click(screen.getByText('안녕하세요'))
+    await waitFor(() => {
+      expect(screen.getByText('메일 본문 내용입니다')).toBeInTheDocument()
+    })
+    expect(container.querySelector('.md\\:max-w-4xl')).not.toBeNull()
+
+    // 답장을 열면 작성 화면 컨테이너
+    await user.click(await screen.findByRole('button', { name: /답장/ }))
+    await waitFor(() => {
+      expect(screen.getByText('답장 쓰기')).toBeInTheDocument()
+    })
+    expect(container.querySelector('.md\\:max-w-4xl')).not.toBeNull()
   })
 })

@@ -112,21 +112,27 @@ export default function FeedPage() {
   const [commentLoading, setCommentLoading] = useState<Record<number, boolean>>({})
 
   // Load classrooms
-  const fetchClassrooms = useCallback(async (showLoading = true) => {
-    if (showLoading) setClassroomLoading(true)
-    try {
-      const data = await api.get<Classroom[]>('/classrooms')
-      const list = data ?? []
-      setClassrooms(list)
-      if (list.length > 0) {
-        setSelectedClassroom((prev) => prev ?? list[0].id)
+  // #178 강의실 선택 SSOT: 헤더 ClassroomSwitcher 가 정한 활성 강의실을 그대로 따른다.
+  const activeClassroomId = user?.active_classroom_id
+  const fetchClassrooms = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) setClassroomLoading(true)
+      try {
+        const data = await api.get<Classroom[]>('/classrooms')
+        const list = data ?? []
+        setClassrooms(list)
+        if (list.length > 0) {
+          const active = list.find((c) => c.id === activeClassroomId)
+          setSelectedClassroom((prev) => prev ?? (active ?? list[0]).id)
+        }
+      } catch {
+        setClassrooms([])
+      } finally {
+        if (showLoading) setClassroomLoading(false)
       }
-    } catch {
-      setClassrooms([])
-    } finally {
-      if (showLoading) setClassroomLoading(false)
-    }
-  }, [])
+    },
+    [activeClassroomId],
+  )
 
   useEffect(() => {
     fetchClassrooms()
@@ -463,20 +469,7 @@ export default function FeedPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-5 p-4">
-      {/* Classroom selector (if multiple) */}
-      {classrooms.length > 1 && (
-        <select
-          value={selectedClassroom ?? ''}
-          onChange={(e) => setSelectedClassroom(Number(e.target.value))}
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        >
-          {classrooms.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      )}
+      {/* #178 강의실 선택기는 전역 헤더 ClassroomSwitcher 로 단일화 — 피드 중복 선택기 제거 */}
 
       {/* Channel tabs */}
       {channels.length > 0 && (
