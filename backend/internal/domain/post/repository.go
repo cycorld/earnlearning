@@ -10,7 +10,9 @@ type PostRepository interface {
 	CreatePost(p *Post) (int, error)
 	FindPostByID(postID int) (*Post, error)
 	FindPostByIDWithViewer(postID, viewerUserID int) (*Post, error)
-	UpdatePost(postID int, content string, tags string) error
+	// UpdatePost updates content/tags and optionally channel_id atomically.
+	// channelID nil = 채널 유지 (#175).
+	UpdatePost(postID int, content string, tags string, channelID *int) error
 	DeletePost(postID int) error
 	GetPosts(classroomID, channelID int, page, limit int, tag string, currentUserID int) ([]*Post, int, error)
 

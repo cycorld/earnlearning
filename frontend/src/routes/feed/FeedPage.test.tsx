@@ -1,7 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { renderWithProviders } from '@/test/test-utils'
+import {
+  renderWithProviders,
+  setMockUser,
+  mockAdmin,
+  mockStudent,
+} from '@/test/test-utils'
 import {
   allMockPosts,
   mockChannels,
@@ -19,13 +24,14 @@ import FeedPage from './FeedPage'
 
 const mockApiGet = vi.fn()
 const mockApiPost = vi.fn()
+const mockApiPut = vi.fn()
 const mockApiDel = vi.fn()
 
 vi.mock('@/lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
-    put: vi.fn(),
+    put: (...args: unknown[]) => mockApiPut(...args),
     del: (...args: unknown[]) => mockApiDel(...args),
   },
   ApiError: class extends Error {
@@ -56,6 +62,7 @@ function setupDefaultApiMocks() {
   })
 
   mockApiPost.mockImplementation(() => Promise.resolve({ liked: true, reward: 0 }))
+  mockApiPut.mockImplementation(() => Promise.resolve({}))
   mockApiDel.mockImplementation(() => Promise.resolve({}))
 }
 
@@ -560,5 +567,175 @@ describe('FeedPage API 에러 처리', () => {
     await waitFor(() => {
       expect(screen.getByText('클래스룸 참여')).toBeInTheDocument()
     })
+  })
+})
+
+describe('FeedPage 게시물 수정 - 관리자 카테고리 변경 (#175)', () => {
+  // 학생(id=2)이 '자유'(id=2) 채널에 쓴 글. 관리자(id=1)와 작성자가 다름.
+  const studentPost = {
+    ...allMockPosts[0],
+    id: 501,
+    author: { id: 2, name: '김학생', avatar_url: '', student_id: '2026000001' },
+    channel: mockChannels[1], // { id: 2, name: '자유' }
+    content: '학생이 쓴 글입니다',
+    tags: [] as string[],
+  }
+
+  function setupSinglePost(post: typeof studentPost) {
+    const data = paginatePosts([post], 1, 20)
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/classrooms') return Promise.resolve(mockClassrooms)
+      if (path.includes('/channels')) return Promise.resolve(mockChannels)
+      if (path.includes('/posts?')) return Promise.resolve(data)
+      if (path.match(/\/posts\/\d+\/comments/))
+        return Promise.resolve(paginateComments(mockCommentsForPost1, 1, 50))
+      return Promise.resolve([])
+    })
+  }
+
+  // 수정 연필 트리거는 접근 가능한 이름이 없으므로 고유 className 으로 찾는다.
+  function findEditPencil() {
+    return screen
+      .getAllByRole('button')
+      .find((b) => b.className.includes('hover:bg-muted'))
+  }
+
+  afterEach(() => {
+    setMockUser(mockStudent)
+  })
+
+  it('관리자가 학생 글의 수정 다이얼로그를 열면 카테고리 선택이 표시된다', async () => {
+    setMockUser(mockAdmin)
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    setupSinglePost(studentPost)
+
+    renderWithProviders(<FeedPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/학생이 쓴 글입니다/)).toBeInTheDocument()
+    })
+
+    await user.click(findEditPencil()!)
+    await user.click(await screen.findByText('수정'))
+
+    const select = (await screen.findByLabelText('카테고리')) as HTMLSelectElement
+    expect(select).toBeInTheDocument()
+    // 모든 채널이 옵션으로 노출된다
+    expect(within(select).getByRole('option', { name: '공지' })).toBeInTheDocument()
+    expect(within(select).getByRole('option', { name: '자유' })).toBeInTheDocument()
+    expect(within(select).getByRole('option', { name: '과제' })).toBeInTheDocument()
+  })
+
+  it('학생이 자기 글의 수정 다이얼로그를 열면 카테고리 선택이 없다', async () => {
+    setMockUser(mockStudent) // 기본값이지만 명시
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    const ownPost = { ...studentPost, id: 502 } // author id=2 = mockStudent
+    setupSinglePost(ownPost)
+
+    renderWithProviders(<FeedPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/학생이 쓴 글입니다/)).toBeInTheDocument()
+    })
+
+    await user.click(findEditPencil()!)
+    await user.click(await screen.findByText('수정'))
+
+    // 수정 다이얼로그는 열리지만 카테고리 선택은 없어야 한다
+    await screen.findByText('게시물 수정')
+    expect(screen.queryByLabelText('카테고리')).not.toBeInTheDocument()
+  })
+
+  it('관리자가 카테고리를 변경해 저장하면 channel_id 를 전송하고 뱃지가 갱신된다', async () => {
+    setMockUser(mockAdmin)
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    setupSinglePost(studentPost)
+    // 백엔드 PUT 응답의 channel 은 null (채널명 join 안 함) — 로컬 channels 로 해석되어야 함
+    mockApiPut.mockResolvedValue({
+      id: 501,
+      channel: null,
+      content: '학생이 쓴 글입니다',
+      tags: [],
+    })
+
+    renderWithProviders(<FeedPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/학생이 쓴 글입니다/)).toBeInTheDocument()
+    })
+
+    // 초기 뱃지 = 자유 (카드 내부로 스코프해서 채널 탭과 구분)
+    const card = screen
+      .getByText(/학생이 쓴 글입니다/)
+      .closest('[data-slot="card"]') as HTMLElement
+    expect(within(card).getByText('자유')).toBeInTheDocument()
+
+    await user.click(findEditPencil()!)
+    await user.click(await screen.findByText('수정'))
+
+    const select = (await screen.findByLabelText('카테고리')) as HTMLSelectElement
+    await user.selectOptions(select, '1') // 공지 (id=1)
+
+    await user.click(screen.getByRole('button', { name: '수정' }))
+
+    await waitFor(() => {
+      expect(mockApiPut).toHaveBeenCalledWith(
+        '/posts/501',
+        expect.objectContaining({ channel_id: 1 }),
+      )
+    })
+
+    // 응답 channel 이 null 이어도 로컬 channels 목록에서 '공지'로 해석되어 뱃지가 갱신된다
+    await waitFor(() => {
+      const updatedCard = screen
+        .getByText(/학생이 쓴 글입니다/)
+        .closest('[data-slot="card"]') as HTMLElement
+      expect(within(updatedCard).getByText('공지')).toBeInTheDocument()
+      expect(within(updatedCard).queryByText('자유')).not.toBeInTheDocument()
+    })
+  })
+
+  it('학생 저장 시 payload 에 channel_id 키가 없다', async () => {
+    setMockUser(mockStudent)
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    const ownPost = { ...studentPost, id: 503 }
+    setupSinglePost(ownPost)
+    mockApiPut.mockResolvedValue({
+      id: 503,
+      channel: null,
+      content: '학생이 쓴 글입니다',
+      tags: [],
+    })
+
+    renderWithProviders(<FeedPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/학생이 쓴 글입니다/)).toBeInTheDocument()
+    })
+
+    await user.click(findEditPencil()!)
+    await user.click(await screen.findByText('수정'))
+    await screen.findByText('게시물 수정')
+
+    await user.click(screen.getByRole('button', { name: '수정' }))
+
+    await waitFor(() => {
+      expect(mockApiPut).toHaveBeenCalled()
+    })
+    const body = mockApiPut.mock.calls[0][1] as Record<string, unknown>
+    expect(Object.keys(body)).not.toContain('channel_id')
+  })
+
+  it('관리자는 다른 사람이 쓴 글에도 수정 연필 버튼이 보인다 (회귀)', async () => {
+    setMockUser(mockAdmin)
+    setupSinglePost(studentPost) // 작성자 id=2, 관리자 id=1
+
+    renderWithProviders(<FeedPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/학생이 쓴 글입니다/)).toBeInTheDocument()
+    })
+
+    expect(findEditPencil()).toBeTruthy()
   })
 })

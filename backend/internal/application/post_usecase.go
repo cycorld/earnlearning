@@ -180,8 +180,9 @@ func (uc *PostUsecase) CreatePost(userID int, role string, input CreatePostInput
 }
 
 type UpdatePostInput struct {
-	Content string `json:"content"`
-	Tags    string `json:"tags"`
+	Content   string `json:"content"`
+	Tags      string `json:"tags"`
+	ChannelID *int   `json:"channel_id"` // 카테고리 변경용 — nil 이면 채널 유지 (#175)
 }
 
 func (uc *PostUsecase) UpdatePost(postID, userID int, role string, input UpdatePostInput) (*post.Post, error) {
@@ -193,6 +194,26 @@ func (uc *PostUsecase) UpdatePost(postID, userID int, role string, input UpdateP
 
 	if p.AuthorID != userID && role != "admin" {
 		return nil, fmt.Errorf("본인이 작성한 게시글만 수정할 수 있습니다")
+	}
+
+	// 카테고리(채널) 변경은 관리자만 가능 (#175). 본문 저장 전에 검증하여
+	// 이동이 거부되면 본문/태그도 건드리지 않는다. nil 이거나 현재 채널과 같으면 no-op.
+	moveChannel := input.ChannelID != nil && *input.ChannelID != p.ChannelID
+	if moveChannel {
+		if role != "admin" {
+			return nil, fmt.Errorf("카테고리는 관리자만 변경할 수 있습니다")
+		}
+		newCh, err := uc.postRepo.FindChannelByID(*input.ChannelID)
+		if err != nil {
+			return nil, err
+		}
+		oldCh, err := uc.postRepo.FindChannelByID(p.ChannelID)
+		if err != nil {
+			return nil, err
+		}
+		if newCh.ClassroomID != oldCh.ClassroomID {
+			return nil, fmt.Errorf("같은 강의실의 채널로만 이동할 수 있습니다")
+		}
 	}
 
 	// Merge user-provided tags with auto-extracted tags from content
@@ -228,7 +249,13 @@ func (uc *PostUsecase) UpdatePost(postID, userID int, role string, input UpdateP
 		existing[id] = true
 	}
 
-	if err := uc.postRepo.UpdatePost(postID, input.Content, string(tagsJSON)); err != nil {
+	// 본문/태그 + (관리자 이동 시) 채널을 단일 원자적 UPDATE 로 반영 (#175)
+	// — 채널 변경 실패 시 본문만 저장되는 부분 반영 방지.
+	var newChannelID *int
+	if moveChannel {
+		newChannelID = input.ChannelID
+	}
+	if err := uc.postRepo.UpdatePost(postID, input.Content, string(tagsJSON), newChannelID); err != nil {
 		return nil, fmt.Errorf("게시글 수정 실패: %w", err)
 	}
 
