@@ -1732,5 +1732,17 @@
       "SPA"
     ],
     "github": null
+  },
+  {
+    "slug": "175-admin-post-category-edit",
+    "title": "잘못 올라간 글, 관리자가 옮겨주기 — 게시물 카테고리 수정",
+    "date": "2026-07-23",
+    "tags": [
+      "피드",
+      "권한",
+      "TDD",
+      "관리자"
+    ],
+    "github": null
   }
 ]

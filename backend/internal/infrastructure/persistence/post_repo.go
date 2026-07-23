@@ -133,8 +133,15 @@ func (r *PostRepo) FindPostByIDWithViewer(postID, viewerUserID int) (*post.Post,
 	return p, nil
 }
 
-func (r *PostRepo) UpdatePost(postID int, content string, tags string) error {
-	_, err := r.db.Exec("UPDATE posts SET content = ?, tags = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", content, tags, postID)
+// UpdatePost updates content/tags and optionally channel_id in one atomic
+// statement (#175). channelID nil → 채널 유지: NULL 바인딩 + COALESCE 로
+// 단일 UPDATE 안에서 처리해 부분 반영(본문만 저장되고 채널 이동 실패)을 막는다.
+func (r *PostRepo) UpdatePost(postID int, content string, tags string, channelID *int) error {
+	var ch interface{}
+	if channelID != nil {
+		ch = *channelID
+	}
+	_, err := r.db.Exec("UPDATE posts SET content = ?, tags = ?, channel_id = COALESCE(?, channel_id), updated_at = CURRENT_TIMESTAMP WHERE id = ?", content, tags, ch, postID)
 	if err != nil {
 		return fmt.Errorf("update post: %w", err)
 	}

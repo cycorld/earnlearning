@@ -96,6 +96,7 @@ export default function FeedPage() {
   const [editPostId, setEditPostId] = useState<number | null>(null)
   const [editPostContent, setEditPostContent] = useState('')
   const [editPostTags, setEditPostTags] = useState('')
+  const [editPostChannelId, setEditPostChannelId] = useState<number | null>(null)
   const [editPostOpen, setEditPostOpen] = useState(false)
   const [editing, setEditing] = useState(false)
 
@@ -275,6 +276,7 @@ export default function FeedPage() {
       try { tags = JSON.parse(post.tags) } catch { tags = [] }
     }
     setEditPostTags(tags.join(', '))
+    setEditPostChannelId(post.channel?.id ?? null)
     setEditPostOpen(true)
   }
 
@@ -287,16 +289,37 @@ export default function FeedPage() {
         .split(',')
         .map((t) => t.trim().replace(/^#/, ''))
         .filter(Boolean)
-      const updated = await api.put<Post>(`/posts/${editPostId}`, {
+      const isAdmin = user?.role === 'admin'
+      const payload: { content: string; tags: string; channel_id?: number } = {
         content: editPostContent.trim(),
         tags: JSON.stringify(tags),
-      })
+      }
+      // Admin 만 카테고리(채널) 이동 가능. 서버가 클래스룸 경계를 검증한다.
+      if (isAdmin && editPostChannelId != null) {
+        payload.channel_id = editPostChannelId
+      }
+      const updated = await api.put<Post>(`/posts/${editPostId}`, payload)
       setPosts((prev) =>
-        prev.map((p) => (p.id === editPostId ? { ...p, content: updated.content, tags: updated.tags } : p)),
+        prev.map((p) =>
+          p.id === editPostId
+            ? {
+                ...p,
+                content: updated.content,
+                tags: updated.tags,
+                // PUT 응답의 channel 은 null 이므로 로컬 channels 목록에서 이름을 해석한다.
+                channel:
+                  updated.channel ??
+                  (isAdmin && editPostChannelId != null
+                    ? channels.find((c) => c.id === editPostChannelId) ?? p.channel
+                    : p.channel),
+              }
+            : p,
+        ),
       )
       toast.success('게시물이 수정되었습니다.')
       setEditPostOpen(false)
       setEditPostId(null)
+      setEditPostChannelId(null)
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : '게시물 수정에 실패했습니다.'
@@ -556,6 +579,26 @@ export default function FeedPage() {
             <DialogTitle>게시물 수정</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {user?.role === 'admin' && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-post-channel">카테고리</Label>
+                <select
+                  id="edit-post-channel"
+                  value={editPostChannelId ?? ''}
+                  onChange={(e) =>
+                    setEditPostChannelId(Number(e.target.value) || null)
+                  }
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">카테고리를 선택하세요</option>
+                  {channels.map((ch) => (
+                    <option key={ch.id} value={ch.id}>
+                      {ch.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>내용</Label>
               <MarkdownEditor
