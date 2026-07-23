@@ -79,14 +79,15 @@ export default function ClassroomSwitcher() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
+          {/* #178 모바일에선 헤더 2줄째 전체 너비, 데스크톱에선 기존 컴팩트 크기 */}
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 min-w-0 gap-1 px-2 text-xs text-muted-foreground"
+            className="h-9 w-full min-w-0 justify-start gap-1 px-2 text-xs text-muted-foreground sm:h-8 sm:w-auto"
             disabled={switching}
           >
             <GraduationCap className="h-3.5 w-3.5 shrink-0" />
-            <span className="max-w-24 truncate sm:max-w-44">
+            <span className="min-w-0 flex-1 truncate text-left sm:max-w-44 sm:flex-none">
               {active ? active.name : '강의실 선택'}
             </span>
             <ChevronDown className="h-3 w-3 shrink-0" />

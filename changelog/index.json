@@ -1756,5 +1756,17 @@
       "인프라"
     ],
     "github": null
+  },
+  {
+    "slug": "178-responsive-header-mailbox",
+    "title": "좁은 헤더와 메일함 — 화면 크기에 맞는 선택 UI 만들기",
+    "date": "2026-07-23",
+    "tags": [
+      "반응형",
+      "헤더",
+      "메일함",
+      "UX"
+    ],
+    "github": null
   }
 ]

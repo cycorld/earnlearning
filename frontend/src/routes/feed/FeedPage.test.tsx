@@ -739,3 +739,61 @@ describe('FeedPage 게시물 수정 - 관리자 카테고리 변경 (#175)', () 
     expect(findEditPencil()).toBeTruthy()
   })
 })
+
+describe('#178 강의실 선택 SSOT', () => {
+  // mock-data 의 mockClassrooms 는 1개뿐이라 여기서 2개를 별도로 구성한다.
+  const twoClassrooms = [
+    { id: 1, name: 'A반', invite_code: 'AAA111' },
+    { id: 2, name: 'B반', invite_code: 'BBB222' },
+  ]
+
+  function setupTwoClassrooms() {
+    const page1 = paginatePosts(allMockPosts, 1, 20)
+    mockApiGet.mockImplementation((path: string) => {
+      if (path === '/classrooms') return Promise.resolve(twoClassrooms)
+      if (path.includes('/channels')) return Promise.resolve(mockChannels)
+      if (path.includes('/posts?')) return Promise.resolve(page1)
+      if (path.match(/\/posts\/\d+\/comments/))
+        return Promise.resolve(paginateComments(mockCommentsForPost1, 1, 50))
+      return Promise.resolve([])
+    })
+  }
+
+  afterEach(() => {
+    setMockUser(mockStudent)
+  })
+
+  it('user.active_classroom_id 를 존중해 그 강의실 게시물을 조회한다(list[0] 아님)', async () => {
+    setMockUser({ ...mockStudent, active_classroom_id: 2 })
+    setupTwoClassrooms()
+
+    renderWithProviders(<FeedPage />)
+
+    await waitFor(() => {
+      const postCalls = mockApiGet.mock.calls
+        .map((c) => String(c[0]))
+        .filter((u) => u.includes('/posts?'))
+      expect(postCalls.some((u) => u.includes('classroom_id=2'))).toBe(true)
+    })
+    // 활성 강의실(2)만 조회하고 첫 강의실(1)로 조회하지 않는다
+    const postCalls = mockApiGet.mock.calls
+      .map((c) => String(c[0]))
+      .filter((u) => u.includes('/posts?'))
+    expect(postCalls.some((u) => u.includes('classroom_id=1'))).toBe(false)
+  })
+
+  it('강의실이 여러 개여도 피드에는 강의실 선택기(combobox)를 렌더하지 않는다', async () => {
+    setMockUser(mockStudent) // 기본값이지만 명시
+    setupTwoClassrooms()
+
+    renderWithProviders(<FeedPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/테스트 게시글 #1번/)).toBeInTheDocument()
+    })
+    // 다이얼로그가 닫힌 기본 상태에는 combobox 가 없다
+    expect(screen.queryByRole('combobox')).toBeNull()
+    // 강의실 이름이 옵션으로 렌더되지 않는다
+    expect(screen.queryByText('B반')).toBeNull()
+  })
+})
