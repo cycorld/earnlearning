@@ -20,7 +20,7 @@
 - **서버 빌드 절대 금지**: t3.small(2GB) 리소스 고갈로 SSH 끊김/서비스 다운 위험
 - 상세: [docs/DEPLOY.md](docs/DEPLOY.md) | 핫픽스: [docs/HOTFIX.md](docs/HOTFIX.md)
 
-### 배포 명령어 (로컬에서 실행)
+### 배포 명령어 (빌드서버 cycorld에서 실행)
 ```bash
 ./deploy-remote.sh              # 1단계: 빌드 → GHCR push → Stage 배포
 ./deploy-remote.sh promote      # 2단계: Stage 확인 후 Prod blue-green 배포
@@ -29,9 +29,9 @@
 ```
 
 ### 배포 플로우
-1. PR 머지 후 로컬에서 `./deploy-remote.sh` 실행
+1. PR 머지 후 빌드서버(cycorld) 레포에서 main을 `git pull --ff-only`로 최신화한 뒤 `./deploy-remote.sh` 실행 (스크립트가 main·clean·origin/main 동기화를 검증 후 빌드)
 2. https://stage.earnlearning.com 에서 확인
-3. `./deploy-remote.sh promote` 로 Prod 배포
+3. `./deploy-remote.sh promote` 로 Prod 배포 (Stage 컨테이너의 실제 이미지 태그를 그대로 승격)
 4. 문제 시 `./deploy-remote.sh rollback` 즉시 롤백
 
 ### 서버 직접 배포 (SSH)
@@ -121,9 +121,9 @@ created: YYYY-MM-DD
 - **main 직접 푸시 금지**: 모든 개발은 feature 브랜치에서 진행한다.
 - **PR 생성 필수**: 작업 완료 후 PR을 생성하고 사용자가 리뷰 후 머지한다.
 - **브랜치 네이밍**: `feat/기능명`, `fix/버그명`, `chore/작업명` 형식 사용.
-- **배포**: 로컬에서 `./deploy-remote.sh` (빌드→GHCR→Stage) → 확인 → `./deploy-remote.sh promote` (Prod blue-green).
+- **배포**: 빌드서버에서 `./deploy-remote.sh` (빌드→GHCR→Stage) → 확인 → `./deploy-remote.sh promote` (Prod blue-green).
 - **EC2 서버에서 빌드 금지**: t3.small 리소스 고갈 방지. 빌드는 cycorld 서버에서 수행.
-- **빌드서버 리포**: `cycorld:~/Workspace/earnlearning` (deploy-remote.sh가 자동 git pull + 빌드)
+- **빌드서버 리포**: `cycorld:~/Workspace/earnlearning` — deploy-remote.sh는 자동 pull 하지 않음. main·clean·origin/main 동기화 상태를 검증한 뒤 로컬 빌드.
 
 ## 개발일지 (Changelog)
 - **PR 생성 시 필수**: 모든 PR에 대해 `changelog/`에 교육용 개발일지 엔트리를 추가한다.
