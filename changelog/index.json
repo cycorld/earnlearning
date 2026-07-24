@@ -1,5 +1,11 @@
 [
   {
+    "slug": "180-main-backend-test-compilation",
+    "title": "전체 테스트의 컴파일 계약 복구",
+    "date": "2026-07-24",
+    "tags": ["테스트", "Go", "TDD", "컴파일"]
+  },
+  {
     "slug": "001-project-kickoff",
     "title": "프로젝트 기획과 설계: 아이디어를 문서로 만들기",
     "date": "2026-03-13",
