@@ -1768,5 +1768,12 @@
       "UX"
     ],
     "github": null
+  },
+  {
+    "slug": "179-markdown-upload",
+    "title": "Markdown 문서도 과제 첨부파일로 올리기",
+    "date": "2026-07-24",
+    "tags": ["마크다운", "파일업로드", "보안", "TDD"],
+    "github": null
   }
 ]
