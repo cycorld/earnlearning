@@ -60,6 +60,12 @@ func (f *fakeWiki) DeleteDoc(slug string) error {
 	delete(f.docs, slug)
 	return nil
 }
+func (f *fakeWiki) GetDoc(slug string) (string, string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	doc := f.docs[slug]
+	return doc.title, doc.body, nil
+}
 func (f *fakeWiki) Search(query string, scope []string, limit int) ([]*chat.WikiSearchHit, error) {
 	return nil, nil
 }

@@ -26,10 +26,10 @@ func setupExchangeTestDB(t *testing.T) (*ExchangeRepo, int) {
 	return NewExchangeRepo(db), int(ownerID)
 }
 
-func insertListedCompany(t *testing.T, repo *ExchangeRepo, ownerID int, name string, totalShares int) int {
+func insertListedCompany(t *testing.T, repo *ExchangeRepo, ownerID, classroomID int, name string, totalShares int) int {
 	t.Helper()
-	res, err := repo.db.Exec(`INSERT INTO companies (owner_id, name, initial_capital, total_shares, listed, status)
-		VALUES (?, ?, 1000000, ?, 1, 'active')`, ownerID, name, totalShares)
+	res, err := repo.db.Exec(`INSERT INTO companies (owner_id, classroom_id, name, initial_capital, total_shares, listed, status)
+		VALUES (?, ?, ?, 1000000, ?, 1, 'active')`, ownerID, classroomID, name, totalShares)
 	if err != nil {
 		t.Fatalf("insert company %s: %v", name, err)
 	}
@@ -52,8 +52,8 @@ func insertOrder(t *testing.T, repo *ExchangeRepo, companyID, userID int, orderT
 // GetCompanyTrades returns a company's executed trades newest-first, capped by limit.
 func TestGetCompanyTrades(t *testing.T) {
 	repo, ownerID := setupExchangeTestDB(t)
-	co := insertListedCompany(t, repo, ownerID, "Alpha", 10000)
-	other := insertListedCompany(t, repo, ownerID, "Bravo", 10000)
+	co := insertListedCompany(t, repo, ownerID, 1, "Alpha", 10000)
+	other := insertListedCompany(t, repo, ownerID, 1, "Bravo", 10000)
 
 	// 3 trades for `co` at increasing time, plus 1 for another company (must be excluded).
 	insertTrade := func(companyID, price, shares, minutesAgo int) {
@@ -108,7 +108,7 @@ func TestGetListedCompanies_LastPriceFallback(t *testing.T) {
 	repo, ownerID := setupExchangeTestDB(t)
 
 	// Company A: has a funded round (price 5000) AND a later trade (price 7000) → trade wins.
-	a := insertListedCompany(t, repo, ownerID, "Alpha", 10000)
+	a := insertListedCompany(t, repo, ownerID, 1, "Alpha", 10000)
 	if _, err := repo.db.Exec(`INSERT INTO investment_rounds
 		(company_id, target_amount, offered_percent, price_per_share, new_shares, status, funded_at)
 		VALUES (?, 1000000, 0.1, 5000, 200, 'funded', datetime('now','-2 hours'))`, a); err != nil {
@@ -124,7 +124,7 @@ func TestGetListedCompanies_LastPriceFallback(t *testing.T) {
 	}
 
 	// Company B: only a funded round (price 5000), no trades → falls back to round price.
-	b := insertListedCompany(t, repo, ownerID, "Bravo", 10000)
+	b := insertListedCompany(t, repo, ownerID, 1, "Bravo", 10000)
 	if _, err := repo.db.Exec(`INSERT INTO investment_rounds
 		(company_id, target_amount, offered_percent, price_per_share, new_shares, status, funded_at)
 		VALUES (?, 1000000, 0.1, 5000, 200, 'funded', datetime('now','-3 hours'))`, b); err != nil {
@@ -133,15 +133,18 @@ func TestGetListedCompanies_LastPriceFallback(t *testing.T) {
 
 	// Company C: no trades, no funded round, valuation 30,000,000 / 10,000 shares
 	// → falls back to company valuation per share (3000).
-	c := insertListedCompany(t, repo, ownerID, "Charlie", 10000)
+	c := insertListedCompany(t, repo, ownerID, 1, "Charlie", 10000)
 	if _, err := repo.db.Exec(`UPDATE companies SET valuation = 30000000 WHERE id = ?`, c); err != nil {
 		t.Fatalf("set valuation C: %v", err)
 	}
 
 	// Company D: no trades, no round, valuation 0 → 0 (true empty state).
-	d := insertListedCompany(t, repo, ownerID, "Delta", 10000)
+	d := insertListedCompany(t, repo, ownerID, 1, "Delta", 10000)
 
-	companies, err := repo.GetListedCompanies()
+	// Company E belongs to another classroom and must not leak into classroom 1.
+	e := insertListedCompany(t, repo, ownerID, 2, "Echo", 10000)
+
+	companies, err := repo.GetListedCompanies(1)
 	if err != nil {
 		t.Fatalf("GetListedCompanies: %v", err)
 	}
@@ -149,6 +152,9 @@ func TestGetListedCompanies_LastPriceFallback(t *testing.T) {
 	prices := map[int]int{}
 	for _, lc := range companies {
 		prices[lc.ID] = lc.LastPrice
+	}
+	if _, ok := prices[e]; ok {
+		t.Errorf("Echo (classroom 2) unexpectedly returned for classroom 1")
 	}
 	if prices[a] != 7000 {
 		t.Errorf("Alpha last_price = %d, want 7000 (last trade)", prices[a])
