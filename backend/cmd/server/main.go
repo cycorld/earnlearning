@@ -18,7 +18,9 @@ import (
 	"github.com/earnlearning/backend/internal/infrastructure/persistence"
 	"github.com/earnlearning/backend/internal/infrastructure/push"
 	"github.com/earnlearning/backend/internal/infrastructure/ragindex"
+	"github.com/earnlearning/backend/internal/infrastructure/rybbit"
 	"github.com/earnlearning/backend/internal/infrastructure/scheduler"
+	"github.com/earnlearning/backend/internal/infrastructure/urlcheck"
 	"github.com/earnlearning/backend/internal/infrastructure/userdbadmin"
 	"github.com/earnlearning/backend/internal/infrastructure/websearch"
 	"github.com/earnlearning/backend/internal/interfaces/http/handler"
@@ -137,6 +139,25 @@ func main() {
 	mailRepo := persistence.NewMailRepo(db)
 	mailUC := application.NewMailUseCase(mailRepo, emailSvc, notifUC, cfg.PrivateUploadPath)
 
+	// #181 회사 등록 서비스 — URL 검증(SSRF 방어) + Rybbit HMAC 프로비저닝.
+	// 설정이 없으면 Noop 프로비저너 → 연동 요청은 503 (검증/등록 기능은 그대로 동작).
+	// 잘못된 설정(하나만 설정 / 시크릿 32자 미만)도 fail-closed 로 Noop + 경고 로그.
+	companyServiceRepo := persistence.NewCompanyServiceRepo(db)
+	rybbitProvisioner, rybbitErr := rybbit.New(cfg.RybbitAPIBaseURL, cfg.RybbitProvisionSecret)
+	switch {
+	case rybbitErr != nil:
+		// 에러 문자열에 시크릿 값은 절대 포함되지 않는다 (rybbit.New 보장).
+		log.Printf("Rybbit provisioning disabled (misconfigured): %v", rybbitErr)
+	case cfg.RybbitAPIBaseURL == "":
+		log.Printf("Rybbit provisioning disabled (RYBBIT_API_BASE_URL / RYBBIT_PROVISION_SECRET not set)")
+	default:
+		// 시크릿은 절대 로그에 남기지 않는다.
+		log.Printf("Rybbit provisioning enabled (base=%s)", cfg.RybbitAPIBaseURL)
+	}
+	companyServiceUC := application.NewCompanyServiceUseCase(
+		companyRepo, companyServiceRepo, userRepo, walletRepo, urlcheck.NewChecker(), rybbitProvisioner,
+	)
+
 	// Task repo (reads tasks/ markdown files)
 	tasksPath := os.Getenv("TASKS_PATH")
 	if tasksPath == "" {
@@ -156,7 +177,7 @@ func main() {
 
 	// OAuth
 	oauthRepo := persistence.NewOAuthRepo(db)
-	oauthUC := application.NewOAuthUseCase(oauthRepo, userRepo)
+	oauthUC := application.NewOAuthUseCase(oauthRepo, userRepo, walletRepo)
 
 	// 학생 DB 프로비저너 (POSTGRES_ADMIN_URL 이 비면 NoopProvisioner 가 사용됨)
 	userDBProvisioner, err := userdbadmin.New(userdbadmin.Config{
@@ -276,6 +297,8 @@ func main() {
 		UserDB:       handler.NewUserDBHandler(userDBUC),
 		Milestone:    handler.NewMilestoneHandler(milestoneUC),
 		Mail:         handler.NewMailHandler(mailUC, cfg.MailWebhookSecret),
+
+		CompanyService: handler.NewCompanyServiceHandler(companyServiceUC), // #181
 	}
 	if llmUC != nil {
 		handlers.LLM = handler.NewLLMHandler(llmUC)

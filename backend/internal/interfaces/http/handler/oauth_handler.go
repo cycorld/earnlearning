@@ -214,7 +214,7 @@ func (h *OAuthHandler) Revoke(c echo.Context) error {
 // UserInfo godoc
 //
 //	@Summary		사용자 정보 (OAuth)
-//	@Description	OAuth 액세스 토큰으로 사용자 정보 조회. 응답: id, email, name, department, bio, avatar_url
+//	@Description	OAuth 액세스 토큰으로 사용자 정보 조회. 응답: id, sub, email, name, department, bio, avatar_url, role, status, active, approved, active_classroom_id, camp_eligible (#181 Rybbit SSO 계약: sub/active 필수)
 //	@Tags			OAuth
 //	@Produce		json
 //	@Security		BearerAuth

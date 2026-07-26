@@ -3,16 +3,16 @@ package config
 import "os"
 
 type Config struct {
-	Port            string
-	DBPath          string
-	UploadPath      string
+	Port              string
+	DBPath            string
+	UploadPath        string
 	PrivateUploadPath string // #125 비공개 첨부 (static 서빙 안 함)
-	JWTSecret       string
-	AdminEmail      string
-	AdminPassword   string
-	VAPIDPublicKey  string
-	VAPIDPrivateKey string
-	VAPIDSubject    string
+	JWTSecret         string
+	AdminEmail        string
+	AdminPassword     string
+	VAPIDPublicKey    string
+	VAPIDPrivateKey   string
+	VAPIDSubject      string
 	// SES Email
 	SESRegion          string
 	SESAccessKeyID     string
@@ -30,31 +30,38 @@ type Config struct {
 	PublicBaseURL string
 	// 학생 메일함 inbound webhook 시크릿 (#166). 비면 /api/mail/inbound 비활성(503).
 	MailWebhookSecret string
+	// Rybbit(웹 애널리틱스) EarnLearning 프로비저닝 API (#181).
+	// 둘 다 비면 연동 비활성(503). 하나만 설정되거나 시크릿이 32자 미만이면
+	// 잘못된 설정 → fail-closed (rybbit.New 가 Noop + 에러 반환, 시크릿 비로깅).
+	RybbitAPIBaseURL      string
+	RybbitProvisionSecret string
 }
 
 func Load() *Config {
 	return &Config{
-		Port:            getEnv("PORT", "8080"),
-		DBPath:          getEnv("DB_PATH", "./data/earnlearning.db"),
-		UploadPath:      getEnv("UPLOAD_PATH", "./data/uploads"),
-		PrivateUploadPath: getEnv("PRIVATE_UPLOAD_PATH", "./data/private_uploads"),
-		JWTSecret:       getEnv("JWT_SECRET", "dev-secret-change-in-production"),
-		AdminEmail:      getEnv("ADMIN_EMAIL", "admin@example.com"),
-		AdminPassword:   getEnv("ADMIN_PASSWORD", "change-this"),
-		VAPIDPublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),
-		VAPIDPrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
-		VAPIDSubject:       getEnv("VAPID_SUBJECT", "mailto:admin@example.com"),
-		SESRegion:          getEnv("SES_REGION", "ap-northeast-2"),
-		SESAccessKeyID:     getEnv("AWS_ACCESS_KEY_ID", ""),
-		SESSecretAccessKey: getEnv("AWS_SECRET_ACCESS_KEY", ""),
-		SESFromEmail:       getEnv("SES_FROM_EMAIL", ""),
-		LLMProxyBaseURL:    getEnv("LLM_PROXY_BASE_URL", "https://llm.cycorld.com"),
-		LLMAdminAPIKey:     getEnv("LLM_ADMIN_API_KEY", ""),
-		LLMAffiliation:     getEnv("LLM_AFFILIATION", "이화여대"),
-		Context7APIKey:     getEnv("CONTEXT7_API_KEY", ""),
-		NotionToken:        getEnv("NOTION_INTEGRATION_TOKEN", ""),
-		PublicBaseURL:      getEnv("PUBLIC_BASE_URL", "https://earnlearning.com"),
-		MailWebhookSecret:  getEnv("MAIL_WEBHOOK_SECRET", ""),
+		Port:                  getEnv("PORT", "8080"),
+		DBPath:                getEnv("DB_PATH", "./data/earnlearning.db"),
+		UploadPath:            getEnv("UPLOAD_PATH", "./data/uploads"),
+		PrivateUploadPath:     getEnv("PRIVATE_UPLOAD_PATH", "./data/private_uploads"),
+		JWTSecret:             getEnv("JWT_SECRET", "dev-secret-change-in-production"),
+		AdminEmail:            getEnv("ADMIN_EMAIL", "admin@example.com"),
+		AdminPassword:         getEnv("ADMIN_PASSWORD", "change-this"),
+		VAPIDPublicKey:        getEnv("VAPID_PUBLIC_KEY", ""),
+		VAPIDPrivateKey:       getEnv("VAPID_PRIVATE_KEY", ""),
+		VAPIDSubject:          getEnv("VAPID_SUBJECT", "mailto:admin@example.com"),
+		SESRegion:             getEnv("SES_REGION", "ap-northeast-2"),
+		SESAccessKeyID:        getEnv("AWS_ACCESS_KEY_ID", ""),
+		SESSecretAccessKey:    getEnv("AWS_SECRET_ACCESS_KEY", ""),
+		SESFromEmail:          getEnv("SES_FROM_EMAIL", ""),
+		LLMProxyBaseURL:       getEnv("LLM_PROXY_BASE_URL", "https://llm.cycorld.com"),
+		LLMAdminAPIKey:        getEnv("LLM_ADMIN_API_KEY", ""),
+		LLMAffiliation:        getEnv("LLM_AFFILIATION", "이화여대"),
+		Context7APIKey:        getEnv("CONTEXT7_API_KEY", ""),
+		NotionToken:           getEnv("NOTION_INTEGRATION_TOKEN", ""),
+		PublicBaseURL:         getEnv("PUBLIC_BASE_URL", "https://earnlearning.com"),
+		MailWebhookSecret:     getEnv("MAIL_WEBHOOK_SECRET", ""),
+		RybbitAPIBaseURL:      getEnv("RYBBIT_API_BASE_URL", ""),
+		RybbitProvisionSecret: getEnv("RYBBIT_PROVISION_SECRET", ""),
 	}
 }
 

@@ -561,6 +561,35 @@ func RunMigrations(db *sql.DB) error {
 		}
 	}
 
+	// #181 회사 등록 서비스 — URL 검증 상태 + Rybbit(웹 애널리틱스) 연동 상태.
+	// 레거시 companies.service_url (쉼표 구분, #115) 은 그대로 두고 추가만 한다 (additive).
+	companyServiceTables := []string{
+		`CREATE TABLE IF NOT EXISTS company_services (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			company_id INTEGER NOT NULL DEFAULT 0,
+			name TEXT NOT NULL DEFAULT '',
+			url TEXT NOT NULL DEFAULT '',
+			normalized_url TEXT NOT NULL DEFAULT '',
+			validation_status TEXT NOT NULL DEFAULT 'unvalidated',
+			validation_checked_at DATETIME,
+			validation_detail TEXT NOT NULL DEFAULT '',
+			rybbit_status TEXT NOT NULL DEFAULT 'not_connected',
+			rybbit_site_id TEXT NOT NULL DEFAULT '',
+			rybbit_connected_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		// 같은 회사 안에서 정규화 URL 은 유일 (유스케이스 사전 검사 + 이 인덱스가 최종 방어선).
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_company_services_company_url
+			ON company_services(company_id, normalized_url)`,
+		`CREATE INDEX IF NOT EXISTS idx_company_services_company ON company_services(company_id)`,
+	}
+	for _, stmt := range companyServiceTables {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("create company_services tables: %w", err)
+		}
+	}
+
 	// #159 Phase 2 백필: 미배정(0) 도메인 엔티티를 소유자의 첫 멤버십 강의실로.
 	// grants 테이블은 위에서 생성되므로 반드시 마지막에 실행. 멱등 (0인 행만 갱신).
 	classroomBackfills := []string{
@@ -589,10 +618,10 @@ func RunMigrations(db *sql.DB) error {
 // migrateWalletsPerClassroom — wallets 를 유저 전역 지갑(UNIQUE user_id)에서
 // 강의실별 지갑(UNIQUE(user_id, classroom_id))으로 리빌드한다 (#159).
 // SQLite 는 ALTER 로 UNIQUE 제약을 제거할 수 없어 새 테이블 복사 방식 사용.
-// - id 를 보존해 transactions.wallet_id 참조가 그대로 유효
-// - 기존 지갑의 classroom_id 는 유저의 첫 멤버십 강의실로 백필 (없으면 0 = 미배정;
-//   미배정 지갑은 첫 강의실 조인 시 해당 강의실로 귀속됨)
-// - 구 테이블은 wallets_legacy_159 로 보존 (DROP 금지 규칙)
+//   - id 를 보존해 transactions.wallet_id 참조가 그대로 유효
+//   - 기존 지갑의 classroom_id 는 유저의 첫 멤버십 강의실로 백필 (없으면 0 = 미배정;
+//     미배정 지갑은 첫 강의실 조인 시 해당 강의실로 귀속됨)
+//   - 구 테이블은 wallets_legacy_159 로 보존 (DROP 금지 규칙)
 func migrateWalletsPerClassroom(db *sql.DB) error {
 	var hasCol int
 	if err := db.QueryRow(

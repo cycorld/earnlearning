@@ -73,6 +73,27 @@ export interface Company {
   created_at: string
 }
 
+/**
+ * #181: 회사에 등록된 개별 서비스.
+ * legacy `Company.service_url`(쉼표 구분 다중 URL) 과 별개로,
+ * 서비스마다 정규화된 HTTPS URL + 검증 상태 + Rybbit(애널리틱스) 연동 상태를 가진다.
+ */
+export interface CompanyService {
+  id: number
+  company_id: number
+  name: string
+  url: string
+  validation_status: 'unvalidated' | 'valid' | 'invalid'
+  validation_checked_at: string | null
+  /** 실패 사유 머신 토큰 (예: private_ip, http_status_500) */
+  validation_detail: string
+  rybbit_status: 'not_connected' | 'connected' | 'needs_reconnect'
+  rybbit_site_id: string
+  rybbit_connected_at: string | null
+  /** 서버가 계산한 연동 가능 여부 — 연동 버튼 활성화의 유일한 근거 */
+  connect_ready: boolean
+}
+
 export interface Disclosure {
   id: number
   company_id: number

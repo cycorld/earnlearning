@@ -3,7 +3,12 @@
     "slug": "180-main-backend-test-compilation",
     "title": "전체 테스트의 컴파일 계약 복구",
     "date": "2026-07-24",
-    "tags": ["테스트", "Go", "TDD", "컴파일"]
+    "tags": [
+      "테스트",
+      "Go",
+      "TDD",
+      "컴파일"
+    ]
   },
   {
     "slug": "001-project-kickoff",
@@ -1803,7 +1808,25 @@
     "slug": "179-markdown-upload",
     "title": "Markdown 문서도 과제 첨부파일로 올리기",
     "date": "2026-07-24",
-    "tags": ["마크다운", "파일업로드", "보안", "TDD"],
+    "tags": [
+      "마크다운",
+      "파일업로드",
+      "보안",
+      "TDD"
+    ],
     "github": null
+  },
+  {
+    "date": "2026-07-27",
+    "github": null,
+    "slug": "181-company-services-rybbit",
+    "tags": [
+      "보안",
+      "SSRF",
+      "TDD",
+      "회사",
+      "외부연동"
+    ],
+    "title": "회사 서비스 목록과 안전한 URL 검증, Rybbit 연동 버튼"
   }
 ]
