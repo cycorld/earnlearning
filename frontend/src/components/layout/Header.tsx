@@ -53,22 +53,26 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center justify-between px-4">
-        <div className="flex min-w-0 items-center gap-2">
-          <Link to="/feed" className="flex shrink-0 items-center gap-2">
-            <img src="/favicon.svg" alt="" aria-hidden className="h-7 w-7" />
-            <span className="text-lg font-bold tracking-tight text-primary">EarnLearning</span>
-            <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-              {__BUILD_NUMBER__ !== 'dev' ? `#${__BUILD_NUMBER__}` : 'dev'}
+      {/* #178 모바일: 로고/아이콘 1줄 + 강의실 스위처 전용 2줄(flex-wrap). 데스크톱: 한 줄 유지. */}
+      <div className="flex min-h-14 flex-wrap items-center gap-x-2 px-4 py-1.5 sm:h-14 sm:flex-nowrap sm:py-0">
+        <Link to="/feed" className="flex min-w-0 shrink-0 items-center gap-2">
+          <img src="/favicon.svg" alt="" aria-hidden className="h-7 w-7" />
+          <span className="text-lg font-bold tracking-tight text-primary">EarnLearning</span>
+          <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+            <span>{__BUILD_NUMBER__ !== 'dev' ? `#${__BUILD_NUMBER__}` : 'dev'}</span>
+            {/* 커밋 sha 는 모바일 공간 확보를 위해 데스크톱에서만 노출 */}
+            <span className="hidden sm:inline">
               {' · '}
               {__COMMIT_SHA__ !== 'local' ? __COMMIT_SHA__.slice(0, 7) : 'local'}
             </span>
-          </Link>
+          </span>
+        </Link>
+        <div className="order-last min-w-0 basis-full sm:order-none sm:basis-auto">
           <ClassroomSwitcher />
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" asChild className="relative">
-            <Link to="/messages">
+        <div className="ml-auto flex items-center gap-1">
+          <Button variant="ghost" size="icon" asChild className="relative h-11 w-11">
+            <Link to="/messages" aria-label="메시지">
               <MessageSquare className="h-5 w-5" />
               {dmUnreadCount > 0 && (
                 <Badge
@@ -80,8 +84,8 @@ export default function Header() {
               )}
             </Link>
           </Button>
-          <Button variant="ghost" size="icon" asChild className="relative">
-            <Link to="/notifications">
+          <Button variant="ghost" size="icon" asChild className="relative h-11 w-11">
+            <Link to="/notifications" aria-label="알림">
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
                 <Badge
