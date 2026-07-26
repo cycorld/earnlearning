@@ -456,39 +456,72 @@ function MailboxSelector({
     )
   }
 
+  // 옵션 라벨: 이름(구분) · 주소 [· 상태] — 모바일 select 에서 한 줄로 식별 가능해야 한다.
+  const optionLabel = (b: Mailbox) => {
+    const base = `${b.name} (${KIND_LABEL[b.kind]}) · ${b.email ?? ''}`
+    if (b.status === 'pending') return `${base} · 승인 대기중`
+    if (b.status === 'rejected') return `${base} · 반려됨`
+    return base
+  }
+
   return (
-    <Tabs value={String(value)} onValueChange={(v) => onChange(Number(v))}>
-      {/* 베이스 TabsList 는 가로형 h-8 고정 → 2줄(이름+주소) 항목이 잘려서 variant 까지 h-auto 로 오버라이드 (#171 비전검사) */}
-      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto">
-        {boxes.map((b) => (
-          <TabsTrigger
-            key={b.address_id}
-            value={String(b.address_id)}
-            disabled={b.status !== 'approved'}
-            className="h-auto flex-none flex-col items-start gap-0.5 px-3 py-2"
-          >
-            <span className="flex items-center gap-1 text-xs font-medium">
-              {kindIcon(b.kind)}
-              {b.name}
-              <Badge variant="outline" className="px-1 py-0 text-[10px]">
-                {KIND_LABEL[b.kind]}
-              </Badge>
-              {b.status === 'pending' && (
-                <Badge variant="secondary" className="px-1 py-0 text-[10px]">
-                  대기중
-                </Badge>
-              )}
-              {b.status === 'rejected' && (
-                <Badge variant="destructive" className="px-1 py-0 text-[10px]">
-                  반려됨
-                </Badge>
-              )}
-            </span>
-            <span className="text-[10px] text-muted-foreground">{b.email}</span>
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+    <div className="space-y-2">
+      {/* #178 모바일: 메일함이 많아도 쓰기 쉬운 네이티브 select */}
+      <div className="sm:hidden">
+        <select
+          aria-label="메일함 선택"
+          value={String(value)}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+        >
+          {boxes.map((b) => (
+            <option
+              key={b.address_id}
+              value={String(b.address_id)}
+              disabled={b.status !== 'approved'}
+            >
+              {optionLabel(b)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* 데스크톱: 이름·주소·상태를 한눈에 훑을 수 있는 탭 */}
+      <div className="hidden sm:block">
+        <Tabs value={String(value)} onValueChange={(v) => onChange(Number(v))}>
+          {/* 베이스 TabsList 는 가로형 h-8 고정 → 2줄(이름+주소) 항목이 잘려서 variant 까지 h-auto 로 오버라이드 (#171 비전검사) */}
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto">
+            {boxes.map((b) => (
+              <TabsTrigger
+                key={b.address_id}
+                value={String(b.address_id)}
+                disabled={b.status !== 'approved'}
+                className="h-auto flex-none flex-col items-start gap-0.5 px-3 py-2"
+              >
+                <span className="flex items-center gap-1 text-xs font-medium">
+                  {kindIcon(b.kind)}
+                  {b.name}
+                  <Badge variant="outline" className="px-1 py-0 text-[10px]">
+                    {KIND_LABEL[b.kind]}
+                  </Badge>
+                  {b.status === 'pending' && (
+                    <Badge variant="secondary" className="px-1 py-0 text-[10px]">
+                      대기중
+                    </Badge>
+                  )}
+                  {b.status === 'rejected' && (
+                    <Badge variant="destructive" className="px-1 py-0 text-[10px]">
+                      반려됨
+                    </Badge>
+                  )}
+                </span>
+                <span className="text-[10px] text-muted-foreground">{b.email}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
+    </div>
   )
 }
 
@@ -627,7 +660,8 @@ function Mailbox({
 
   // ── 목록 화면 ──
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    // #178 데스크톱에선 목록·상세·작성 모두 md:max-w-4xl 로 넓게
+    <div className="mx-auto w-full max-w-lg space-y-4 p-4 md:max-w-4xl">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">메일함</h1>
         <Button
@@ -788,7 +822,7 @@ function DetailView({
   onReply: () => void
 }) {
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto w-full max-w-lg space-y-4 p-4 md:max-w-4xl">
       <button
         onClick={onBack}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -901,7 +935,7 @@ function ComposeView({
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4">
+    <div className="mx-auto w-full max-w-lg space-y-4 p-4 md:max-w-4xl">
       <button
         onClick={onCancel}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"

@@ -96,6 +96,7 @@ export default function FeedPage() {
   const [editPostId, setEditPostId] = useState<number | null>(null)
   const [editPostContent, setEditPostContent] = useState('')
   const [editPostTags, setEditPostTags] = useState('')
+  const [editPostChannelId, setEditPostChannelId] = useState<number | null>(null)
   const [editPostOpen, setEditPostOpen] = useState(false)
   const [editing, setEditing] = useState(false)
 
@@ -111,21 +112,27 @@ export default function FeedPage() {
   const [commentLoading, setCommentLoading] = useState<Record<number, boolean>>({})
 
   // Load classrooms
-  const fetchClassrooms = useCallback(async (showLoading = true) => {
-    if (showLoading) setClassroomLoading(true)
-    try {
-      const data = await api.get<Classroom[]>('/classrooms')
-      const list = data ?? []
-      setClassrooms(list)
-      if (list.length > 0) {
-        setSelectedClassroom((prev) => prev ?? list[0].id)
+  // #178 강의실 선택 SSOT: 헤더 ClassroomSwitcher 가 정한 활성 강의실을 그대로 따른다.
+  const activeClassroomId = user?.active_classroom_id
+  const fetchClassrooms = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) setClassroomLoading(true)
+      try {
+        const data = await api.get<Classroom[]>('/classrooms')
+        const list = data ?? []
+        setClassrooms(list)
+        if (list.length > 0) {
+          const active = list.find((c) => c.id === activeClassroomId)
+          setSelectedClassroom((prev) => prev ?? (active ?? list[0]).id)
+        }
+      } catch {
+        setClassrooms([])
+      } finally {
+        if (showLoading) setClassroomLoading(false)
       }
-    } catch {
-      setClassrooms([])
-    } finally {
-      if (showLoading) setClassroomLoading(false)
-    }
-  }, [])
+    },
+    [activeClassroomId],
+  )
 
   useEffect(() => {
     fetchClassrooms()
@@ -275,6 +282,7 @@ export default function FeedPage() {
       try { tags = JSON.parse(post.tags) } catch { tags = [] }
     }
     setEditPostTags(tags.join(', '))
+    setEditPostChannelId(post.channel?.id ?? null)
     setEditPostOpen(true)
   }
 
@@ -287,16 +295,37 @@ export default function FeedPage() {
         .split(',')
         .map((t) => t.trim().replace(/^#/, ''))
         .filter(Boolean)
-      const updated = await api.put<Post>(`/posts/${editPostId}`, {
+      const isAdmin = user?.role === 'admin'
+      const payload: { content: string; tags: string; channel_id?: number } = {
         content: editPostContent.trim(),
         tags: JSON.stringify(tags),
-      })
+      }
+      // Admin 만 카테고리(채널) 이동 가능. 서버가 클래스룸 경계를 검증한다.
+      if (isAdmin && editPostChannelId != null) {
+        payload.channel_id = editPostChannelId
+      }
+      const updated = await api.put<Post>(`/posts/${editPostId}`, payload)
       setPosts((prev) =>
-        prev.map((p) => (p.id === editPostId ? { ...p, content: updated.content, tags: updated.tags } : p)),
+        prev.map((p) =>
+          p.id === editPostId
+            ? {
+                ...p,
+                content: updated.content,
+                tags: updated.tags,
+                // PUT 응답의 channel 은 null 이므로 로컬 channels 목록에서 이름을 해석한다.
+                channel:
+                  updated.channel ??
+                  (isAdmin && editPostChannelId != null
+                    ? channels.find((c) => c.id === editPostChannelId) ?? p.channel
+                    : p.channel),
+              }
+            : p,
+        ),
       )
       toast.success('게시물이 수정되었습니다.')
       setEditPostOpen(false)
       setEditPostId(null)
+      setEditPostChannelId(null)
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : '게시물 수정에 실패했습니다.'
@@ -440,20 +469,7 @@ export default function FeedPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-5 p-4">
-      {/* Classroom selector (if multiple) */}
-      {classrooms.length > 1 && (
-        <select
-          value={selectedClassroom ?? ''}
-          onChange={(e) => setSelectedClassroom(Number(e.target.value))}
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        >
-          {classrooms.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      )}
+      {/* #178 강의실 선택기는 전역 헤더 ClassroomSwitcher 로 단일화 — 피드 중복 선택기 제거 */}
 
       {/* Channel tabs */}
       {channels.length > 0 && (
@@ -556,6 +572,26 @@ export default function FeedPage() {
             <DialogTitle>게시물 수정</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {user?.role === 'admin' && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-post-channel">카테고리</Label>
+                <select
+                  id="edit-post-channel"
+                  value={editPostChannelId ?? ''}
+                  onChange={(e) =>
+                    setEditPostChannelId(Number(e.target.value) || null)
+                  }
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">카테고리를 선택하세요</option>
+                  {channels.map((ch) => (
+                    <option key={ch.id} value={ch.id}>
+                      {ch.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>내용</Label>
               <MarkdownEditor

@@ -67,6 +67,14 @@ describe('ClassroomSwitcher', () => {
     })
   })
 
+  // #178 반응형: 트리거가 모바일에선 전체 너비, 데스크톱에선 auto 너비여야 한다.
+  it('트리거 버튼이 모바일 전체 너비(w-full)·데스크톱 auto(sm:w-auto) 클래스를 갖는다', async () => {
+    renderWithProviders(<ClassroomSwitcher />)
+    const trigger = await screen.findByRole('button', { name: /A반/ })
+    expect(trigger.className).toContain('w-full')
+    expect(trigger.className).toContain('sm:w-auto')
+  })
+
   // #159 회귀: 드롭다운에 "초대 코드로 입장" 항목이 있고, 코드 제출 시 조인 API 를 호출한다.
   it('초대 코드로 입장 항목으로 새 강의실에 참여한다', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 })
