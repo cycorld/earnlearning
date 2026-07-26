@@ -77,6 +77,7 @@ type assetView struct {
 	StockValue    int `json:"stock_value"`
 	CompanyEquity int `json:"company_equity"`
 	TotalDebt     int `json:"total_debt"`
+	Total         int `json:"total"`
 }
 
 // assetBreakdown — GET /api/wallet 의 assets 블록만 뽑아온다.
@@ -440,5 +441,35 @@ func TestIsolation_MyCompaniesScoping(t *testing.T) {
 	env.activate(t, ab, env.crA.ID)
 	if !containsID(ts.get("/api/companies/mine", ab).Data, "", caID) {
 		t.Errorf("company from A must appear in /companies/mine when active A")
+	}
+}
+
+// #164 회귀: 회사 설립은 현금→주식 전환일 뿐, 총자산이 늘어나면 안 된다.
+// 기존 버그: StockValue(지분×밸류에이션)와 CompanyEquity(회사지갑 지분)를 둘 다 합산해
+// 초기자본 100만 회사 설립만으로 총자산 100만 → 200만이 됐다.
+// 결정(2026-07-22): 총자산 = 현금 + 주식가치 − 부채. 회사지분은 참고 표시만.
+func TestFounderEquityNotDoubleCounted(t *testing.T) {
+	env := setupIsolation(t)
+	ts := env.ts
+
+	_, tok := registerWithID(t, ts, "eq164@test.com", "이중계상", "20270164")
+	if r := ts.joinClassroom(tok, env.crA.Code); !r.Success {
+		t.Fatalf("join: %v", r.Error)
+	}
+
+	before := assetBreakdown(t, ts, tok)
+	env.createCompany(t, tok, "이중계상검증사")
+	after := assetBreakdown(t, ts, tok)
+
+	// 총자산 보존: 설립 전후 동일 (현금이 주식가치로 전환됐을 뿐)
+	if after.Total != before.Total {
+		t.Fatalf("회사 설립으로 총자산이 변하면 안 됨: before=%d after=%d (%+v)", before.Total, after.Total, after)
+	}
+	// 회사지분은 계속 계산·표시되지만 총자산 합산에서는 제외
+	if after.CompanyEquity == 0 {
+		t.Fatalf("company_equity 는 참고용으로 계속 제공되어야 함: %+v", after)
+	}
+	if want := after.Cash + after.StockValue - after.TotalDebt; after.Total != want {
+		t.Fatalf("총자산 공식 불일치: total=%d want cash+stock-debt=%d", after.Total, want)
 	}
 }

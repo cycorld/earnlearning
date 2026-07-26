@@ -137,3 +137,30 @@ func TestMilestoneAssetPercentile(t *testing.T) {
 		}
 	})
 }
+
+// #164 회귀: 평가지표(자산 상위 %)의 총자산도 회사 설립로 부풀려지면 안 된다.
+// ListStudentAssets 는 GetAssetBreakdown 와 별도 SQL 로 총자산을 계산하므로
+// 같은 공식(현금 + 주식가치 − 부채, 회사지분 제외)을 여기서 따로 고정한다.
+func TestAssetPercentileNotDoubleCounted(t *testing.T) {
+	ts := setupTestServer(t)
+
+	_, tok := createInvestor(t, ts, "grade164@test.com", "평가이중계상", "20270165", 2_000_000)
+
+	before := fetchProgress(t, ts, tok)
+	if before.AssetTotal != 2_000_000 {
+		t.Fatalf("사전 asset_total=%d, want 2000000", before.AssetTotal)
+	}
+
+	if r := ts.post("/api/companies", map[string]interface{}{
+		"name": "평가이중계상사", "description": "회귀 검증", "initial_capital": 1_000_000, "logo_url": "",
+	}, tok); !r.Success {
+		t.Fatalf("create company: %v", r.Error)
+	}
+
+	// 총자산 보존: 현금 100만이 주식가치 100만으로 형태만 바뀜.
+	after := fetchProgress(t, ts, tok)
+	if after.AssetTotal != before.AssetTotal {
+		t.Fatalf("회사 설립으로 평가지표 총자산이 부풀려짐: before=%d after=%d",
+			before.AssetTotal, after.AssetTotal)
+	}
+}
