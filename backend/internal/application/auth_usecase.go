@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/earnlearning/backend/internal/domain/notification"
 	"github.com/earnlearning/backend/internal/domain/user"
 	"github.com/earnlearning/backend/internal/domain/wallet"
 	"github.com/golang-jwt/jwt/v5"
@@ -31,10 +32,16 @@ type AuthUseCase struct {
 	jwtSecret   string
 	emailSender EmailSender
 	baseURL     string
+	notifUC     *NotificationUseCase
 }
 
 func NewAuthUseCase(repo user.Repository, walletRepo wallet.Repository, jwtSecret string) *AuthUseCase {
 	return &AuthUseCase{userRepo: repo, walletRepo: walletRepo, jwtSecret: jwtSecret}
+}
+
+// SetNotificationUseCase는 가입 승인 알림 발송용 의존성을 주입한다 (#167).
+func (uc *AuthUseCase) SetNotificationUseCase(notifUC *NotificationUseCase) {
+	uc.notifUC = notifUC
 }
 
 type RegisterInput struct {
@@ -263,6 +270,21 @@ func (uc *AuthUseCase) AdminApprove(userID int) error {
 		if _, createErr := uc.walletRepo.CreateWallet(userID); createErr != nil {
 			fmt.Printf("wallet creation failed for approved user %d: %v\n", userID, createErr)
 			// Non-fatal: the classroom-join flow will retry wallet creation.
+		}
+	}
+
+	// 가입 승인 알림 (#167) — 학생이 pending 화면에서 폴링/재접속하면 바로 확인 가능.
+	// 알림 실패는 승인 자체를 막지 않는다 (non-fatal).
+	if uc.notifUC != nil {
+		if err := uc.notifUC.CreateNotification(
+			userID,
+			notification.NotifUserApproved,
+			"가입 승인 완료",
+			"환영합니다! 이제 언러닝을 시작할 수 있어요.",
+			"user",
+			userID,
+		); err != nil {
+			log.Printf("approval notification failed for user %d: %v", userID, err)
 		}
 	}
 

@@ -125,6 +125,7 @@ func main() {
 	exchangeUC.SetNotificationUseCase(notifUC)
 	postUC.SetNotificationUseCase(notifUC)
 	companyUC.SetNotificationUseCase(notifUC)
+	authUC.SetNotificationUseCase(notifUC) // #167 가입 승인 알림
 	loanUC := application.NewLoanUseCase(db, loanRepo, walletRepo)
 
 	// #119 학생 4대 평가지표
