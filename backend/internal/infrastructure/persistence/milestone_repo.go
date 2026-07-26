@@ -260,7 +260,8 @@ func scanFileRow(row rowScanner) (*milestone.FileRef, error) {
 }
 
 // ListStudentAssets — 전체 승인 학생의 (승인 milestone 개수, 총자산).
-// 총자산 = Cash + StockValue + CompanyEquity − Debt (GetAssetBreakdown 와 동일 공식).
+// 총자산 = Cash + StockValue − Debt (GetAssetBreakdown 와 동일 공식).
+// #164 CompanyEquity(회사지갑 지분)는 StockValue 와 같은 지분의 중복 평가라 합산 제외.
 func (r *MilestoneRepo) ListStudentAssets() ([]milestone.StudentAsset, error) {
 	rows, err := r.db.Query(`
 		SELECT u.id,
@@ -269,10 +270,6 @@ func (r *MilestoneRepo) ListStudentAssets() ([]milestone.StudentAsset, error) {
 		  COALESCE((SELECT balance FROM wallets w WHERE w.user_id = u.id), 0)
 		  + COALESCE((SELECT SUM(s.shares * c.valuation / c.total_shares)
 		     FROM shareholders s JOIN companies c ON c.id = s.company_id
-		     WHERE s.user_id = u.id AND c.status = 'active'), 0)
-		  + COALESCE((SELECT SUM(cw.balance * s.shares / c.total_shares)
-		     FROM shareholders s JOIN companies c ON c.id = s.company_id
-		     JOIN company_wallets cw ON cw.company_id = c.id
 		     WHERE s.user_id = u.id AND c.status = 'active'), 0)
 		  - COALESCE((SELECT SUM(remaining) FROM loans
 		     WHERE borrower_id = u.id AND status IN ('active','overdue')), 0)

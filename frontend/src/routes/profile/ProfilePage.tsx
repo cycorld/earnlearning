@@ -214,7 +214,8 @@ export default function ProfilePage() {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">회사 지분</p>
+                {/* #164 회사 지분은 총자산 합산에서 제외된 참고 지표 (WalletPage 와 동일 표기) */}
+                <p className="text-xs text-muted-foreground">회사 지분 (참고)</p>
                 <p className="text-sm font-semibold">
                   {formatMoney(wallet.asset_breakdown?.company_equity ?? 0)}
                 </p>

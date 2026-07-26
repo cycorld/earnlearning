@@ -41,7 +41,9 @@ function normalizeWallet(raw: WalletApiResponse): Wallet {
   const stockValue = Number(raw.assets?.stock_value) || 0
   const companyEquity = Number(raw.assets?.company_equity) || 0
   const totalDebt = Number(raw.assets?.total_debt) || 0
-  const total = Number(raw.assets?.total) || (cash + stockValue + companyEquity - totalDebt)
+  // #164 폴백 공식도 서버와 동일하게: 회사지분(companyEquity)은 주식가치와 같은 지분의
+  // 중복 평가라 총자산에 합산하지 않는다 (참고 표시용).
+  const total = Number(raw.assets?.total) || (cash + stockValue - totalDebt)
 
   return {
     balance: Number(raw.wallet?.balance) || 0,

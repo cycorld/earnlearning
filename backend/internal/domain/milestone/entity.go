@@ -109,7 +109,7 @@ type StudentProgress struct {
 	ApprovedCount int          `json:"approved_count"` // 0~4
 	Group         string       `json:"group"`          // "A" / "B" / "C" / "D" / "" (= 성적 그레이드)
 	// #125 성적/자산 — 본인 대시보드(ListForStudent)에서만 채워짐.
-	AssetTotal     int `json:"asset_total"`      // 본인 총자산 (Cash+Stock+CompanyEquity−Debt)
+	AssetTotal     int `json:"asset_total"`      // 본인 총자산 (Cash+Stock−Debt, #164 회사지분 합산 제외)
 	GroupSize      int `json:"group_size"`       // 같은 그룹(A/B/C/D) 인원 수
 	AssetRank      int `json:"asset_rank"`       // 같은 그룹 내 자산 순위 (1 = 최상위), 0 = 미산정
 	AssetPercentile int `json:"asset_percentile"` // 같은 그룹 내 상위 N% (1~100), 0 = 미산정
