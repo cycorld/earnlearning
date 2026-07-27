@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -194,8 +195,23 @@ func (h *MilestoneHandler) DownloadFile(c echo.Context) error {
 		}
 		return c.JSON(http.StatusInternalServerError, errorResp("INTERNAL", err.Error()))
 	}
+	// #176 파일명은 emit 시점에도 다시 정리한다 (검증 이전에 저장된 기존 레코드 방어).
+	safeName := application.SanitizeDownloadFilename(f.Filename, f.StoredName)
+	// MIME sniffing 금지 — 모든 첨부 응답 공통.
+	c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+
+	// #176 HTML 은 절대 same-origin 렌더링되면 안 된다.
+	// 확장자로 서버가 직접 판단한다 (DB MimeType 은 업로드 당시 클라이언트 입력이라 신뢰 불가).
+	if application.IsHTMLAttachmentExt(filepath.Ext(f.StoredName)) ||
+		application.IsHTMLAttachmentExt(filepath.Ext(safeName)) {
+		h := c.Response().Header()
+		h.Set(echo.HeaderContentType, "application/octet-stream")
+		h.Set("Content-Security-Policy", "default-src 'none'; sandbox")
+		return c.Attachment(f.Path, safeName)
+	}
+
 	// Inline: PDF/이미지는 브라우저에서 바로 열람, 그 외는 다운로드.
-	return c.Inline(f.Path, f.Filename)
+	return c.Inline(f.Path, safeName)
 }
 
 // DeleteFile godoc
