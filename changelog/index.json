@@ -3,7 +3,12 @@
     "slug": "180-main-backend-test-compilation",
     "title": "전체 테스트의 컴파일 계약 복구",
     "date": "2026-07-24",
-    "tags": ["테스트", "Go", "TDD", "컴파일"]
+    "tags": [
+      "테스트",
+      "Go",
+      "TDD",
+      "컴파일"
+    ]
   },
   {
     "slug": "001-project-kickoff",
@@ -1803,7 +1808,24 @@
     "slug": "179-markdown-upload",
     "title": "Markdown 문서도 과제 첨부파일로 올리기",
     "date": "2026-07-24",
-    "tags": ["마크다운", "파일업로드", "보안", "TDD"],
+    "tags": [
+      "마크다운",
+      "파일업로드",
+      "보안",
+      "TDD"
+    ],
+    "github": null
+  },
+  {
+    "slug": "181-html-assignment-download",
+    "title": "HTML 사업계획서 첨부 — 열지 않고 내려받게 만들기",
+    "date": "2026-07-27",
+    "tags": [
+      "파일업로드",
+      "보안",
+      "HTML",
+      "TDD"
+    ],
     "github": null
   }
 ]

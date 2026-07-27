@@ -332,7 +332,7 @@ function BusinessPlanFiles() {
             type="file"
             multiple
             className="hidden"
-            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.hwp,.hwpx,.txt,.md,.csv,.zip,.png,.jpg,.jpeg,.gif,.webp"
+            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.hwp,.hwpx,.txt,.md,.csv,.html,.htm,.zip,.png,.jpg,.jpeg,.gif,.webp"
             disabled={uploading}
             onChange={(e) => {
               onPick(e.target.files)
@@ -342,7 +342,7 @@ function BusinessPlanFiles() {
         </label>
       </div>
       {files.length === 0 ? (
-        <p className="text-xs text-muted-foreground">아직 첨부한 파일이 없습니다. (PDF·DOCX·PPTX·HWP 등, 최대 20MB)</p>
+        <p className="text-xs text-muted-foreground">아직 첨부한 파일이 없습니다. (PDF·DOCX·PPTX·HWP·HTML 등, 최대 20MB / HTML 10MB)</p>
       ) : (
         <ul className="space-y-1">
           {files.map((f) => (
