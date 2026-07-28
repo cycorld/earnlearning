@@ -44,8 +44,9 @@ type apiClient struct {
 	client *http.Client
 }
 type server struct {
-	api    *apiClient
-	logger *log.Logger
+	api         *apiClient
+	logger      *log.Logger
+	initialized bool
 }
 type tool struct {
 	Name        string         `json:"name"`
@@ -77,7 +78,25 @@ func newAPIClient(rawBase, token string, allowRemote bool, client *http.Client) 
 		return nil, errors.New("remote API base URL must use HTTPS")
 	}
 	if client == nil {
-		client = &http.Client{}
+		dialer := &net.Dialer{Timeout: 10 * time.Second}
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+			dialHost, port, err := net.SplitHostPort(address)
+			if err != nil {
+				return nil, errors.New("invalid upstream address")
+			}
+			ips, err := net.DefaultResolver.LookupIP(ctx, "ip", dialHost)
+			if err != nil || len(ips) == 0 {
+				return nil, errors.New("upstream host could not be resolved")
+			}
+			for _, resolved := range ips {
+				if !local && !isPublicIP(resolved) {
+					return nil, errors.New("upstream resolved to a non-public address")
+				}
+			}
+			return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].String(), port))
+		}
+		client = &http.Client{Transport: transport}
 	}
 	clientCopy := *client
 	clientCopy.Timeout = 10 * time.Second
@@ -86,6 +105,11 @@ func newAPIClient(rawBase, token string, allowRemote bool, client *http.Client) 
 	}
 	u.Path = strings.TrimRight(u.Path, "/")
 	return &apiClient{base: u, token: token, client: &clientCopy}, nil
+}
+
+func isPublicIP(ip net.IP) bool {
+	return ip != nil && !ip.IsLoopback() && !ip.IsPrivate() && !ip.IsLinkLocalUnicast() &&
+		!ip.IsLinkLocalMulticast() && !ip.IsUnspecified() && !ip.IsMulticast()
 }
 
 func intArg(args map[string]any, name string, required bool, min, max, def int) (int, error) {
@@ -270,19 +294,32 @@ func (s *server) handle(r request) response {
 	}
 	switch r.Method {
 	case "initialize":
+		var p struct {
+			ProtocolVersion string         `json:"protocolVersion"`
+			Capabilities    map[string]any `json:"capabilities"`
+			ClientInfo      map[string]any `json:"clientInfo"`
+		}
+		if err := decodeOne(r.Params, &p); err != nil || p.ProtocolVersion != "2025-03-26" || p.ClientInfo == nil {
+			return fail(-32602, "unsupported or invalid initialize parameters")
+		}
+		s.initialized = true
 		out.Result = map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "earnlearning-mcp", "version": "0.1.0"}}
 	case "notifications/initialized":
-		out.Result = map[string]any{}
+		return out
 	case "tools/list":
+		if !s.initialized {
+			return fail(-32002, "server is not initialized")
+		}
 		out.Result = map[string]any{"tools": tools()}
 	case "tools/call":
+		if !s.initialized {
+			return fail(-32002, "server is not initialized")
+		}
 		var p struct {
 			Name      string         `json:"name"`
 			Arguments map[string]any `json:"arguments"`
 		}
-		dec := json.NewDecoder(bytes.NewReader(r.Params))
-		dec.DisallowUnknownFields()
-		if err := dec.Decode(&p); err != nil || p.Name == "" {
+		if err := decodeOne(r.Params, &p); err != nil || p.Name == "" {
 			return fail(-32602, "invalid tools/call parameters")
 		}
 		if p.Arguments == nil {
@@ -291,13 +328,26 @@ func (s *server) handle(r request) response {
 		data, err := s.api.call(p.Name, p.Arguments)
 		if err != nil {
 			s.logger.Printf("tool %s failed: %v", p.Name, err)
-			return fail(-32000, err.Error())
+			out.Result = map[string]any{"content": []map[string]any{{"type": "text", "text": err.Error()}}, "isError": true}
+			return out
 		}
 		out.Result = map[string]any{"content": []map[string]any{{"type": "text", "text": string(data)}}, "structuredContent": json.RawMessage(data)}
 	default:
 		return fail(-32601, "method not found")
 	}
 	return out
+}
+
+func decodeOne(data []byte, dst any) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		return err
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		return errors.New("trailing JSON data")
+	}
+	return nil
 }
 
 func serve(in io.Reader, out io.Writer, s *server) error {
@@ -314,31 +364,14 @@ func serve(in io.Reader, out io.Writer, s *server) error {
 		if line == "" {
 			continue
 		}
-		var payload []byte
-		if strings.HasPrefix(strings.ToLower(line), "content-length:") {
-			n, e := strconv.Atoi(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]))
-			if e != nil || n <= 0 || n > 2<<20 {
-				return errors.New("invalid Content-Length")
-			}
-			for {
-				h, e := r.ReadString('\n')
-				if e != nil {
-					return e
-				}
-				if strings.TrimSpace(h) == "" {
-					break
-				}
-			}
-			payload = make([]byte, n)
-			if _, e = io.ReadFull(r, payload); e != nil {
-				return e
-			}
-		} else {
-			payload = []byte(line)
+		payload := []byte(line)
+		if len(payload) > 2<<20 {
+			writeResponse(out, response{JSONRPC: "2.0", ID: json.RawMessage("null"), Error: &rpcError{Code: -32600, Message: "request too large"}})
+			continue
 		}
 		var req request
 		if json.Unmarshal(payload, &req) != nil {
-			writeResponse(out, response{JSONRPC: "2.0", Error: &rpcError{Code: -32700, Message: "parse error"}})
+			writeResponse(out, response{JSONRPC: "2.0", ID: json.RawMessage("null"), Error: &rpcError{Code: -32700, Message: "parse error"}})
 			continue
 		}
 		if len(req.ID) == 0 {
@@ -358,7 +391,7 @@ func writeResponse(w io.Writer, resp response) error {
 }
 func main() {
 	allowRemote := strings.EqualFold(os.Getenv("EARNLEARNING_MCP_ALLOW_REMOTE"), "true")
-	client, err := newAPIClient(os.Getenv("EARNLEARNING_API_BASE_URL"), os.Getenv("EARNLEARNING_API_TOKEN"), allowRemote, &http.Client{Timeout: 10 * time.Second})
+	client, err := newAPIClient(os.Getenv("EARNLEARNING_API_BASE_URL"), os.Getenv("EARNLEARNING_API_TOKEN"), allowRemote, nil)
 	if err != nil {
 		log.Printf("configuration error: %v", err)
 		os.Exit(1)
