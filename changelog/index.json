@@ -1817,6 +1817,18 @@
     "github": null
   },
   {
+    "slug": "181-html-assignment-download",
+    "title": "HTML 사업계획서 첨부 — 열지 않고 내려받게 만들기",
+    "date": "2026-07-27",
+    "tags": [
+      "파일업로드",
+      "보안",
+      "HTML",
+      "TDD"
+    ],
+    "github": null
+  },
+  {
     "date": "2026-07-27",
     "github": null,
     "slug": "181-company-services-rybbit",
