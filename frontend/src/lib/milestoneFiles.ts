@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 
-import { getToken } from './auth'
+import { apiFetch } from './api'
 import type { MilestoneFile } from './milestone'
 
 // #125 사업계획서 비공개 첨부 — 공통 헬퍼.
@@ -22,6 +22,17 @@ function isInlineSafe(mime: string, filename: string): boolean {
   return type === 'application/pdf' || type.startsWith('image/')
 }
 
+// #184 fetch 를 기다린 뒤 window.open 하면 사용자 제스처가 끊겨 팝업이 차단된다.
+// → 확장자로 미리 짐작해서 클릭 즉시 빈 탭을 열어두고, blob 이 준비되면 그 탭을 이동시킨다.
+// 여기는 어디까지나 "미리 열지" 결정일 뿐, 실제 inline 여부는 서버 Content-Type 으로 다시 판단한다.
+// .html/.htm 은 목록에 없으므로 구조적으로 절대 미리 열리지 않는다.
+const PREOPEN_EXT = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp']
+
+function guessInline(filename: string): boolean {
+  const ext = filename.toLowerCase().match(/\.[^.]+$/)?.[0] ?? ''
+  return PREOPEN_EXT.includes(ext)
+}
+
 function triggerDownload(url: string, filename: string) {
   const a = document.createElement('a')
   a.href = url
@@ -33,27 +44,38 @@ function triggerDownload(url: string, filename: string) {
 }
 
 // 다운로드/열람 — 인증 헤더가 필요하므로 fetch 로 blob 을 받는다.
-// 서버가 owner/admin 권한을 검증하므로 권한 없으면 403 → 에러 토스트.
-export async function openMilestoneFile(file: Pick<MilestoneFile, 'id'> & Partial<MilestoneFile>) {
+// 서버가 권한을 검증하므로 권한 없으면 403 → 에러 토스트.
+export async function openPrivateFile(url: string, filename: string) {
+  // noopener 를 주면 window.open 이 항상 null 을 반환해 이 방식이 무너진다.
+  // 우리가 만든 same-origin blob 을 우리 탭에서 여는 것이라 문제 없다.
+  const pre = guessInline(filename) ? window.open('', '_blank') : null
   try {
-    const res = await fetch(`/api/milestones/files/${file.id}`, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-    })
+    const res = await apiFetch(url)
     if (!res.ok) throw new Error(String(res.status))
     const raw = await res.blob()
-    const filename = file.filename ?? ''
     const serverType = res.headers.get('Content-Type') ?? raw.type ?? ''
     const inline = isInlineSafe(serverType, filename)
     // 서버 응답이 잘못된 타입이더라도 렌더링되지 않도록 blob 타입을 강제한다.
     const blob = inline ? raw : new Blob([raw], { type: 'application/octet-stream' })
-    const url = URL.createObjectURL(blob)
+    const blobURL = URL.createObjectURL(blob)
     if (inline) {
-      window.open(url, '_blank', 'noopener')
+      if (pre) {
+        pre.location.replace(blobURL)
+      } else if (!window.open(blobURL, '_blank')) {
+        // 팝업 차단 → 다운로드로 대체.
+        triggerDownload(blobURL, filename)
+      }
     } else {
-      triggerDownload(url, filename)
+      pre?.close()
+      triggerDownload(blobURL, filename)
     }
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    setTimeout(() => URL.revokeObjectURL(blobURL), 60_000)
   } catch {
+    pre?.close()
     toast.error('파일을 열 수 없습니다.')
   }
+}
+
+export function openMilestoneFile(file: Pick<MilestoneFile, 'id'> & Partial<MilestoneFile>) {
+  return openPrivateFile(`/api/milestones/files/${file.id}`, file.filename ?? '')
 }

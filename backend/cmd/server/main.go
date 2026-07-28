@@ -151,7 +151,7 @@ func main() {
 
 	// DM
 	dmRepo := persistence.NewDMRepo(db)
-	dmUC := application.NewDMUseCase(dmRepo, userRepo, hub)
+	dmUC := application.NewDMUseCase(dmRepo, userRepo, hub, cfg.PrivateUploadPath) // #184 첨부 비공개 저장
 	dmUC.SetNotificationUseCase(notifUC)
 
 	// OAuth

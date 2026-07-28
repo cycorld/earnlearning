@@ -93,7 +93,7 @@ export default function MessagesPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{conv.peer_name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {conv.last_message}
+                    {conv.last_message || '📎 첨부파일'}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">

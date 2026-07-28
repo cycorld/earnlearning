@@ -1834,5 +1834,12 @@
     "date": "2026-07-28",
     "tags": ["Go", "테스트", "Docker", "재현성"],
     "github": null
+  },
+  {
+    "slug": "184-dm-attachments",
+    "title": "DM 파일/이미지 첨부 — 둘만 볼 수 있는 첨부 만들기",
+    "date": "2026-07-28",
+    "tags": ["DM", "파일업로드", "보안", "TDD"],
+    "github": null
   }
 ]
