@@ -1861,5 +1861,12 @@
     "date": "2026-07-29",
     "tags": ["운영", "Git", "보안", "정리"],
     "github": null
+  },
+  {
+    "slug": "182-local-mcp-server",
+    "title": "로컬 MCP 서버: AI 도구에 안전한 읽기 창구 만들기",
+    "date": "2026-07-28",
+    "tags": ["MCP", "보안", "Go", "API"],
+    "github": null
   }
 ]
