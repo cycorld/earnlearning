@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 
@@ -22,13 +24,35 @@ func NewDMHandler(uc *application.DMUseCase) *DMHandler {
 func (h *DMHandler) SendMessage(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 	var input application.SendDMInput
-	if err := c.Bind(&input); err != nil {
+	var files []*multipart.FileHeader
+
+	// #184 multipart 첨부 전송. SendDMInput 은 json 태그만 있어 c.Bind 로는 form 값을 못 읽는다.
+	if strings.HasPrefix(c.Request().Header.Get(echo.HeaderContentType), "multipart/form-data") {
+		receiverID, err := strconv.Atoi(c.FormValue("receiver_id"))
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "INVALID_INPUT", "message": "잘못된 입력입니다"},
+			})
+		}
+		input.ReceiverID = receiverID
+		input.Content = c.FormValue("content")
+		form, err := c.MultipartForm()
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "INVALID_INPUT", "message": "첨부를 읽을 수 없습니다"},
+			})
+		}
+		files = form.File["files"]
+	} else if err := c.Bind(&input); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"success": false, "data": nil,
 			"error": map[string]string{"code": "INVALID_INPUT", "message": "잘못된 입력입니다"},
 		})
 	}
-	msg, err := h.uc.SendMessage(userID, input)
+
+	msg, err := h.uc.SendMessageWithAttachments(userID, input, files, generateUUID)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"success": false, "data": nil,
@@ -38,6 +62,50 @@ func (h *DMHandler) SendMessage(c echo.Context) error {
 	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"success": true, "data": msg, "error": nil,
 	})
+}
+
+// DownloadAttachment — DM 첨부 다운로드 (#184). 발신자/수신자만, 관리자 우회 없음.
+func (h *DMHandler) DownloadAttachment(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "BAD_REQUEST", "message": "잘못된 첨부 ID입니다"},
+		})
+	}
+	att, err := h.uc.GetAttachmentForAccess(id, userID)
+	if err != nil {
+		switch err {
+		case dm.ErrForbidden:
+			return c.JSON(http.StatusForbidden, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "FORBIDDEN", "message": err.Error()},
+			})
+		case dm.ErrAttachmentNotFound, dm.ErrMessageNotFound:
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"success": false, "data": nil,
+				"error": map[string]string{"code": "NOT_FOUND", "message": err.Error()},
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"success": false, "data": nil,
+			"error": map[string]string{"code": "INTERNAL", "message": err.Error()},
+		})
+	}
+
+	safeName := application.SanitizeDownloadFilename(att.Filename, att.StoredName)
+	header := c.Response().Header()
+	header.Set("X-Content-Type-Options", "nosniff")
+
+	// 검증된 이미지만 inline. MIME 은 DB(클라이언트 입력) 대신 서버가 확장자로 판단한다.
+	if mime := application.DMAttachmentInlineMIME(att.StoredName); mime != "" {
+		header.Set(echo.HeaderContentType, mime)
+		return c.Inline(att.Path, safeName)
+	}
+	header.Set(echo.HeaderContentType, "application/octet-stream")
+	header.Set("Content-Security-Policy", "default-src 'none'; sandbox")
+	return c.Attachment(att.Path, safeName)
 }
 
 func (h *DMHandler) GetConversations(c echo.Context) error {

@@ -45,6 +45,9 @@ type testServer struct {
 	milestoneUC *application.MilestoneUseCase // #120 — fake LLM 주입용
 	authUC      *application.AuthUseCase      // #128 — fake email sender 주입용
 	mailSpy     *spyMailSender                // #166 — 발신 SES 스파이
+
+	// #184 DM 첨부 비공개 저장 루트 (테스트마다 격리된 임시 디렉토리).
+	privateUploadPath string
 }
 
 // setupTestServer creates a fresh test server with an in-memory-like temp DB.
@@ -125,9 +128,11 @@ func setupTestServer(t *testing.T, opts ...func(*testConfig)) *testServer {
 	mailSpy := &spyMailSender{}
 	mailUC := application.NewMailUseCase(mailRepo, mailSpy, notifUC, testUploadPath+"/private")
 
-	// DM
+	// DM (#184 첨부는 테스트별 임시 비공개 경로에 저장 — 파일 개수 단언이 실행 간 오염되지 않게)
+	dmPrivatePath := t.TempDir()
 	dmRepo := persistence.NewDMRepo(db)
-	dmUC := application.NewDMUseCase(dmRepo, userRepo, hub)
+	dmUC := application.NewDMUseCase(dmRepo, userRepo, hub, dmPrivatePath)
+	dmUC.SetNotificationUseCase(notifUC)
 
 	// OAuth
 	oauthRepo := persistence.NewOAuthRepo(db)
@@ -181,7 +186,7 @@ func setupTestServer(t *testing.T, opts ...func(*testConfig)) *testServer {
 	ts := httptest.NewServer(e)
 	t.Cleanup(func() { ts.Close() })
 
-	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy, milestoneUC: milestoneUC, authUC: authUC, mailSpy: mailSpy}
+	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy, milestoneUC: milestoneUC, authUC: authUC, mailSpy: mailSpy, privateUploadPath: dmPrivatePath}
 }
 
 // injectMilestoneFakeLLM — milestone usecase 에 fake ChatLLMClient 주입 (#120).
