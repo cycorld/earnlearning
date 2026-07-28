@@ -1854,5 +1854,12 @@
     "date": "2026-07-28",
     "tags": ["DM", "파일업로드", "보안", "TDD"],
     "github": null
+  },
+  {
+    "slug": "185-local-ops-isolation",
+    "title": "완료 티켓 정리와 로컬 운영 데이터 격리",
+    "date": "2026-07-29",
+    "tags": ["운영", "Git", "보안", "정리"],
+    "github": null
   }
 ]
