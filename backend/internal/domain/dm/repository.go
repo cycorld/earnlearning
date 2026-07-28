@@ -6,4 +6,7 @@ type Repository interface {
 	GetConversations(userID int) ([]*Conversation, error)
 	MarkAsRead(userID, peerID int) error
 	GetUnreadCount(userID int) (int, error)
+	// #184 첨부 접근 권한 확인용
+	FindMessageByID(id int) (*Message, error)
+	FindAttachmentByID(id int) (*Attachment, error)
 }

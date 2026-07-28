@@ -372,6 +372,16 @@ export interface PaginatedData<T> {
   pagination: Pagination
 }
 
+export interface DMAttachment {
+  id: number
+  message_id: number
+  filename: string
+  stored_name: string
+  mime: string
+  size: number
+  created_at: string
+}
+
 export interface DMMessage {
   id: number
   sender_id: number
@@ -379,6 +389,7 @@ export interface DMMessage {
   content: string
   is_read: boolean
   created_at: string
+  attachments?: DMAttachment[]
 }
 
 export interface DMConversation {

@@ -70,6 +70,30 @@ async function request<T>(
   return data.data
 }
 
+// #184 blob 다운로드(첨부/이미지)처럼 Response 자체가 필요한 호출용.
+// request() 와 같은 401 → 토큰 갱신 → 1회 재시도 규칙을 공유한다.
+// 401 외의 실패는 그대로 Response 로 돌려주고 판단은 호출자에게 맡긴다.
+export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const send = () => {
+    const token = getToken()
+    return fetch(path.startsWith('/api/') ? path : `${BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        ...(init?.headers as Record<string, string> | undefined),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+  }
+
+  const res = await send()
+  if (res.status !== 401) return res
+
+  if (await tryRefreshToken()) return send()
+  removeToken()
+  window.location.href = '/login'
+  throw new ApiError('UNAUTHORIZED', '세션이 만료되었습니다. 다시 로그인해주세요.', 401)
+}
+
 let refreshPromise: Promise<boolean> | null = null
 
 async function tryRefreshToken(): Promise<boolean> {

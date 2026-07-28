@@ -1840,5 +1840,19 @@
       "외부연동"
     ],
     "title": "회사 서비스 목록과 안전한 URL 검증, Rybbit 연동 버튼"
+  },
+  {
+    "slug": "183-pin-go-toolchain",
+    "title": "Go 버전과 SQLite FTS5 테스트 계약 고정",
+    "date": "2026-07-28",
+    "tags": ["Go", "테스트", "Docker", "재현성"],
+    "github": null
+  },
+  {
+    "slug": "184-dm-attachments",
+    "title": "DM 파일/이미지 첨부 — 둘만 볼 수 있는 첨부 만들기",
+    "date": "2026-07-28",
+    "tags": ["DM", "파일업로드", "보안", "TDD"],
+    "github": null
   }
 ]

@@ -420,6 +420,18 @@ func RunMigrations(db *sql.DB) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_dm_sender_receiver ON dm_messages(sender_id, receiver_id, created_at DESC)`,
 		`CREATE INDEX IF NOT EXISTS idx_dm_receiver_unread ON dm_messages(receiver_id, is_read)`,
+		// #184 DM 첨부. 파일은 PRIVATE_UPLOAD_PATH/dm 하위에 저장 (static 서빙 X).
+		`CREATE TABLE IF NOT EXISTS dm_attachments (
+			id          INTEGER PRIMARY KEY AUTOINCREMENT,
+			message_id  INTEGER NOT NULL REFERENCES dm_messages(id),
+			filename    TEXT NOT NULL,
+			stored_name TEXT NOT NULL,
+			mime        TEXT NOT NULL DEFAULT '',
+			size        INTEGER NOT NULL DEFAULT 0,
+			path        TEXT NOT NULL,
+			created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_dm_attachments_message ON dm_attachments(message_id)`,
 	}
 	for _, stmt := range dmTables {
 		if _, err := db.Exec(stmt); err != nil {

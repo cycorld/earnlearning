@@ -187,7 +187,12 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.DELETE("/grants/:id/applications/:appId", h.Grant.DeleteApplication, middleware.RequireScope("write:market"))
 
 	// DM (no OAuth scope — internal only)
-	approved.POST("/dm/messages", h.DM.SendMessage)
+	// #184 전송(업로드)과 첨부 다운로드만 RejectOAuth 그룹. 비공개 파일 바이트를 OAuth 토큰에
+	// 노출하지 않기 위한 의도적 비대칭 — 기존 읽기 라우트 3개는 그대로 둔다.
+	dmGroup := approved.Group("", middleware.RejectOAuth())
+	// #184 첨부 합계 20MB 제한을 multipart 파싱 전에 걸러낸다 (multipart 오버헤드 여유 1MB).
+	dmGroup.POST("/dm/messages", h.DM.SendMessage, echomw.BodyLimit("21M"))
+	dmGroup.GET("/dm/attachments/:id", h.DM.DownloadAttachment)
 	approved.GET("/dm/conversations", h.DM.GetConversations)
 	approved.GET("/dm/messages/:userId", h.DM.GetMessages)
 	approved.PUT("/dm/messages/:userId/read", h.DM.MarkAsRead)
