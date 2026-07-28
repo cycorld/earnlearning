@@ -62,10 +62,10 @@ Host Nginx (port 80)
 - **회귀 테스트 필수**: 버그 수정 시 반드시 해당 버그를 재현하는 회귀 테스트를 남겨 재발을 방지한다. 회귀 테스트는 삭제하지 않고 계속 축적한다.
 - **스모크 테스트 필수**: 커밋 또는 다른 테스트 실행 전에 반드시 스모크 테스트를 통과해야 한다.
   ```bash
-  cd backend && go test ./tests/integration/ -run TestSmoke -timeout 60s
+  ./scripts/test-backend.sh smoke
   ```
 - 스모크 테스트 실패 시 커밋하지 않고 원인을 먼저 수정한다.
-- **Backend 테스트**: `go test ./tests/integration/ -timeout 60s`
+- **Backend 테스트**: `./scripts/test-backend.sh integration`
 - **Frontend 테스트**: `cd frontend && npm test`
 
 

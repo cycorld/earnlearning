@@ -1827,5 +1827,12 @@
       "TDD"
     ],
     "github": null
+  },
+  {
+    "slug": "183-pin-go-toolchain",
+    "title": "Go 버전과 SQLite FTS5 테스트 계약 고정",
+    "date": "2026-07-28",
+    "tags": ["Go", "테스트", "Docker", "재현성"],
+    "github": null
   }
 ]
