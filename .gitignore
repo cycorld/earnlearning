@@ -14,6 +14,16 @@ backend/earnlearning
 # Local runtime data (SQLite DB + uploads) — 공개 저장소 유출 방지
 backend/data/
 
+# Local operational artifacts — keep only the policy README in Git
+_local-ops/*
+!_local-ops/README.md
+
+# Legacy root locations during migration to _local-ops/
+generated/
+whitepaper-2026/
+WORKLOG.md
+.kanban-evidence-*/
+
 # Agent worktrees
 .claude/worktrees/
 
