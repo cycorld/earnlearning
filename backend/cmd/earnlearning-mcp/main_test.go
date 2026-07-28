@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,7 +17,7 @@ func TestServeUsesNewlineDelimitedJSONRPC(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	input := strings.NewReader("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}\n")
+	input := strings.NewReader("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-03-26\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1\"}}}\n")
 	var output bytes.Buffer
 	if err := serve(input, &output, newServer(c, log.New(io.Discard, "", 0))); err != nil {
 		t.Fatal(err)
@@ -73,14 +74,16 @@ func TestToolCallRejectsUnknownArguments(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := newServer(c, log.New(io.Discard, "", 0))
+	s.initialized = true
 	resp := s.handle(request{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(`1`),
 		Method:  "tools/call",
 		Params:  json.RawMessage(`{"name":"health_get","arguments":{"unexpected":true}}`),
 	})
-	if resp.Error == nil || !strings.Contains(resp.Error.Message, "unsupported argument") {
-		t.Fatalf("expected unsupported argument error, got %+v", resp.Error)
+	b, _ := json.Marshal(resp.Result)
+	if resp.Error != nil || !bytes.Contains(b, []byte(`"isError":true`)) || !bytes.Contains(b, []byte("unsupported argument")) {
+		t.Fatalf("expected tool error result, got error=%+v result=%s", resp.Error, b)
 	}
 }
 
@@ -98,6 +101,30 @@ func TestNewAPIClientRejectsUnsafeConfiguration(t *testing.T) {
 	}
 	if _, err := newAPIClient("https://example.test", "secret", true, http.DefaultClient); err != nil {
 		t.Fatalf("explicit remote opt-in rejected: %v", err)
+	}
+}
+
+func TestIsPublicIPRejectsInternalRanges(t *testing.T) {
+	for _, raw := range []string{"127.0.0.1", "10.0.0.1", "169.254.169.254", "::1", "fc00::1", "ff02::1"} {
+		if isPublicIP(net.ParseIP(raw)) {
+			t.Errorf("expected %s to be non-public", raw)
+		}
+	}
+	if !isPublicIP(net.ParseIP("8.8.8.8")) {
+		t.Fatal("expected public address to be accepted")
+	}
+}
+
+func TestServerRequiresInitializationAndRejectsTrailingJSON(t *testing.T) {
+	c, _ := newAPIClient("http://localhost:8080", "token", false, http.DefaultClient)
+	s := newServer(c, log.New(io.Discard, "", 0))
+	before := s.handle(request{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/list"})
+	if before.Error == nil || before.Error.Code != -32002 {
+		t.Fatalf("expected initialization error, got %+v", before.Error)
+	}
+	badInit := s.handle(request{JSONRPC: "2.0", ID: json.RawMessage(`2`), Method: "initialize", Params: json.RawMessage(`{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test"}} {}`)})
+	if badInit.Error == nil || badInit.Error.Code != -32602 {
+		t.Fatalf("expected invalid params, got %+v", badInit.Error)
 	}
 }
 
@@ -133,7 +160,7 @@ func TestServerInitializeListAndCall(t *testing.T) {
 	defer ts.Close()
 	c, _ := newAPIClient(ts.URL, "token", false, ts.Client())
 	s := newServer(c, log.New(io.Discard, "", 0))
-	init := s.handle(request{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "initialize"})
+	init := s.handle(request{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "initialize", Params: json.RawMessage(`{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1"}}`)})
 	if init.Error != nil || init.Result == nil {
 		t.Fatalf("initialize: %+v", init)
 	}
@@ -158,9 +185,11 @@ func TestValidationAndTokenRedaction(t *testing.T) {
 	c, _ := newAPIClient(ts.URL, token, false, ts.Client())
 	var logs bytes.Buffer
 	s := newServer(c, log.New(&logs, "", 0))
+	s.initialized = true
 	bad := s.handle(request{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "tools/call", Params: json.RawMessage(`{"name":"posts_list","arguments":{"limit":0}}`)})
-	if bad.Error == nil {
-		t.Fatal("expected structured error")
+	badResult, _ := json.Marshal(bad.Result)
+	if bad.Error != nil || !bytes.Contains(badResult, []byte(`"isError":true`)) {
+		t.Fatalf("expected structured tool error, got error=%+v result=%s", bad.Error, badResult)
 	}
 	failed := s.handle(request{JSONRPC: "2.0", ID: json.RawMessage(`2`), Method: "tools/call", Params: json.RawMessage(`{"name":"health_get","arguments":{}}`)})
 	out, _ := json.Marshal(failed)
