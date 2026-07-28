@@ -1829,6 +1829,19 @@
     "github": null
   },
   {
+    "date": "2026-07-27",
+    "github": null,
+    "slug": "181-company-services-rybbit",
+    "tags": [
+      "보안",
+      "SSRF",
+      "TDD",
+      "회사",
+      "외부연동"
+    ],
+    "title": "회사 서비스 목록과 안전한 URL 검증, Rybbit 연동 버튼"
+  },
+  {
     "slug": "183-pin-go-toolchain",
     "title": "Go 버전과 SQLite FTS5 테스트 계약 고정",
     "date": "2026-07-28",

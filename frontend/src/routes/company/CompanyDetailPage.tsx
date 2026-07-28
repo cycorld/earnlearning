@@ -27,6 +27,7 @@ import { DisclosureSection } from './DisclosureSection'
 import { ProposalSection } from './ProposalSection'
 import { InvestmentRoundSection } from './InvestmentRoundSection'
 import { CompanyMailSection } from './CompanyMailSection'
+import { CompanyServicesSection } from './CompanyServicesSection'
 
 export default function CompanyDetailPage() {
   const { id } = useParams()
@@ -274,6 +275,9 @@ export default function CompanyDetailPage() {
 
       {/* Company email (대표 전용) */}
       {isOwner && <CompanyMailSection companyId={Number(id)} />}
+
+      {/* #181: 등록 서비스 (목록은 모두 공개, 관리는 대표만) */}
+      <CompanyServicesSection companyId={Number(id)} isOwner={!!isOwner} />
 
       {/* Disclosures */}
       <DisclosureSection companyId={Number(id)} isOwner={!!isOwner} />

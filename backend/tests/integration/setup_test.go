@@ -2,10 +2,13 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -16,6 +19,8 @@ import (
 	"github.com/earnlearning/backend/internal/application"
 	"github.com/earnlearning/backend/internal/infrastructure/persistence"
 	"github.com/earnlearning/backend/internal/infrastructure/push"
+	"github.com/earnlearning/backend/internal/infrastructure/rybbit"
+	"github.com/earnlearning/backend/internal/infrastructure/urlcheck"
 	"github.com/earnlearning/backend/internal/infrastructure/userdbadmin"
 	"github.com/earnlearning/backend/internal/interfaces/http/handler"
 	"github.com/earnlearning/backend/internal/interfaces/http/router"
@@ -45,6 +50,8 @@ type testServer struct {
 	milestoneUC *application.MilestoneUseCase // #120 — fake LLM 주입용
 	authUC      *application.AuthUseCase      // #128 — fake email sender 주입용
 	mailSpy     *spyMailSender                // #166 — 발신 SES 스파이
+	// #181 — fake URL checker / Rybbit provisioner 주입용
+	companyServiceUC *application.CompanyServiceUseCase
 
 	// #184 DM 첨부 비공개 저장 루트 (테스트마다 격리된 임시 디렉토리).
 	privateUploadPath string
@@ -128,6 +135,20 @@ func setupTestServer(t *testing.T, opts ...func(*testConfig)) *testServer {
 	mailSpy := &spyMailSender{}
 	mailUC := application.NewMailUseCase(mailRepo, mailSpy, notifUC, testUploadPath+"/private")
 
+	// #181 회사 등록 서비스.
+	// 기본 checker 는 DNS 를 막아 어떤 테스트도 실제 인터넷에 나가지 않게 한다
+	// (네트워크가 필요한 테스트는 ts.companyServiceUC.SetChecker 로 직접 주입).
+	// 기본 provisioner 는 Noop → 연동 요청은 503.
+	companyServiceRepo := persistence.NewCompanyServiceRepo(db)
+	blockedChecker := &urlcheck.Checker{
+		LookupIP: func(ctx context.Context, host string) ([]net.IP, error) {
+			return nil, errors.New("test: network blocked")
+		},
+	}
+	companyServiceUC := application.NewCompanyServiceUseCase(
+		companyRepo, companyServiceRepo, userRepo, walletRepo, blockedChecker, rybbit.NewNoop(),
+	)
+
 	// DM (#184 첨부는 테스트별 임시 비공개 경로에 저장 — 파일 개수 단언이 실행 간 오염되지 않게)
 	dmPrivatePath := t.TempDir()
 	dmRepo := persistence.NewDMRepo(db)
@@ -136,7 +157,7 @@ func setupTestServer(t *testing.T, opts ...func(*testConfig)) *testServer {
 
 	// OAuth
 	oauthRepo := persistence.NewOAuthRepo(db)
-	oauthUC := application.NewOAuthUseCase(oauthRepo, userRepo)
+	oauthUC := application.NewOAuthUseCase(oauthRepo, userRepo, walletRepo)
 
 	// User DB (Noop provisioner — 실제 PG 없음)
 	userDBRepo := persistence.NewUserDBRepo(db)
@@ -177,6 +198,8 @@ func setupTestServer(t *testing.T, opts ...func(*testConfig)) *testServer {
 		LLM:          handler.NewLLMHandler(llmUC),
 		Milestone:    handler.NewMilestoneHandler(milestoneUC),
 		Mail:         handler.NewMailHandler(mailUC, tc.mailWebhookSecret),
+
+		CompanyService: handler.NewCompanyServiceHandler(companyServiceUC), // #181
 	}
 
 	e := echo.New()
@@ -186,7 +209,7 @@ func setupTestServer(t *testing.T, opts ...func(*testConfig)) *testServer {
 	ts := httptest.NewServer(e)
 	t.Cleanup(func() { ts.Close() })
 
-	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy, milestoneUC: milestoneUC, authUC: authUC, mailSpy: mailSpy, privateUploadPath: dmPrivatePath}
+	return &testServer{server: ts, t: t, db: db, companyRepo: companyRepo, llmUC: llmUC, llmProxy: llmProxy, milestoneUC: milestoneUC, authUC: authUC, mailSpy: mailSpy, companyServiceUC: companyServiceUC, privateUploadPath: dmPrivatePath}
 }
 
 // injectMilestoneFakeLLM — milestone usecase 에 fake ChatLLMClient 주입 (#120).

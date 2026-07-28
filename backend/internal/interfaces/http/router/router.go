@@ -36,6 +36,8 @@ type Handlers struct {
 	ChatProposal *handler.ChatProposalHandler
 	Milestone    *handler.MilestoneHandler
 	Mail         *handler.MailHandler
+	// #181 회사 등록 서비스 (URL 검증 + Rybbit 연동)
+	CompanyService *handler.CompanyServiceHandler
 }
 
 // Setup registers all routes on the given Echo instance.
@@ -131,6 +133,16 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.GET("/companies/:id/business-card", h.Company.GetBusinessCard, middleware.RequireScope("read:company"))
 	approved.POST("/companies/:id/disclosures", h.Company.CreateDisclosure, middleware.RequireScope("write:company"))
 	approved.GET("/companies/:id/disclosures", h.Company.GetDisclosures, middleware.RequireScope("read:company"))
+
+	// #181 회사 등록 서비스 — 목록은 누구나, 변경/검증/연동은 소유자만 (권한 판정은 유스케이스)
+	if h.CompanyService != nil {
+		approved.GET("/companies/:id/services", h.CompanyService.ListServices, middleware.RequireScope("read:company"))
+		approved.POST("/companies/:id/services", h.CompanyService.CreateService, middleware.RequireScope("write:company"))
+		approved.PUT("/companies/:id/services/:serviceId", h.CompanyService.UpdateService, middleware.RequireScope("write:company"))
+		approved.DELETE("/companies/:id/services/:serviceId", h.CompanyService.DeleteService, middleware.RequireScope("write:company"))
+		approved.POST("/companies/:id/services/:serviceId/validate", h.CompanyService.ValidateService, middleware.RequireScope("write:company"))
+		approved.POST("/companies/:id/services/:serviceId/rybbit/connect", h.CompanyService.ConnectRybbit, middleware.RequireScope("write:company"))
+	}
 
 	// Company wallet (#031)
 	approved.GET("/companies/:id/wallet", h.Company.GetCompanyWallet, middleware.RequireScope("read:company"))

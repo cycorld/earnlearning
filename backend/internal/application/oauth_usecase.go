@@ -10,16 +10,19 @@ import (
 
 	"github.com/earnlearning/backend/internal/domain/oauth"
 	"github.com/earnlearning/backend/internal/domain/user"
+	"github.com/earnlearning/backend/internal/domain/wallet"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type OAuthUseCase struct {
 	oauthRepo oauth.Repository
 	userRepo  user.Repository
+	// #181 캠프(강의실) 자격 판정을 위해 활성 강의실을 조회한다.
+	walletRepo wallet.Repository
 }
 
-func NewOAuthUseCase(oauthRepo oauth.Repository, userRepo user.Repository) *OAuthUseCase {
-	return &OAuthUseCase{oauthRepo: oauthRepo, userRepo: userRepo}
+func NewOAuthUseCase(oauthRepo oauth.Repository, userRepo user.Repository, walletRepo wallet.Repository) *OAuthUseCase {
+	return &OAuthUseCase{oauthRepo: oauthRepo, userRepo: userRepo, walletRepo: walletRepo}
 }
 
 // --- Input types ---
@@ -38,12 +41,12 @@ type RegisterClientOutput struct {
 }
 
 type AuthorizeInput struct {
-	ClientID            string `json:"client_id"`
-	RedirectURI         string `json:"redirect_uri"`
+	ClientID            string   `json:"client_id"`
+	RedirectURI         string   `json:"redirect_uri"`
 	Scopes              []string `json:"scopes"`
-	State               string `json:"state"`
-	CodeChallenge       string `json:"code_challenge"`
-	CodeChallengeMethod string `json:"code_challenge_method"`
+	State               string   `json:"state"`
+	CodeChallenge       string   `json:"code_challenge"`
+	CodeChallengeMethod string   `json:"code_challenge_method"`
 }
 
 type AuthorizeInfoOutput struct {
@@ -67,10 +70,10 @@ type ExchangeCodeInput struct {
 }
 
 type TokenOutput struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int    `json:"expires_in"`
+	AccessToken  string   `json:"access_token"`
+	RefreshToken string   `json:"refresh_token"`
+	TokenType    string   `json:"token_type"`
+	ExpiresIn    int      `json:"expires_in"`
 	Scopes       []string `json:"scopes"`
 }
 
@@ -85,12 +88,27 @@ type RevokeTokenInput struct {
 }
 
 type OAuthUserInfo struct {
-	ID         int    `json:"id"`
+	ID int `json:"id"`
+	// Sub — Rybbit SSO 계약 필수 클레임 (#181). user.OAuthSubject(ID) 로 생성하며,
+	// Rybbit 은 이 값으로만 계정을 연결하고 프로비저닝 user.id 도 같은 값을 쓴다.
+	// 형식을 바꾸면 기존 Rybbit 계정 연결이 전부 끊어진다.
+	Sub        string `json:"sub"`
 	Email      string `json:"email"`
 	Name       string `json:"name"`
 	Department string `json:"department"`
 	Bio        string `json:"bio"`
 	AvatarURL  string `json:"avatar_url"`
+	// #181: Rybbit SSO 계약 클레임.
+	// Active 는 "계정이 활성(승인) 상태" 여부 — Rybbit 은 active != true 면 로그인을
+	// 거부한다. 역할 검사는 role 클레임으로 Rybbit 쪽에서 별도로 한다.
+	Role              string `json:"role"`
+	Status            string `json:"status"`
+	Active            bool   `json:"active"`
+	Approved          bool   `json:"approved"`
+	ActiveClassroomID int    `json:"active_classroom_id"`
+	// CampEligible — 캠프 자격: 승인 + 학생 역할 + 활성 강의실 소속 (전부 필요,
+	// fail-closed). admin 은 명시 정책상 캠프 자격이 없다.
+	CampEligible bool `json:"camp_eligible"`
 }
 
 // --- Client management ---
@@ -344,13 +362,29 @@ func (uc *OAuthUseCase) GetUserInfo(userID int) (*OAuthUserInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	// #181: 캠프 자격 클레임. 조회 실패 시 자격 없음으로 처리 (fail-closed).
+	activeClassroomID := 0
+	if uc.walletRepo != nil {
+		if cid, err := uc.walletRepo.GetActiveClassroomID(u.ID); err == nil {
+			activeClassroomID = cid
+		}
+	}
+	approved := u.Status == user.StatusApproved
+	isStudent := u.Role == user.RoleStudent
 	return &OAuthUserInfo{
-		ID:         u.ID,
-		Email:      u.Email,
-		Name:       u.Name,
-		Department: u.Department,
-		Bio:        u.Bio,
-		AvatarURL:  u.AvatarURL,
+		ID:                u.ID,
+		Sub:               user.OAuthSubject(u.ID),
+		Email:             u.Email,
+		Name:              u.Name,
+		Department:        u.Department,
+		Bio:               u.Bio,
+		AvatarURL:         u.AvatarURL,
+		Role:              string(u.Role),
+		Status:            string(u.Status),
+		Active:            approved,
+		Approved:          approved,
+		ActiveClassroomID: activeClassroomID,
+		CampEligible:      approved && isStudent && activeClassroomID != 0,
 	}, nil
 }
 

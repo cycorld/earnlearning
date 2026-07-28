@@ -55,3 +55,24 @@ type CompanyRepository interface {
 	FindVote(proposalID, userID int) (*Vote, error)
 	FindVotesByProposalID(proposalID int) ([]*Vote, error)
 }
+
+// CompanyServiceRepository — #181 회사 등록 서비스 저장소.
+// 중복 URL 은 (company_id, normalized_url) UNIQUE 인덱스가 최종 방어선이며,
+// 위반 시 ErrDuplicateServiceURL 을 반환한다.
+type CompanyServiceRepository interface {
+	Create(s *CompanyService) (int, error)
+	// FindByID 는 없으면 ErrServiceNotFound.
+	FindByID(id int) (*CompanyService, error)
+	// FindByCompanyID 는 id 오름차순 정렬.
+	FindByCompanyID(companyID int) ([]*CompanyService, error)
+	// FindByCompanyAndNormalizedURL 은 중복 사전 검사용 (없으면 ErrServiceNotFound).
+	FindByCompanyAndNormalizedURL(companyID int, normalizedURL string) (*CompanyService, error)
+	// Update 는 이름/URL/검증 상태/연동 상태를 한 번에 덮어쓴다 (updated_at 자동 갱신).
+	Update(s *CompanyService) error
+	// UpdateValidation 은 검증 결과만 기록한다 (서버 시각 기준).
+	UpdateValidation(id int, status string, checkedAt *time.Time, detail string) error
+	// UpdateRybbit 은 연동 성공 후에만 호출되는 단일 UPDATE (fail-closed).
+	UpdateRybbit(id int, status, siteID string, connectedAt *time.Time) error
+	// Delete 는 대상이 없으면 ErrServiceNotFound.
+	Delete(id int) error
+}
