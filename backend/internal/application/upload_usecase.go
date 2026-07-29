@@ -26,7 +26,7 @@ var allowedMIMETypesByExtension = map[string]map[string]bool{
 	".xls": {"application/vnd.ms-excel": true}, ".xlsx": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": true},
 	".ppt": {"application/vnd.ms-powerpoint": true}, ".pptx": {"application/vnd.openxmlformats-officedocument.presentationml.presentation": true},
 	".txt": {"text/plain": true}, ".md": {"text/markdown": true, "text/plain": true},
-	".zip": {"application/zip": true}, ".mp4": {"video/mp4": true}, ".mp3": {"audio/mpeg": true},
+	".zip": {"application/zip": true, "application/x-zip-compressed": true}, ".mp4": {"video/mp4": true}, ".mp3": {"audio/mpeg": true},
 	".json": {"application/json": true, "text/plain": true},
 }
 
