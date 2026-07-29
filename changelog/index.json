@@ -1874,5 +1874,12 @@
     "date": "2026-07-28",
     "tags": ["MCP", "보안", "Go", "API"],
     "github": null
+  },
+  {
+    "slug": "191-dm-zip-mime",
+    "title": "DM ZIP 첨부 MIME 호환",
+    "date": "2026-07-29",
+    "tags": ["DM", "ZIP", "파일업로드", "호환성"],
+    "github": null
   }
 ]

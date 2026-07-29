@@ -31,6 +31,10 @@ func pdfBytes() []byte {
 	return []byte("%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n%%EOF\n")
 }
 
+func zipBytes() []byte {
+	return []byte("PK\x03\x04\x14\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+}
+
 // postDMMultipart — multipart/form-data 로 DM 전송. (파싱된 envelope, HTTP status) 반환.
 func (ts *testServer) postDMMultipart(token string, values map[string]string, files []dmTestFile) (*apiResponse, int) {
 	ts.t.Helper()
@@ -181,6 +185,19 @@ func TestDMAttachments(t *testing.T) {
 		}
 		if !found {
 			t.Fatalf("attachment not persisted in message list: %s", list.Data)
+		}
+	})
+
+	t.Run("zip accepts common browser MIME fallback", func(t *testing.T) {
+		r, status := ts.postDMMultipart(senderToken, map[string]string{
+			"receiver_id": fmt.Sprint(receiverID),
+		}, []dmTestFile{{filename: "archive.zip", contentType: "application/x-zip-compressed", content: zipBytes()}})
+		if status != http.StatusCreated || !r.Success {
+			t.Fatalf("zip send: status=%d err=%v", status, r.Error)
+		}
+		msg := decodeDMMessage(t, r.Data)
+		if len(msg.Attachments) != 1 || msg.Attachments[0].Filename != "archive.zip" {
+			t.Fatalf("unexpected zip attachment: %s", r.Data)
 		}
 	})
 
