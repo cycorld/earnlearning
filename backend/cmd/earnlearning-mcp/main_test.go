@@ -197,3 +197,52 @@ func TestValidationAndTokenRedaction(t *testing.T) {
 		t.Fatal("token leaked")
 	}
 }
+
+func TestMutationRequiresExactConfirmationAndBuildsAllowlistedRequest(t *testing.T) {
+	var method, path string
+	var body map[string]any
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		method, path = r.Method, r.URL.Path
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		io.WriteString(w, `{"success":true}`)
+	}))
+	defer ts.Close()
+	c, _ := newAPIClient(ts.URL, "token", false, ts.Client())
+	args := map[string]any{"channel_id": 7, "content": "hello"}
+	if _, err := c.call("post_create", args); err == nil || !strings.Contains(err.Error(), "confirm") {
+		t.Fatalf("expected confirmation rejection, got %v", err)
+	}
+	args["confirm"] = "post_create"
+	if _, err := c.call("post_create", args); err != nil {
+		t.Fatal(err)
+	}
+	if method != http.MethodPost || path != "/api/channels/7/posts" {
+		t.Fatalf("%s %s", method, path)
+	}
+	if body["content"] != "hello" || body["confirm"] != nil || body["channel_id"] != nil {
+		t.Fatalf("body=%v", body)
+	}
+	args["channel_id"] = "7/../../admin"
+	if _, err := c.call("post_create", args); err == nil {
+		t.Fatal("expected non-integer path rejection")
+	}
+}
+
+func TestOperationsRegistryContract(t *testing.T) {
+	names := map[string]bool{}
+	for _, tool := range tools() {
+		names[tool.Name] = true
+	}
+	for _, name := range []string{"health_get", "admin_users_list", "admin_user_approve", "classrooms_list", "wallet_get", "company_services_list", "investment_portfolio_get", "post_create", "assignment_submit", "company_service_create", "grant_apply", "exchange_order_create", "wallet_transfer", "loan_repay"} {
+		if !names[name] {
+			t.Errorf("missing %s", name)
+		}
+	}
+	for _, excluded := range []string{"dm_send", "mail_send", "upload_create", "admin_impersonate", "investment_dividend_execute"} {
+		if names[excluded] {
+			t.Errorf("unsafe tool exposed: %s", excluded)
+		}
+	}
+}
