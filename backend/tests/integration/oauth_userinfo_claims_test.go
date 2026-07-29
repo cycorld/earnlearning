@@ -177,10 +177,9 @@ func TestOAuthUserInfo_CampEligibilityClaims(t *testing.T) {
 	}
 }
 
-// TestOAuthUserInfo_AdminNotCampEligible — admin 은 승인·강의실 소속이어도 캠프 자격이
-// 없다 (#181 명시 정책: 학생 역할 필수, admin 자격 추론 금지). active 는 계정 활성
-// 여부라 admin 도 true — Rybbit 로그인 가능 여부와 캠프 접근 권한은 별개다.
-func TestOAuthUserInfo_AdminNotCampEligible(t *testing.T) {
+// TestOAuthUserInfo_AdminCampEligible — 승인된 수업 관리자는 활성 강의실이 있으면
+// Rybbit에 로그인해 자기 회사 사이트를 운영할 수 있다.
+func TestOAuthUserInfo_AdminCampEligible(t *testing.T) {
 	ts := setupTestServer(t)
 	adminToken := ts.login(testAdminEmail, testAdminPass)
 
@@ -207,7 +206,7 @@ func TestOAuthUserInfo_AdminNotCampEligible(t *testing.T) {
 	if info.Sub != user.OAuthSubject(adminID) {
 		t.Errorf("admin sub=%q, want %q", info.Sub, user.OAuthSubject(adminID))
 	}
-	if info.CampEligible {
-		t.Errorf("admin 인데 camp_eligible=true (학생 역할 필수 위반): %+v", info)
+	if !info.CampEligible {
+		t.Errorf("승인·강의실 소속 admin 인데 camp_eligible=false: %+v", info)
 	}
 }

@@ -331,7 +331,7 @@ func grantServiceIDs(all []*company.CompanyService, clickedID int) []int {
 	return ids
 }
 
-// ConnectRybbit — 소유자(학생·승인) + 활성 강의실 일치 + 최신 검증 통과일 때만
+// ConnectRybbit — 소유자(승인된 학생 또는 관리자) + 활성 강의실 일치 + 최신 검증 통과일 때만
 // 사이트를 등록하고, 소유자의 회사 전체 사이트 접근을 재조정한다.
 // 실패하면 상태를 전혀 바꾸지 않는다 (fail-closed: 성공 후 단일 UPDATE).
 func (uc *CompanyServiceUseCase) ConnectRybbit(ctx context.Context, companyID, serviceID, userID int) (*CompanyServiceResponse, error) {
@@ -344,13 +344,13 @@ func (uc *CompanyServiceUseCase) ConnectRybbit(ctx context.Context, companyID, s
 		return nil, err
 	}
 
-	// #181 자격 게이트 — 캠프 연동은 승인된 "학생" 소유자만. admin 은 자격이 없다
-	// (명시 정책). JWT 클레임은 로그인 시점 값이라 오래될 수 있으므로 DB 를 다시 읽는다.
+	// #181 자격 게이트 — 승인된 학생과 수업을 운영하는 관리자가 자기 회사만 연동한다.
+	// JWT 클레임은 로그인 시점 값이라 오래될 수 있으므로 DB 를 다시 읽는다.
 	owner, err := uc.userRepo.FindByID(c.OwnerID)
 	if err != nil {
 		return nil, err
 	}
-	if owner.Role != user.RoleStudent {
+	if owner.Role != user.RoleStudent && owner.Role != user.RoleAdmin {
 		return nil, company.ErrNotStudent
 	}
 	if owner.Status != user.StatusApproved {

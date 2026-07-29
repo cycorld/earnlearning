@@ -45,6 +45,9 @@ type Token struct {
 
 // ValidScopes is the list of all valid OAuth scopes.
 var ValidScopes = map[string]string{
+	"openid":             "OpenID Connect 식별",
+	"profile":            "기본 프로필 조회",
+	"email":              "이메일 주소 조회",
 	"read:profile":       "프로필 조회",
 	"write:profile":      "프로필 수정",
 	"read:wallet":        "지갑 잔액/거래 조회",
