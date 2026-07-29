@@ -4,8 +4,32 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 )
+
+func (ts *testServer) postOAuthForm(path string, values url.Values) *apiResponse {
+	ts.t.Helper()
+	req, err := http.NewRequest(http.MethodPost, ts.server.URL+path, strings.NewReader(values.Encode()))
+	if err != nil {
+		ts.t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := ts.server.Client().Do(req)
+	if err != nil {
+		ts.t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	var result apiResponse
+	if err := json.Unmarshal(b, &result); err != nil {
+		ts.t.Fatalf("parse oauth form response: %v body=%s", err, b)
+	}
+	return &result
+}
 
 // TestOAuthE2E mirrors the example app flow end-to-end:
 // register client → authorize (PKCE) → exchange code → call APIs → refresh → revoke
@@ -43,7 +67,7 @@ func TestOAuthE2E(t *testing.T) {
 	codeChallenge := base64.RawURLEncoding.EncodeToString(hash[:])
 
 	authResp := ts.post("/api/oauth/authorize", map[string]interface{}{
-		"client_id":              client.ClientID,
+		"client_id":             client.ClientID,
 		"redirect_uri":          "http://localhost:3000/callback",
 		"scopes":                []string{"read:profile", "read:wallet", "write:posts", "read:posts", "read:market"},
 		"state":                 "e2e-state-abc",
@@ -75,6 +99,26 @@ func TestOAuthE2E(t *testing.T) {
 	}, "")
 	if !tokenResp.Success {
 		t.Fatalf("token exchange failed: %v", tokenResp.Error)
+	}
+
+	// Standard OAuth clients send token requests as form-urlencoded.
+	// Use a fresh authorization code because authorization codes are one-time.
+	formAuth := ts.post("/api/oauth/authorize", map[string]interface{}{
+		"client_id": client.ClientID, "redirect_uri": "http://localhost:3000/callback",
+		"scopes": []string{"read:profile"}, "state": "form-state",
+		"code_challenge": codeChallenge, "code_challenge_method": "S256",
+	}, apiUserToken)
+	var formAuthData struct {
+		Code string `json:"code"`
+	}
+	json.Unmarshal(formAuth.Data, &formAuthData)
+	formTokenResp := ts.postOAuthForm("/api/oauth/token", url.Values{
+		"grant_type": {"authorization_code"}, "code": {formAuthData.Code},
+		"client_id": {client.ClientID}, "redirect_uri": {"http://localhost:3000/callback"},
+		"code_verifier": {codeVerifier},
+	})
+	if !formTokenResp.Success {
+		t.Fatalf("form token exchange failed: %v", formTokenResp.Error)
 	}
 	var tokens struct {
 		AccessToken  string   `json:"access_token"`
@@ -153,7 +197,7 @@ func TestOAuthE2E(t *testing.T) {
 		ch2 := base64.RawURLEncoding.EncodeToString(h2[:])
 
 		authR := ts.post("/api/oauth/authorize", map[string]interface{}{
-			"client_id":              client.ClientID,
+			"client_id":             client.ClientID,
 			"redirect_uri":          "http://localhost:3000/callback",
 			"scopes":                []string{"read:profile"},
 			"state":                 "limited",
@@ -163,7 +207,9 @@ func TestOAuthE2E(t *testing.T) {
 		if !authR.Success {
 			t.Fatalf("limited auth failed: %v", authR.Error)
 		}
-		var ad struct{ Code string `json:"code"` }
+		var ad struct {
+			Code string `json:"code"`
+		}
 		json.Unmarshal(authR.Data, &ad)
 
 		tokR := ts.post("/api/oauth/token", map[string]interface{}{
@@ -174,7 +220,9 @@ func TestOAuthE2E(t *testing.T) {
 		if !tokR.Success {
 			t.Fatalf("limited token failed: %v", tokR.Error)
 		}
-		var lt struct{ AccessToken string `json:"access_token"` }
+		var lt struct {
+			AccessToken string `json:"access_token"`
+		}
 		json.Unmarshal(tokR.Data, &lt)
 
 		// read:profile → wallet 접근 불가 (403)

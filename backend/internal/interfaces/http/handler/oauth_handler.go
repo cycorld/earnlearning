@@ -158,6 +158,18 @@ func (h *OAuthHandler) Token(c echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "잘못된 입력입니다")
 	}
+	// OAuth 2.0 token requests are normally application/x-www-form-urlencoded.
+	// Echo's JSON binding leaves this struct empty for some clients, so read the
+	// standard form fields as the interoperable fallback.
+	if body.GrantType == "" {
+		body.GrantType = c.FormValue("grant_type")
+		body.Code = c.FormValue("code")
+		body.ClientID = c.FormValue("client_id")
+		body.ClientSecret = c.FormValue("client_secret")
+		body.RedirectURI = c.FormValue("redirect_uri")
+		body.CodeVerifier = c.FormValue("code_verifier")
+		body.RefreshToken = c.FormValue("refresh_token")
+	}
 
 	switch body.GrantType {
 	case "authorization_code":
