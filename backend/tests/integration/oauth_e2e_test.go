@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func (ts *testServer) postOAuthForm(path string, values url.Values) *apiResponse {
+func (ts *testServer) postOAuthForm(path string, values url.Values) map[string]interface{} {
 	ts.t.Helper()
 	req, err := http.NewRequest(http.MethodPost, ts.server.URL+path, strings.NewReader(values.Encode()))
 	if err != nil {
@@ -24,11 +24,11 @@ func (ts *testServer) postOAuthForm(path string, values url.Values) *apiResponse
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
-	var result apiResponse
+	var result map[string]interface{}
 	if err := json.Unmarshal(b, &result); err != nil {
 		ts.t.Fatalf("parse oauth form response: %v body=%s", err, b)
 	}
-	return &result
+	return result
 }
 
 // TestOAuthE2E mirrors the example app flow end-to-end:
@@ -117,8 +117,8 @@ func TestOAuthE2E(t *testing.T) {
 		"client_id": {client.ClientID}, "redirect_uri": {"http://localhost:3000/callback"},
 		"code_verifier": {codeVerifier},
 	})
-	if !formTokenResp.Success {
-		t.Fatalf("form token exchange failed: %v", formTokenResp.Error)
+	if formTokenResp["access_token"] == nil {
+		t.Fatalf("form token response missing access_token: %v", formTokenResp)
 	}
 	var tokens struct {
 		AccessToken  string   `json:"access_token"`

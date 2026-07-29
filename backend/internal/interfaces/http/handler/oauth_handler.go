@@ -183,6 +183,9 @@ func (h *OAuthHandler) Token(c echo.Context) error {
 		if err != nil {
 			return errorResponse(c, http.StatusBadRequest, "TOKEN_EXCHANGE_FAILED", err.Error())
 		}
+		if strings.HasPrefix(c.Request().Header.Get(echo.HeaderContentType), echo.MIMEApplicationForm) {
+			return c.JSON(http.StatusOK, result)
+		}
 		return successResponse(c, http.StatusOK, result)
 
 	case "refresh_token":
@@ -193,6 +196,9 @@ func (h *OAuthHandler) Token(c echo.Context) error {
 		})
 		if err != nil {
 			return errorResponse(c, http.StatusBadRequest, "REFRESH_FAILED", err.Error())
+		}
+		if strings.HasPrefix(c.Request().Header.Get(echo.HeaderContentType), echo.MIMEApplicationForm) {
+			return c.JSON(http.StatusOK, result)
 		}
 		return successResponse(c, http.StatusOK, result)
 
