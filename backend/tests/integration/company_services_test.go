@@ -954,9 +954,9 @@ func TestCompanyServices_Connect_CrossCompanyExclusion(t *testing.T) {
 	}
 }
 
-// TestCompanyServices_Connect_RequiresStudentApproved — 캠프 연동은 "승인된 학생"
-// 소유자만 가능하다. admin 은 명시 정책상 자격이 없다 (JWT 클레임이 아니라 DB 기준).
-func TestCompanyServices_Connect_RequiresStudentApproved(t *testing.T) {
+// TestCompanyServices_Connect_RequiresApprovedCampRole — 캠프 연동은 승인된 학생이나
+// 수업 관리자 소유자만 가능하다 (JWT 클레임이 아니라 DB 기준).
+func TestCompanyServices_Connect_RequiresApprovedCampRole(t *testing.T) {
 	ts := setupTestServer(t)
 	email := "svc-elig@test.com"
 	token, cid, _ := createClassroomOwnerCompany(t, ts, email, "자격", "20261022", "svc_elig_co")
@@ -968,12 +968,14 @@ func TestCompanyServices_Connect_RequiresStudentApproved(t *testing.T) {
 	svc := ts.createService(t, cid, token, "자격앱", "https://elig.example.com")
 	ts.validateService(t, cid, svc.ID, token)
 
-	// (1) 소유자 role 이 admin 으로 바뀐 경우 → NOT_STUDENT (admin 자격 추론 금지)
+	// (1) 소유자 role 이 admin 으로 바뀐 경우에도 자기 회사 연동 가능
 	if _, err := ts.db.Exec("UPDATE users SET role = 'admin' WHERE email = ?", email); err != nil {
 		t.Fatalf("role 변경: %v", err)
 	}
 	status, r := ts.svcJSON(http.MethodPost, connectPath(cid, svc.ID), nil, token)
-	assertErrCode(t, "admin 소유자 연동", status, r, http.StatusForbidden, "NOT_STUDENT")
+	if status != http.StatusOK || !r.Success {
+		t.Fatalf("admin 소유자 연동: status=%d error=%+v", status, r.Error)
+	}
 
 	// (2) 학생이지만 승인 상태가 아닌 경우 → NOT_APPROVED (비활성 계정 fail-closed)
 	if _, err := ts.db.Exec("UPDATE users SET role = 'student', status = 'pending' WHERE email = ?", email); err != nil {
@@ -982,11 +984,11 @@ func TestCompanyServices_Connect_RequiresStudentApproved(t *testing.T) {
 	status, r = ts.svcJSON(http.MethodPost, connectPath(cid, svc.ID), nil, token)
 	assertErrCode(t, "미승인 소유자 연동", status, r, http.StatusForbidden, "NOT_APPROVED")
 
-	if fake.callCount() != 0 {
-		t.Fatalf("자격 미달인데 프로비저너 호출 %d회", fake.callCount())
+	if fake.callCount() != 1 {
+		t.Fatalf("미승인 요청이 프로비저너를 추가 호출함: 총 %d회", fake.callCount())
 	}
 	for _, s := range ts.listServices(t, cid, token) {
-		if s.ID == svc.ID && s.RybbitStatus != "not_connected" {
+		if s.ID == svc.ID && s.RybbitStatus != "connected" {
 			t.Errorf("자격 미달 요청이 상태를 바꿈: %+v", s)
 		}
 	}

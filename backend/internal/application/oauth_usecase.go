@@ -106,8 +106,7 @@ type OAuthUserInfo struct {
 	Active            bool   `json:"active"`
 	Approved          bool   `json:"approved"`
 	ActiveClassroomID int    `json:"active_classroom_id"`
-	// CampEligible — 캠프 자격: 승인 + 학생 역할 + 활성 강의실 소속 (전부 필요,
-	// fail-closed). admin 은 명시 정책상 캠프 자격이 없다.
+	// CampEligible — 캠프 자격: 승인 + 학생 또는 관리자 역할 + 활성 강의실 소속.
 	CampEligible bool `json:"camp_eligible"`
 }
 
@@ -370,7 +369,7 @@ func (uc *OAuthUseCase) GetUserInfo(userID int) (*OAuthUserInfo, error) {
 		}
 	}
 	approved := u.Status == user.StatusApproved
-	isStudent := u.Role == user.RoleStudent
+	isCampRole := u.Role == user.RoleStudent || u.Role == user.RoleAdmin
 	return &OAuthUserInfo{
 		ID:                u.ID,
 		Sub:               user.OAuthSubject(u.ID),
@@ -384,7 +383,7 @@ func (uc *OAuthUseCase) GetUserInfo(userID int) (*OAuthUserInfo, error) {
 		Active:            approved,
 		Approved:          approved,
 		ActiveClassroomID: activeClassroomID,
-		CampEligible:      approved && isStudent && activeClassroomID != 0,
+		CampEligible:      approved && isCampRole && activeClassroomID != 0,
 	}, nil
 }
 
