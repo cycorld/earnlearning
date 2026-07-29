@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"io"
+	"net/http"
 	"testing"
 
 	"github.com/earnlearning/backend/internal/domain/user"
@@ -87,13 +89,17 @@ func oauthAccessTokenFor(t *testing.T, ts *testServer, userToken, appName, verif
 
 func fetchUserInfo(t *testing.T, ts *testServer, accessToken string) userInfoClaims {
 	t.Helper()
-	resp := ts.get("/api/oauth/userinfo", accessToken)
-	if !resp.Success {
-		t.Fatalf("userinfo failed: %v", resp.Error)
+	req, _ := http.NewRequest(http.MethodGet, ts.server.URL+"/api/oauth/userinfo", nil)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	raw, err := ts.server.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer raw.Body.Close()
+	body, _ := io.ReadAll(raw.Body)
 	var info userInfoClaims
-	if err := json.Unmarshal(resp.Data, &info); err != nil {
-		t.Fatalf("parse userinfo: %v (%s)", err, string(resp.Data))
+	if err := json.Unmarshal(body, &info); err != nil {
+		t.Fatalf("userinfo decode: %v", err)
 	}
 	return info
 }
