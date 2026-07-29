@@ -1,5 +1,11 @@
 [
   {
+    "slug": "189-mcp-operations",
+    "title": "MCP 운영 도구 P0~P2 확장",
+    "date": "2026-07-29",
+    "tags": ["MCP", "API", "보안", "운영"]
+  },
+  {
     "slug": "180-main-backend-test-compilation",
     "title": "전체 테스트의 컴파일 계약 복구",
     "date": "2026-07-24",

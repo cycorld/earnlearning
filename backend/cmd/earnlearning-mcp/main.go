@@ -171,6 +171,9 @@ func validateArgs(args map[string]any, allowed ...string) error {
 }
 
 func (c *apiClient) call(name string, args map[string]any) (json.RawMessage, error) {
+	if len(operations) > 0 {
+		return c.callOperation(name, args)
+	}
 	if args == nil {
 		args = map[string]any{}
 	}
@@ -273,6 +276,9 @@ func (c *apiClient) call(name string, args map[string]any) (json.RawMessage, err
 
 func newServer(api *apiClient, logger *log.Logger) *server { return &server{api: api, logger: logger} }
 func tools() []tool {
+	if len(operations) > 0 {
+		return operationTools()
+	}
 	empty := map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}
 	list := func(extra map[string]any, required ...string) map[string]any {
 		s := map[string]any{"type": "object", "properties": extra, "additionalProperties": false}
