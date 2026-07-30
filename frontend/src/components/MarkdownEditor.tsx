@@ -300,7 +300,7 @@ export function MarkdownEditor({
         type="file"
         className="hidden"
         multiple
-        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt,.md,text/markdown"
+        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt,.md,.html,.htm,text/markdown,text/html"
         onChange={(e) => handleUpload(e.target.files)}
       />
 

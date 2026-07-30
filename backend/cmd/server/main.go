@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 
@@ -316,6 +317,17 @@ func main() {
 	e.HideBanner = true
 
 	// Static uploads
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			path := strings.ToLower(c.Request().URL.Path)
+			if strings.HasPrefix(path, "/uploads/") && (strings.HasSuffix(path, ".html") || strings.HasSuffix(path, ".htm")) {
+				c.Response().Header().Set("Content-Disposition", "attachment")
+				c.Response().Header().Set("Content-Type", "application/octet-stream")
+				c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+			}
+			return next(c)
+		}
+	})
 	e.Static("/uploads", cfg.UploadPath)
 
 	// Set up all routes

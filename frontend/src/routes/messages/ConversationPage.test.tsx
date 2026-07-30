@@ -387,10 +387,18 @@ describe('#184 DM 첨부 클라이언트 검증', () => {
 
   it('허용되지 않은 확장자는 거부한다', async () => {
     await renderPage()
-    select([makeFile('evil.html', 'text/html')])
+    select([makeFile('evil.exe', 'application/octet-stream')])
 
     await waitFor(() => expect(vi.mocked(toast.error)).toHaveBeenCalled())
-    expect(screen.queryByText('evil.html')).not.toBeInTheDocument()
+    expect(screen.queryByText('evil.exe')).not.toBeInTheDocument()
+  })
+
+  it('HTML 파일은 첨부할 수 있다', async () => {
+    await renderPage()
+    select([makeFile('prototype.html', 'text/html')])
+
+    expect(await screen.findByText('prototype.html')).toBeInTheDocument()
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
   })
 
   it('4개를 넘으면 거부한다', async () => {

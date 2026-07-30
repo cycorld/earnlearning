@@ -16,6 +16,7 @@ const ALLOWED_EXT = [
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf',
   '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
   '.zip', '.mp4', '.mp3',
+  '.html', '.htm',
 ]
 const MAX_FILES = 4
 const MAX_SIZE = 10 * 1024 * 1024

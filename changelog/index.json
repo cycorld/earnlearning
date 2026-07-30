@@ -1,5 +1,11 @@
 [
   {
+    "slug": "197-html-upload",
+    "title": "게시글·댓글·DM HTML 파일 첨부",
+    "date": "2026-07-30",
+    "tags": ["HTML", "파일 첨부", "보안"]
+  },
+  {
     "slug": "189-mcp-operations",
     "title": "MCP 운영 도구 P0~P2 확장",
     "date": "2026-07-29",

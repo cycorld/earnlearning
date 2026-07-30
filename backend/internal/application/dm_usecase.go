@@ -40,6 +40,7 @@ var allowedDMAttachmentExt = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
 	".pdf": true, ".doc": true, ".docx": true, ".xls": true, ".xlsx": true,
 	".ppt": true, ".pptx": true, ".zip": true, ".mp4": true, ".mp3": true,
+	".html": true, ".htm": true,
 }
 
 // inlineDMImageMIME — inline 렌더를 허용하는 안전한 이미지 타입만.

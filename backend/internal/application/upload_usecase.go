@@ -28,6 +28,7 @@ var allowedMIMETypesByExtension = map[string]map[string]bool{
 	".txt": {"text/plain": true}, ".md": {"text/markdown": true, "text/plain": true},
 	".zip": {"application/zip": true, "application/x-zip-compressed": true}, ".mp4": {"video/mp4": true}, ".mp3": {"audio/mpeg": true},
 	".json": {"application/json": true, "text/plain": true},
+	".html": {"text/html": true}, ".htm": {"text/html": true},
 }
 
 var activeHTMLPattern = regexp.MustCompile(`(?is)<\s*(?:!doctype\s+html|html\b|head\b|body\b|script\b|iframe\b|object\b|embed\b|svg\b|form\b|meta\b|link\b)`)
@@ -97,7 +98,7 @@ func (uc *UploadUsecase) Upload(userID int, fileHeader *multipart.FileHeader, uu
 	}
 	defer src.Close()
 	reader := bufio.NewReader(src)
-	textUpload := ext == ".md" || ext == ".txt" || ext == ".json"
+	textUpload := ext == ".md" || ext == ".txt" || ext == ".json" || ext == ".html" || ext == ".htm"
 	if !textUpload {
 		sample, err := reader.Peek(512)
 		if err != nil && err != io.EOF && err != bufio.ErrBufferFull {
@@ -158,6 +159,12 @@ func (uc *UploadUsecase) Upload(userID int, fileHeader *multipart.FileHeader, uu
 
 func validateUploadContent(ext string, sample []byte) error {
 	detected := strings.Split(http.DetectContentType(sample), ";")[0]
+	if ext == ".html" || ext == ".htm" {
+		if !utf8.Valid(sample) || bytes.IndexByte(sample, 0) >= 0 {
+			return fmt.Errorf("HTML 파일 내용이 올바르지 않습니다")
+		}
+		return nil
+	}
 	if ext == ".md" || ext == ".txt" || ext == ".json" {
 		// Reject active/document-level HTML anywhere; ordinary Markdown remains valid.
 		if !utf8.Valid(sample) || bytes.IndexByte(sample, 0) >= 0 || detected == "text/html" || detected == "text/xml" || activeHTMLPattern.Match(sample) {
