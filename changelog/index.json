@@ -1,5 +1,11 @@
 [
   {
+    "slug": "198-classroom-investment-isolation",
+    "title": "투자 내역을 현재 강의실별로 분리하기",
+    "date": "2026-07-30",
+    "tags": ["투자", "강의실", "격리", "버그수정"]
+  },
+  {
     "slug": "197-html-upload",
     "title": "게시글·댓글·DM HTML 파일 첨부",
     "date": "2026-07-30",

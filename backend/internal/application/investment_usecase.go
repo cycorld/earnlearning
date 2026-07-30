@@ -186,7 +186,7 @@ func (uc *InvestmentUseCase) Invest(roundID, userID, shares int) (*investment.In
 	}
 
 	// Wallet balance check + debit
-	w, err := uc.walletRepo.FindByUserID(userID)
+	w, err := uc.walletRepo.FindByUserAndClassroom(userID, c.ClassroomID)
 	if err != nil {
 		return nil, investment.ErrInsufficientFunds
 	}
@@ -498,6 +498,10 @@ func (uc *InvestmentUseCase) ListRounds(requesterID, companyID int, status strin
 // GetPortfolio returns the user's holdings aggregated per company, shaped for
 // the frontend InvestPage (nested company object + derived profit / dividends).
 func (uc *InvestmentUseCase) GetPortfolio(userID int) ([]*investment.PortfolioItem, error) {
+	active, err := uc.walletRepo.GetActiveClassroomID(userID)
+	if err != nil {
+		return nil, err
+	}
 	invs, err := uc.repo.ListByUser(userID)
 	if err != nil {
 		return nil, err
@@ -524,6 +528,9 @@ func (uc *InvestmentUseCase) GetPortfolio(userID int) ([]*investment.PortfolioIt
 	for _, a := range aggs {
 		c, err := uc.companyRepo.FindByID(a.companyID)
 		if err != nil {
+			continue
+		}
+		if c.ClassroomID != active {
 			continue
 		}
 		var pct float64
@@ -646,7 +653,11 @@ func (uc *InvestmentUseCase) ExecuteDividend(input ExecuteDividendInput, userID 
 }
 
 func (uc *InvestmentUseCase) GetMyDividends(userID int) ([]*investment.DividendPayment, error) {
-	return uc.repo.ListDividendsByUser(userID)
+	active, err := uc.walletRepo.GetActiveClassroomID(userID)
+	if err != nil {
+		return nil, err
+	}
+	return uc.repo.ListDividendsByUser(userID, active)
 }
 
 // CreateKpiRule now requires the caller to be the company owner.

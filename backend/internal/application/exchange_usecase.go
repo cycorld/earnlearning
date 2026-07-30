@@ -86,7 +86,7 @@ func (uc *ExchangeUseCase) GetPosition(companyID, userID int) (*Position, error)
 	if w, err := uc.walletRepo.FindByUserAndClassroom(userID, c.ClassroomID); err == nil && w != nil {
 		pos.Balance = w.Balance
 	}
-	pendingBuy, err := uc.exchangeRepo.GetPendingBuyTotal(userID)
+	pendingBuy, err := uc.exchangeRepo.GetPendingBuyTotal(userID, c.ClassroomID)
 	if err != nil {
 		return nil, err
 	}
@@ -157,11 +157,11 @@ func (uc *ExchangeUseCase) PlaceOrder(input PlaceOrderInput, userID int) (*Place
 
 	// Validate balance/shares
 	if orderType == exchange.OrderTypeBuy {
-		w, err := uc.walletRepo.FindByUserID(userID)
+		w, err := uc.walletRepo.FindByUserAndClassroom(userID, comp.ClassroomID)
 		if err != nil {
 			return nil, fmt.Errorf("지갑을 찾을 수 없습니다")
 		}
-		pendingBuy, err := uc.exchangeRepo.GetPendingBuyTotal(userID)
+		pendingBuy, err := uc.exchangeRepo.GetPendingBuyTotal(userID, comp.ClassroomID)
 		if err != nil {
 			return nil, err
 		}
@@ -245,7 +245,11 @@ func (uc *ExchangeUseCase) GetMyOrders(userID int, status string, companyID, pag
 		limit = 20
 	}
 
-	orders, total, err := uc.exchangeRepo.GetUserOrders(userID, status, companyID, page, limit)
+	active, err := uc.walletRepo.GetActiveClassroomID(userID)
+	if err != nil {
+		return nil, err
+	}
+	orders, total, err := uc.exchangeRepo.GetUserOrders(userID, active, status, companyID, page, limit)
 	if err != nil {
 		return nil, err
 	}
