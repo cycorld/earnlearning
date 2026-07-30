@@ -353,6 +353,17 @@ func TestIsolation_DividendRoutesToCompanyClassroom(t *testing.T) {
 	}, env.a1); !r.Success {
 		t.Fatalf("dividend: %v", r.Error)
 	}
+	if r := ts.get("/api/investment/dividends", s4); !r.Success {
+		t.Fatalf("list B dividends: %v", r.Error)
+	} else if string(r.Data) != "[]" {
+		t.Errorf("active B dividends=%s, want []", r.Data)
+	}
+	env.activate(t, s4, env.crA.ID)
+	if r := ts.get("/api/investment/dividends", s4); !r.Success {
+		t.Fatalf("list A dividends: %v", r.Error)
+	} else if string(r.Data) == "[]" {
+		t.Error("active A must show its dividend")
+	}
 
 	var balAAfter, balB int
 	ts.db.QueryRow(`SELECT balance FROM wallets WHERE user_id = ? AND classroom_id = ?`, s4ID, env.crA.ID).Scan(&balAAfter)
@@ -362,6 +373,58 @@ func TestIsolation_DividendRoutesToCompanyClassroom(t *testing.T) {
 	}
 	if balB != 60_000_000 {
 		t.Errorf("B wallet=%d, want 60000000 (untouched by dividend)", balB)
+	}
+}
+
+// #198 내 투자 포트폴리오는 활성 강의실의 회사만 보여야 한다.
+func TestIsolation_InvestmentPortfolioScoping(t *testing.T) {
+	env := setupIsolation(t)
+	ts := env.ts
+
+	companyID := env.createCompany(t, env.a1, "A포트폴리오회사")
+	r := ts.post("/api/investment/rounds", map[string]interface{}{
+		"company_id": companyID, "target_amount": 500_000, "offered_percent": 0.2,
+	}, env.a1)
+	if !r.Success {
+		t.Fatalf("create round: %v", r.Error)
+	}
+	var round struct {
+		ID int `json:"id"`
+	}
+	json.Unmarshal(r.Data, &round)
+
+	_, investor := registerWithID(t, ts, "iso-portfolio@test.com", "포트폴리오", "20270198")
+	if r := ts.joinClassroom(investor, env.crA.Code); !r.Success {
+		t.Fatalf("join A: %v", r.Error)
+	}
+	if r := ts.post(fmt.Sprintf("/api/investment/rounds/%d/invest", round.ID),
+		map[string]interface{}{"shares": 100}, investor); !r.Success {
+		t.Fatalf("invest: %v", r.Error)
+	}
+	if r := ts.joinClassroom(investor, env.crB.Code); !r.Success {
+		t.Fatalf("join B: %v", r.Error)
+	}
+
+	portfolioHasCompany := func() bool {
+		var items []struct {
+			Company struct {
+				ID int `json:"id"`
+			} `json:"company"`
+		}
+		json.Unmarshal(ts.get("/api/investment/portfolio", investor).Data, &items)
+		for _, item := range items {
+			if item.Company.ID == companyID {
+				return true
+			}
+		}
+		return false
+	}
+	if portfolioHasCompany() {
+		t.Fatal("company from A must NOT appear in portfolio when active B")
+	}
+	env.activate(t, investor, env.crA.ID)
+	if !portfolioHasCompany() {
+		t.Fatal("company from A must appear in portfolio when active A")
 	}
 }
 
