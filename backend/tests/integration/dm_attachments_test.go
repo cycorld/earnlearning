@@ -308,7 +308,6 @@ func TestDMAttachments(t *testing.T) {
 
 	t.Run("9 disallowed extensions are rejected", func(t *testing.T) {
 		for _, f := range []dmTestFile{
-			{filename: "payload.html", contentType: "text/html", content: []byte("<html><body>x</body></html>")},
 			{filename: "payload.exe", contentType: "application/octet-stream", content: []byte("MZ\x90\x00")},
 		} {
 			before := ts.dmStoredFileCount()
@@ -321,6 +320,15 @@ func TestDMAttachments(t *testing.T) {
 			if after := ts.dmStoredFileCount(); after != before {
 				t.Fatalf("%s left files behind", f.filename)
 			}
+		}
+	})
+
+	t.Run("9b html attachment is accepted", func(t *testing.T) {
+		r, status := ts.postDMMultipart(senderToken, map[string]string{
+			"receiver_id": fmt.Sprint(receiverID),
+		}, []dmTestFile{{filename: "prototype.html", contentType: "text/html", content: []byte("<!doctype html><title>prototype</title>")}})
+		if status != http.StatusCreated || !r.Success {
+			t.Fatalf("html send: status=%d err=%v", status, r.Error)
 		}
 	})
 

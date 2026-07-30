@@ -68,3 +68,12 @@ func TestValidateTextContentRejectsPayloadAfterSniffWindow(t *testing.T) {
 		}
 	}
 }
+
+func TestHTMLUploadTypeIsAllowed(t *testing.T) {
+	for _, ext := range []string{".html", ".htm"} {
+		mimes, ok := allowedMIMETypesByExtension[ext]
+		if !ok || !mimes["text/html"] {
+			t.Fatalf("%s text/html upload should be allowed", ext)
+		}
+	}
+}
