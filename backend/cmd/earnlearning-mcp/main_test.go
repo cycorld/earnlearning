@@ -178,6 +178,19 @@ func TestServerInitializeListAndCall(t *testing.T) {
 	}
 }
 
+func TestServerNegotiatesCurrentMCPProtocol(t *testing.T) {
+	c, _ := newAPIClient("http://localhost:8080", "token", false, http.DefaultClient)
+	s := newServer(c, log.New(io.Discard, "", 0))
+	init := s.handle(request{JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: "initialize", Params: json.RawMessage(`{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1"}}`)})
+	if init.Error != nil {
+		t.Fatalf("initialize current MCP protocol: %+v", init.Error)
+	}
+	b, _ := json.Marshal(init.Result)
+	if !bytes.Contains(b, []byte(`"protocolVersion":"2025-11-25"`)) {
+		t.Fatalf("server did not negotiate requested protocol: %s", b)
+	}
+}
+
 func TestValidationAndTokenRedaction(t *testing.T) {
 	const token = "super-secret-token"
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Error(w, "upstream failed", 500) }))

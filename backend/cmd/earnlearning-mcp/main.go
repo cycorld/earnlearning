@@ -305,11 +305,11 @@ func (s *server) handle(r request) response {
 			Capabilities    map[string]any `json:"capabilities"`
 			ClientInfo      map[string]any `json:"clientInfo"`
 		}
-		if err := decodeOne(r.Params, &p); err != nil || p.ProtocolVersion != "2025-03-26" || p.ClientInfo == nil {
+		if err := decodeOne(r.Params, &p); err != nil || !supportedProtocolVersion(p.ProtocolVersion) || p.ClientInfo == nil {
 			return fail(-32602, "unsupported or invalid initialize parameters")
 		}
 		s.initialized = true
-		out.Result = map[string]any{"protocolVersion": "2025-03-26", "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "earnlearning-mcp", "version": "0.1.0"}}
+		out.Result = map[string]any{"protocolVersion": p.ProtocolVersion, "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "earnlearning-mcp", "version": "0.1.0"}}
 	case "notifications/initialized":
 		return out
 	case "tools/list":
@@ -342,6 +342,15 @@ func (s *server) handle(r request) response {
 		return fail(-32601, "method not found")
 	}
 	return out
+}
+
+func supportedProtocolVersion(version string) bool {
+	switch version {
+	case "2025-03-26", "2025-06-18", "2025-11-25":
+		return true
+	default:
+		return false
+	}
 }
 
 func decodeOne(data []byte, dst any) error {

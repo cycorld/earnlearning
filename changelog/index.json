@@ -1881,5 +1881,12 @@
     "date": "2026-07-29",
     "tags": ["DM", "ZIP", "파일업로드", "호환성"],
     "github": null
+  },
+  {
+    "slug": "196-mcp-protocol-negotiation",
+    "title": "Hermes MCP 프로토콜 협상 호환",
+    "date": "2026-07-30",
+    "tags": ["MCP", "Hermes", "호환성", "보안"],
+    "github": null
   }
 ]
