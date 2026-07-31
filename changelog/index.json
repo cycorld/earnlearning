@@ -1,5 +1,11 @@
 [
   {
+    "slug": "199-grant-file-upload",
+    "title": "정부과제 파일 첨부 범위 확인",
+    "date": "2026-07-31",
+    "tags": ["정부과제", "파일 첨부", "회귀 테스트"]
+  },
+  {
     "slug": "198-classroom-investment-isolation",
     "title": "투자 내역을 현재 강의실별로 분리하기",
     "date": "2026-07-30",
