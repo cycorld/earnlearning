@@ -431,6 +431,17 @@ function ServiceRow({
         <Badge variant={rybbitVariants[service.rybbit_status] || 'secondary'}>
           {rybbitLabels[service.rybbit_status] || service.rybbit_status}
         </Badge>
+        {service.rybbit_status === 'connected' && service.rybbit_site_id && (
+          <a
+            href={`https://analytics.earnlearning.com/${encodeURIComponent(service.rybbit_site_id)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            <ExternalLink className="h-3 w-3" />
+            애널리틱스 열기
+          </a>
+        )}
       </div>
 
       {detail && <p className="text-xs text-destructive">{detail}</p>}
