@@ -317,6 +317,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.PUT("/users/:id/reject", h.Admin.RejectUser)
 	admin.GET("/users", h.Admin.ListUsers)
 	admin.POST("/wallet/transfer", h.Wallet.AdminTransfer)
+	admin.POST("/company-wallet/credit", h.Wallet.AdminCompanyCredit)
 	admin.PUT("/loans/:id/approve", h.Loan.ApproveLoan)
 	admin.PUT("/loans/:id/reject", h.Loan.RejectLoan)
 	admin.POST("/loans/weekly-interest", h.Loan.ProcessWeeklyInterest)

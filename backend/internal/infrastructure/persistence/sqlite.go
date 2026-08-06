@@ -84,6 +84,24 @@ func RunMigrations(db *sql.DB) error {
 		db.Exec(stmt) // ignore "duplicate column" errors
 	}
 
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS admin_company_wallet_credits (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		idempotency_key TEXT NOT NULL UNIQUE,
+		admin_wallet_id INTEGER NOT NULL REFERENCES wallets(id),
+		company_wallet_id INTEGER NOT NULL REFERENCES company_wallets(id),
+		company_id INTEGER NOT NULL REFERENCES companies(id),
+		amount INTEGER NOT NULL,
+		description TEXT NOT NULL DEFAULT '',
+		admin_transaction_id INTEGER REFERENCES transactions(id),
+		company_transaction_id INTEGER REFERENCES company_transactions(id),
+		admin_balance INTEGER,
+		company_balance INTEGER,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`)
+	if err != nil {
+		return fmt.Errorf("create admin_company_wallet_credits: %w", err)
+	}
+
 	// #159 강의실별 지갑: wallets UNIQUE(user_id) → UNIQUE(user_id, classroom_id) 리빌드
 	if err := migrateWalletsPerClassroom(db); err != nil {
 		return fmt.Errorf("migrate wallets per classroom: %w", err)
