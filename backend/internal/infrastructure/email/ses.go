@@ -19,6 +19,33 @@ import (
 // (주의: SendEmail 알림 경로는 기존대로 비활성 시 무시(nil) 유지 — 여기서 바꾸지 않는다.)
 var ErrSenderDisabled = errors.New("메일 발신기가 비활성화되어 있습니다")
 
+// SES v2 Simple 이메일의 사용자 지정 헤더 값은 최대 995자다.
+// References는 오래된 Message-ID부터 제거해 최신 답장 연결을 최대한 보존한다.
+const maxSESMessageHeaderValueLength = 995
+
+func limitReferencesHeader(references string) string {
+	if len(references) <= maxSESMessageHeaderValueLength {
+		return references
+	}
+
+	ids := strings.Fields(references)
+	length := 0
+	start := len(ids)
+	for start > 0 {
+		idLength := len(ids[start-1])
+		separatorLength := 0
+		if length > 0 {
+			separatorLength = 1
+		}
+		if idLength > maxSESMessageHeaderValueLength || length+separatorLength+idLength > maxSESMessageHeaderValueLength {
+			break
+		}
+		length += separatorLength + idLength
+		start--
+	}
+	return strings.Join(ids[start:], " ")
+}
+
 type SESService struct {
 	client    *sesv2.Client
 	fromEmail string
@@ -161,8 +188,8 @@ func (s *SESService) SendMailFrom(m OutgoingMail) error {
 		if m.InReplyTo != "" {
 			headers = append(headers, types.MessageHeader{Name: strPtr("In-Reply-To"), Value: strPtr(m.InReplyTo)})
 		}
-		if m.References != "" {
-			headers = append(headers, types.MessageHeader{Name: strPtr("References"), Value: strPtr(m.References)})
+		if references := limitReferencesHeader(m.References); references != "" {
+			headers = append(headers, types.MessageHeader{Name: strPtr("References"), Value: strPtr(references)})
 		}
 		msg.Headers = headers
 
