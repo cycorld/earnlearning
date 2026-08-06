@@ -111,6 +111,42 @@ type AdminTransferInput struct {
 	Description   string `json:"description"`
 }
 
+type AdminCompanyCreditInput struct {
+	CompanyID      int    `json:"company_id"`
+	Amount         int    `json:"amount"`
+	Description    string `json:"description"`
+	IdempotencyKey string `json:"idempotency_key"`
+}
+
+func (uc *WalletUseCase) AdminCompanyCredit(adminID int, input AdminCompanyCreditInput) (*company.AdminCompanyCreditResult, error) {
+	if input.CompanyID <= 0 || input.Amount <= 0 || strings.TrimSpace(input.IdempotencyKey) == "" {
+		return nil, wallet.ErrInvalidAmount
+	}
+	adminWallet, err := uc.walletRepo.FindByUserAndClassroom(adminID, 2)
+	if err != nil {
+		return nil, fmt.Errorf("classroom 2 admin wallet not found")
+	}
+	target, err := uc.companyRepo.FindByID(input.CompanyID)
+	if err != nil {
+		return nil, err
+	}
+	if target.ClassroomID != 2 {
+		return nil, fmt.Errorf("company is outside classroom 2")
+	}
+	if target.Status != "active" {
+		return nil, fmt.Errorf("company is not active")
+	}
+	companyWallet, err := uc.companyRepo.FindCompanyWallet(input.CompanyID)
+	if err != nil {
+		return nil, err
+	}
+	description := strings.TrimSpace(input.Description)
+	if description == "" {
+		description = "관리자 회사 지갑 보상"
+	}
+	return uc.companyRepo.AdminCreditCompanyWallet(adminWallet.ID, companyWallet.ID, target.ID, input.Amount, description, strings.TrimSpace(input.IdempotencyKey))
+}
+
 func (uc *WalletUseCase) AdminTransfer(adminID int, input AdminTransferInput) (int, error) {
 	if input.Amount == 0 {
 		return 0, wallet.ErrInvalidAmount

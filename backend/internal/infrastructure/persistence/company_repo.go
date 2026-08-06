@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/earnlearning/backend/internal/domain/company"
+	"github.com/earnlearning/backend/internal/domain/wallet"
 )
 
 type CompanyRepo struct {
@@ -15,6 +16,78 @@ type CompanyRepo struct {
 
 func NewCompanyRepo(db *sql.DB) *CompanyRepo {
 	return &CompanyRepo{db: db}
+}
+
+func (r *CompanyRepo) AdminCreditCompanyWallet(adminWalletID, companyWalletID, companyID, amount int, description, idempotencyKey string) (*company.AdminCompanyCreditResult, error) {
+	result := &company.AdminCompanyCreditResult{}
+	err := withDBTx(r.db, func(tx DBTX) error {
+		insert, err := tx.Exec(`INSERT OR IGNORE INTO admin_company_wallet_credits
+			(idempotency_key, admin_wallet_id, company_wallet_id, company_id, amount, description)
+			VALUES (?, ?, ?, ?, ?, ?)`, idempotencyKey, adminWalletID, companyWalletID, companyID, amount, description)
+		if err != nil {
+			return err
+		}
+		if n, _ := insert.RowsAffected(); n == 0 {
+			var storedAdminWalletID, storedCompanyID, storedAmount int
+			err = tx.QueryRow(`SELECT admin_wallet_id, company_id, amount, admin_transaction_id,
+				company_transaction_id, admin_balance, company_balance
+				FROM admin_company_wallet_credits WHERE idempotency_key = ?`, idempotencyKey).Scan(
+				&storedAdminWalletID, &storedCompanyID, &storedAmount, &result.AdminTransactionID,
+				&result.CompanyTransactionID, &result.AdminBalance, &result.CompanyBalance)
+			if err != nil {
+				return err
+			}
+			if storedAdminWalletID != adminWalletID || storedCompanyID != companyID || storedAmount != amount {
+				return fmt.Errorf("idempotency key was already used for a different request")
+			}
+			return nil
+		}
+
+		updated, err := tx.Exec(`UPDATE wallets SET balance = balance - ? WHERE id = ? AND balance >= ?`, amount, adminWalletID, amount)
+		if err != nil {
+			return err
+		}
+		if n, _ := updated.RowsAffected(); n != 1 {
+			return wallet.ErrInsufficientFunds
+		}
+		if err = tx.QueryRow(`SELECT balance FROM wallets WHERE id = ?`, adminWalletID).Scan(&result.AdminBalance); err != nil {
+			return err
+		}
+		personalTx, err := tx.Exec(`INSERT INTO transactions
+			(wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id)
+			VALUES (?, ?, ?, ?, ?, 'company', ?)`, adminWalletID, -amount, result.AdminBalance, string(wallet.TxAdminCompanyCredit), description, companyID)
+		if err != nil {
+			return err
+		}
+		id, err := personalTx.LastInsertId()
+		if err != nil {
+			return err
+		}
+		result.AdminTransactionID = int(id)
+
+		if _, err = tx.Exec(`UPDATE company_wallets SET balance = balance + ? WHERE id = ?`, amount, companyWalletID); err != nil {
+			return err
+		}
+		if err = tx.QueryRow(`SELECT balance FROM company_wallets WHERE id = ?`, companyWalletID).Scan(&result.CompanyBalance); err != nil {
+			return err
+		}
+		companyTx, err := tx.Exec(`INSERT INTO company_transactions
+			(company_wallet_id, amount, balance_after, tx_type, description, reference_type, reference_id)
+			VALUES (?, ?, ?, ?, ?, 'admin_wallet', ?)`, companyWalletID, amount, result.CompanyBalance, string(wallet.TxAdminCompanyCredit), description, adminWalletID)
+		if err != nil {
+			return err
+		}
+		id, err = companyTx.LastInsertId()
+		if err != nil {
+			return err
+		}
+		result.CompanyTransactionID = int(id)
+		_, err = tx.Exec(`UPDATE admin_company_wallet_credits SET admin_transaction_id = ?, company_transaction_id = ?,
+			admin_balance = ?, company_balance = ? WHERE idempotency_key = ?`, result.AdminTransactionID,
+			result.CompanyTransactionID, result.AdminBalance, result.CompanyBalance, idempotencyKey)
+		return err
+	})
+	return result, err
 }
 
 // WithTx returns a repo bound to tx so its writes join the caller's transaction (#142).

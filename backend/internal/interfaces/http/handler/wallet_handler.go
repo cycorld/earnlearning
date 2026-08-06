@@ -169,6 +169,18 @@ func (h *WalletHandler) AdminTransfer(c echo.Context) error {
 	})
 }
 
+func (h *WalletHandler) AdminCompanyCredit(c echo.Context) error {
+	var input application.AdminCompanyCreditInput
+	if err := c.Bind(&input); err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "잘못된 입력입니다")
+	}
+	result, err := h.walletUC.AdminCompanyCredit(middleware.GetUserID(c), input)
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "COMPANY_CREDIT_FAILED", err.Error())
+	}
+	return successResponse(c, http.StatusOK, result)
+}
+
 // GetRanking godoc
 //
 //	@Summary		자산 랭킹

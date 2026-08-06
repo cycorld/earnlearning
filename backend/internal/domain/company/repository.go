@@ -35,6 +35,7 @@ type CompanyRepository interface {
 	CreditCompanyWallet(walletID int, amount int, txType string, desc string, refType string, refID int) error
 	DebitCompanyWallet(walletID int, amount int, txType string, desc string, refType string, refID int) error
 	GetCompanyTransactions(walletID int, page, limit int) ([]*CompanyTransaction, int, error)
+	AdminCreditCompanyWallet(adminWalletID, companyWalletID, companyID, amount int, description, idempotencyKey string) (*AdminCompanyCreditResult, error)
 
 	// Disclosure operations
 	CreateDisclosure(d *Disclosure) (int, error)
@@ -54,6 +55,13 @@ type CompanyRepository interface {
 	CreateVote(v *Vote) (int, error)
 	FindVote(proposalID, userID int) (*Vote, error)
 	FindVotesByProposalID(proposalID int) ([]*Vote, error)
+}
+
+type AdminCompanyCreditResult struct {
+	AdminTransactionID   int `json:"admin_transaction_id"`
+	CompanyTransactionID int `json:"company_transaction_id"`
+	AdminBalance         int `json:"admin_balance"`
+	CompanyBalance       int `json:"company_balance"`
 }
 
 // CompanyServiceRepository — #181 회사 등록 서비스 저장소.
