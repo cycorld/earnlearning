@@ -9,6 +9,7 @@ type Repository interface {
 	// SetActiveClassroom sets the user's current classroom context (#159).
 	SetActiveClassroom(userID, classroomID int) error
 	GetMembers(classroomID int) ([]*ClassroomMember, error)
+	ListApprovedStudents(classroomID, excludeUserID int) ([]*StudentSummary, error)
 	CreateChannel(ch *Channel) (int, error)
 	GetChannels(classroomID int) ([]*Channel, error)
 	ListByUser(userID int) ([]*Classroom, error)

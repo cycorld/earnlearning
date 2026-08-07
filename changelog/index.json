@@ -1,5 +1,11 @@
 [
   {
+    "slug": "200-messages-compose-classroom",
+    "title": "같은 강의실 학생에게 새 메시지 보내기",
+    "date": "2026-08-07",
+    "tags": ["메시지", "강의실", "학생 검색", "개인정보 최소화"]
+  },
+  {
     "slug": "199-grant-file-upload",
     "title": "정부과제 파일 첨부 범위 확인",
     "date": "2026-07-31",

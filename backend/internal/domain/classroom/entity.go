@@ -19,6 +19,14 @@ type ClassroomMember struct {
 	JoinedAt    time.Time `json:"joined_at"`
 }
 
+type StudentSummary struct {
+	UserID     int    `json:"user_id"`
+	Name       string `json:"name"`
+	Department string `json:"department"`
+	StudentID  string `json:"student_id"`
+	AvatarURL  string `json:"avatar_url"`
+}
+
 // MemberDashboard is an enriched member view for admin dashboard.
 type MemberDashboard struct {
 	UserID         int       `json:"user_id"`
