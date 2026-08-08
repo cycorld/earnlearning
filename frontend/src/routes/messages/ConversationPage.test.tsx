@@ -116,6 +116,19 @@ async function renderPage() {
   await screen.findByPlaceholderText('메시지를 입력하세요')
 }
 
+describe('DM 본문 줄바꿈', () => {
+  it('API가 반환한 개행을 보존하고 긴 키 문자열을 버블 안에서 줄바꿈한다', async () => {
+    const credential = 'sk-test_' + 'a'.repeat(96)
+    const content = `API_KEY=${credential}\nENDPOINT=https://example.test/v1`
+    messages = [msg({ content })]
+
+    await renderPage()
+
+    const body = screen.getByText((_, element) => element?.childNodes[0]?.textContent === content)
+    expect(body).toHaveClass('whitespace-pre-wrap', 'break-words')
+  })
+})
+
 describe('#184 DM 첨부 렌더', () => {
   it('이미지 첨부는 인라인 img 로 렌더한다', async () => {
     messages = [
