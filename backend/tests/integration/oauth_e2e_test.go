@@ -142,15 +142,15 @@ func TestOAuthE2E(t *testing.T) {
 
 	// 4a. read:profile — Get user info
 	t.Run("read:profile - userinfo", func(t *testing.T) {
-		resp := ts.get("/api/oauth/userinfo", tokens.AccessToken)
-		if !resp.Success {
-			t.Fatalf("userinfo failed: %v", resp.Error)
+		resp, body := ts.rawGetFull("/api/oauth/userinfo", tokens.AccessToken)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("userinfo failed: status=%d body=%s", resp.StatusCode, body)
 		}
 		var info struct {
 			Name  string `json:"name"`
 			Email string `json:"email"`
 		}
-		json.Unmarshal(resp.Data, &info)
+		json.Unmarshal(body, &info)
 		if info.Name != "API사용자" {
 			t.Errorf("expected 'API사용자', got '%s'", info.Name)
 		}
@@ -238,8 +238,8 @@ func TestOAuthE2E(t *testing.T) {
 		}
 
 		// read:profile → userinfo 접근 가능
-		infoR := ts.get("/api/oauth/userinfo", lt.AccessToken)
-		if !infoR.Success {
+		infoR, _ := ts.rawGetFull("/api/oauth/userinfo", lt.AccessToken)
+		if infoR.StatusCode != http.StatusOK {
 			t.Error("userinfo should work with read:profile scope")
 		}
 	})
@@ -268,14 +268,14 @@ func TestOAuthE2E(t *testing.T) {
 		}
 
 		// Old access token should be revoked
-		oldResp := ts.get("/api/oauth/userinfo", tokens.AccessToken)
-		if oldResp.Success {
+		oldResp, _ := ts.rawGetFull("/api/oauth/userinfo", tokens.AccessToken)
+		if oldResp.StatusCode == http.StatusOK {
 			t.Error("old access token should be revoked after refresh")
 		}
 
 		// New token should work
-		newResp := ts.get("/api/oauth/userinfo", newTokens.AccessToken)
-		if !newResp.Success {
+		newResp, _ := ts.rawGetFull("/api/oauth/userinfo", newTokens.AccessToken)
+		if newResp.StatusCode != http.StatusOK {
 			t.Error("new access token should work")
 		}
 
@@ -296,8 +296,8 @@ func TestOAuthE2E(t *testing.T) {
 		}
 
 		// Revoked token should not work
-		failResp := ts.get("/api/oauth/userinfo", tokens.AccessToken)
-		if failResp.Success {
+		failResp, _ := ts.rawGetFull("/api/oauth/userinfo", tokens.AccessToken)
+		if failResp.StatusCode == http.StatusOK {
 			t.Error("revoked token should not work")
 		}
 	})
