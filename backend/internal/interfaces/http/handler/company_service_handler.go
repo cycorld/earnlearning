@@ -233,3 +233,11 @@ func (h *CompanyServiceHandler) ConnectRybbit(c echo.Context) error {
 	}
 	return successResponse(c, http.StatusOK, updated)
 }
+
+func (h *CompanyServiceHandler) AdminReconcileRybbit(c echo.Context) error {
+	result, err := h.uc.AdminReconcileRybbit(c.Request().Context(), middleware.GetUserID(c))
+	if err != nil {
+		return companyServiceErr(c, err)
+	}
+	return successResponse(c, http.StatusOK, result)
+}

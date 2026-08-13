@@ -23,6 +23,10 @@ const companyServiceCols = `id, company_id, name, url, normalized_url,
 	validation_status, validation_checked_at, validation_detail,
 	rybbit_status, rybbit_site_id, rybbit_connected_at, created_at, updated_at`
 
+const qualifiedCompanyServiceCols = `cs.id, cs.company_id, cs.name, cs.url, cs.normalized_url,
+	cs.validation_status, cs.validation_checked_at, cs.validation_detail,
+	cs.rybbit_status, cs.rybbit_site_id, cs.rybbit_connected_at, cs.created_at, cs.updated_at`
+
 func scanCompanyService(row interface {
 	Scan(dest ...interface{}) error
 }) (*company.CompanyService, error) {
@@ -94,6 +98,28 @@ func (r *CompanyServiceRepo) FindByCompanyID(companyID int) ([]*company.CompanyS
 		companyID)
 	if err != nil {
 		return nil, fmt.Errorf("query company services: %w", err)
+	}
+	defer rows.Close()
+
+	list := make([]*company.CompanyService, 0)
+	for rows.Next() {
+		s, err := scanCompanyService(rows)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, s)
+	}
+	return list, rows.Err()
+}
+
+func (r *CompanyServiceRepo) FindConnectedByClassroomID(classroomID int) ([]*company.CompanyService, error) {
+	rows, err := r.db.Query(
+		`SELECT `+qualifiedCompanyServiceCols+` FROM company_services cs
+		 JOIN companies c ON c.id = cs.company_id
+		 WHERE c.classroom_id = ? AND TRIM(cs.rybbit_site_id) <> ''
+		 ORDER BY cs.company_id ASC, cs.id ASC`, classroomID)
+	if err != nil {
+		return nil, fmt.Errorf("query classroom Rybbit services: %w", err)
 	}
 	defer rows.Close()
 

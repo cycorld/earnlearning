@@ -1,5 +1,11 @@
 [
   {
+    "slug": "199-admin-analytics-project-access",
+    "title": "관리자의 강의실 Analytics 프로젝트 접근",
+    "date": "2026-08-13",
+    "tags": ["Analytics", "Rybbit", "권한", "보안"]
+  },
+  {
     "slug": "197-html-upload",
     "title": "게시글·댓글·DM HTML 파일 첨부",
     "date": "2026-07-30",
