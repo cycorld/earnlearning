@@ -111,6 +111,29 @@ func (r *ClassroomRepo) GetMembers(classroomID int) ([]*classroom.ClassroomMembe
 	return members, rows.Err()
 }
 
+func (r *ClassroomRepo) ListApprovedStudents(classroomID, excludeUserID int) ([]*classroom.StudentSummary, error) {
+	rows, err := r.db.Query(`
+		SELECT u.id, u.name, u.department, u.student_id, u.avatar_url
+		FROM classroom_members cm
+		JOIN users u ON u.id = cm.user_id
+		WHERE cm.classroom_id = ? AND u.role = 'student' AND u.status = 'approved' AND u.id <> ?
+		ORDER BY u.name, u.id`, classroomID, excludeUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var students []*classroom.StudentSummary
+	for rows.Next() {
+		student := &classroom.StudentSummary{}
+		if err := rows.Scan(&student.UserID, &student.Name, &student.Department, &student.StudentID, &student.AvatarURL); err != nil {
+			return nil, err
+		}
+		students = append(students, student)
+	}
+	return students, rows.Err()
+}
+
 func (r *ClassroomRepo) CreateChannel(ch *classroom.Channel) (int, error) {
 	result, err := r.db.Exec(
 		`INSERT INTO channels (classroom_id, name, slug, channel_type, write_role, sort_order)

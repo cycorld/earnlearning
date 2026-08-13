@@ -1,5 +1,5 @@
 ---
-id: 199
+id: 201
 title: canonical 관리자의 강의실 Analytics 프로젝트 접근
 priority: high
 type: feat

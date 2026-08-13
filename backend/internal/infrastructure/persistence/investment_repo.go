@@ -338,7 +338,7 @@ func (r *InvestmentRepo) CreateDividendPayment(p *investment.DividendPayment) (i
 	return int(id), err
 }
 
-func (r *InvestmentRepo) ListDividendsByUser(userID int) ([]*investment.DividendPayment, error) {
+func (r *InvestmentRepo) ListDividendsByUser(userID, classroomID int) ([]*investment.DividendPayment, error) {
 	rows, err := r.db.Query(`
 		SELECT dp.id, dp.dividend_id, dp.user_id, dp.shares, dp.amount, dp.created_at,
 			   u.name AS user_name, c.name AS company_name
@@ -346,8 +346,8 @@ func (r *InvestmentRepo) ListDividendsByUser(userID int) ([]*investment.Dividend
 		JOIN dividends d ON d.id = dp.dividend_id
 		JOIN companies c ON c.id = d.company_id
 		JOIN users u ON u.id = dp.user_id
-		WHERE dp.user_id = ?
-		ORDER BY dp.created_at DESC`, userID)
+		WHERE dp.user_id = ? AND c.classroom_id = ?
+		ORDER BY dp.created_at DESC`, userID, classroomID)
 	if err != nil {
 		return nil, fmt.Errorf("list dividends: %w", err)
 	}

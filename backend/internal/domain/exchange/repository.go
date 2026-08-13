@@ -23,10 +23,10 @@ type Repository interface {
 	// Query operations
 	GetOrderbook(companyID int) (*Orderbook, error)
 	GetCompanyTrades(companyID, limit int) ([]*StockTrade, error)
-	GetUserOrders(userID int, status string, companyID int, page, limit int) ([]*StockOrder, int, error)
+	GetUserOrders(userID, classroomID int, status string, companyID int, page, limit int) ([]*StockOrder, int, error)
 	GetListedCompanies(classroomID int) ([]*ListedCompany, error)
 
 	// Pending order calculations
-	GetPendingBuyTotal(userID int) (int, error)
+	GetPendingBuyTotal(userID, classroomID int) (int, error)
 	GetPendingSellShares(userID int, companyID int) (int, error)
 }

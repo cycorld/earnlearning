@@ -111,6 +111,19 @@ describe('GrantDetailPage', () => {
     })
   })
 
+  it('지원서에서 일반 게시판과 동일한 파일 형식을 업로드할 수 있다', async () => {
+    setupMocks()
+    const user = userEvent.setup()
+    const { container } = renderWithProviders(<GrantDetailPage />)
+
+    await user.click(await screen.findByText('이 과제에 지원하기'))
+
+    expect(container.querySelector('input[type="file"]')).toHaveAttribute(
+      'accept',
+      'image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt,.md,.html,.htm,text/markdown,text/html',
+    )
+  })
+
   it('이미 지원한 학생에게 안내 메시지가 표시된다', async () => {
     const grantWithMyApp = {
       ...mockGrant,

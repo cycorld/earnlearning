@@ -211,12 +211,12 @@ func (r *ExchangeRepo) GetCompanyTrades(companyID, limit int) ([]*exchange.Stock
 	return trades, nil
 }
 
-func (r *ExchangeRepo) GetUserOrders(userID int, status string, companyID int, page, limit int) ([]*exchange.StockOrder, int, error) {
+func (r *ExchangeRepo) GetUserOrders(userID, classroomID int, status string, companyID int, page, limit int) ([]*exchange.StockOrder, int, error) {
 	var conditions []string
 	var args []interface{}
 
-	conditions = append(conditions, "user_id = ?")
-	args = append(args, userID)
+	conditions = append(conditions, "user_id = ?", "company_id IN (SELECT id FROM companies WHERE classroom_id = ?)")
+	args = append(args, userID, classroomID)
 
 	if status != "" {
 		conditions = append(conditions, "status = ?")
@@ -298,12 +298,13 @@ func (r *ExchangeRepo) GetListedCompanies(classroomID int) ([]*exchange.ListedCo
 	return companies, nil
 }
 
-func (r *ExchangeRepo) GetPendingBuyTotal(userID int) (int, error) {
+func (r *ExchangeRepo) GetPendingBuyTotal(userID, classroomID int) (int, error) {
 	var total sql.NullInt64
 	err := r.db.QueryRow(`
 		SELECT SUM(remaining_shares * price_per_share)
-		FROM stock_orders
-		WHERE user_id = ? AND order_type = 'buy' AND status IN ('open', 'partial')`, userID,
+		FROM stock_orders so
+		JOIN companies c ON c.id = so.company_id
+		WHERE so.user_id = ? AND c.classroom_id = ? AND order_type = 'buy' AND so.status IN ('open', 'partial')`, userID, classroomID,
 	).Scan(&total)
 	if err != nil {
 		return 0, fmt.Errorf("get pending buy total: %w", err)

@@ -338,7 +338,7 @@ export default function ConversationPage() {
               className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
+                className={`max-w-[75%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
                   isMine
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted'

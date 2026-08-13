@@ -132,6 +132,24 @@ func (h *ClassroomHandler) GetClassroom(c echo.Context) error {
 	})
 }
 
+func (h *ClassroomHandler) ListStudents(c echo.Context) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return errorResponse(c, http.StatusBadRequest, "INVALID_ID", "유효하지 않은 ID입니다")
+	}
+	students, err := h.classroomUC.ListStudents(id, middleware.GetUserID(c), middleware.GetUserRole(c) == "admin")
+	if err != nil {
+		if err == classroom.ErrNotMember {
+			return errorResponse(c, http.StatusForbidden, "NOT_MEMBER", err.Error())
+		}
+		return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "학생 목록 조회에 실패했습니다")
+	}
+	if students == nil {
+		students = []*classroom.StudentSummary{}
+	}
+	return successResponse(c, http.StatusOK, students)
+}
+
 // GetClassroomDashboard godoc
 //
 //	@Summary		클래스룸 대시보드

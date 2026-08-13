@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
 interface MarkdownContentProps {
@@ -32,7 +33,7 @@ function processMentions(content: string): string {
 
 export function MarkdownContent({
   content: rawContent,
-  maxLines = 8,
+  maxLines = 12,
   className = '',
 }: MarkdownContentProps) {
   const navigate = useNavigate()
@@ -46,8 +47,8 @@ export function MarkdownContent({
   return (
     <div className={className}>
       <div
-        className={`markdown-body break-words ${
-          !expanded && isLong ? 'line-clamp-[8] overflow-hidden' : ''
+        className={`markdown-body break-words whitespace-pre-wrap ${
+          !expanded && isLong ? 'overflow-hidden' : ''
         }`}
         style={
           !expanded && isLong
@@ -56,7 +57,7 @@ export function MarkdownContent({
         }
       >
         <ReactMarkdown
-          remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
+          remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkBreaks]}
           components={{
             img: ({ src, alt }) => (
               <img

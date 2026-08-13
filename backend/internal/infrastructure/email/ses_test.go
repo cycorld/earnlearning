@@ -2,8 +2,43 @@ package email
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 	"testing"
 )
+
+func TestLimitReferencesHeader(t *testing.T) {
+	ids := make([]string, 80)
+	for i := range ids {
+		ids[i] = "<message-" + strconv.Itoa(i) + "-" + strings.Repeat("x", 20) + "@example.com>"
+	}
+	references := strings.Join(ids, " ")
+
+	got := limitReferencesHeader(references)
+	if len(got) > maxSESMessageHeaderValueLength {
+		t.Fatalf("References 길이=%d, SES 제한=%d", len(got), maxSESMessageHeaderValueLength)
+	}
+	if !strings.HasSuffix(got, ids[len(ids)-1]) {
+		t.Fatalf("가장 최신 Message-ID가 보존되어야 함: %q", got)
+	}
+	if strings.Contains(got, ids[0]) {
+		t.Fatalf("제한 초과 시 가장 오래된 Message-ID부터 제거되어야 함")
+	}
+}
+
+func TestLimitReferencesHeaderLeavesShortChainUnchanged(t *testing.T) {
+	const references = "<first@example.com> <second@example.com>"
+	if got := limitReferencesHeader(references); got != references {
+		t.Fatalf("짧은 References가 변경됨: got %q, want %q", got, references)
+	}
+}
+
+func TestLimitReferencesHeaderDropsOversizedMessageID(t *testing.T) {
+	oversized := "<" + strings.Repeat("x", maxSESMessageHeaderValueLength) + ">@example.com>"
+	if got := limitReferencesHeader(oversized); got != "" {
+		t.Fatalf("단일 Message-ID가 제한을 넘으면 헤더를 생략해야 함, got len=%d", len(got))
+	}
+}
 
 // TestSESSendMailFromDisabledIsLoud — 비활성 발신기의 SendMailFrom 은 조용한 성공(nil) 이 아니라
 // ErrSenderDisabled 를 반환해야 한다. (미설정 프로덕션에서 거짓 "발송 완료" + 보낸편지함 저장 방지)

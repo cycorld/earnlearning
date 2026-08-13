@@ -34,7 +34,7 @@ type Repository interface {
 	// Dividends
 	CreateDividend(d *Dividend) (int, error)
 	CreateDividendPayment(p *DividendPayment) (int, error)
-	ListDividendsByUser(userID int) ([]*DividendPayment, error)
+	ListDividendsByUser(userID, classroomID int) ([]*DividendPayment, error)
 
 	// KPI
 	CreateKpiRule(rule *KpiRule) (int, error)

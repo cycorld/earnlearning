@@ -1,9 +1,27 @@
 [
   {
-    "slug": "199-admin-analytics-project-access",
+    "slug": "201-admin-analytics-project-access",
     "title": "관리자의 강의실 Analytics 프로젝트 접근",
     "date": "2026-08-13",
     "tags": ["Analytics", "Rybbit", "권한", "보안"]
+  },
+  {
+    "slug": "200-messages-compose-classroom",
+    "title": "같은 강의실 학생에게 새 메시지 보내기",
+    "date": "2026-08-07",
+    "tags": ["메시지", "강의실", "학생 검색", "개인정보 최소화"]
+  },
+  {
+    "slug": "199-grant-file-upload",
+    "title": "정부과제 파일 첨부 범위 확인",
+    "date": "2026-07-31",
+    "tags": ["정부과제", "파일 첨부", "회귀 테스트"]
+  },
+  {
+    "slug": "198-classroom-investment-isolation",
+    "title": "투자 내역을 현재 강의실별로 분리하기",
+    "date": "2026-07-30",
+    "tags": ["투자", "강의실", "격리", "버그수정"]
   },
   {
     "slug": "197-html-upload",

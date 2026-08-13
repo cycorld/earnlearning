@@ -173,6 +173,19 @@ func (uc *ClassroomUseCase) GetClassroomMembers(classroomID int) ([]*classroom.C
 	return uc.classroomRepo.GetMembers(classroomID)
 }
 
+func (uc *ClassroomUseCase) ListStudents(classroomID, requesterID int, isAdmin bool) ([]*classroom.StudentSummary, error) {
+	if !isAdmin {
+		isMember, err := uc.classroomRepo.IsMember(classroomID, requesterID)
+		if err != nil {
+			return nil, err
+		}
+		if !isMember {
+			return nil, classroom.ErrNotMember
+		}
+	}
+	return uc.classroomRepo.ListApprovedStudents(classroomID, requesterID)
+}
+
 func (uc *ClassroomUseCase) GetMemberDashboard(classroomID int) ([]*classroom.MemberDashboard, error) {
 	return uc.classroomRepo.GetMemberDashboard(classroomID)
 }

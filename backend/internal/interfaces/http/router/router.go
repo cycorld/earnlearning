@@ -121,6 +121,7 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	approved.POST("/classrooms/join", h.Classroom.JoinClassroom)
 	approved.GET("/classrooms", h.Classroom.ListMyClassrooms)
 	approved.GET("/classrooms/:id", h.Classroom.GetClassroom)
+	approved.GET("/classrooms/:id/students", h.Classroom.ListStudents)
 	approved.POST("/classrooms/:id/activate", h.Classroom.ActivateClassroom)
 
 	// Companies (OAuth: read:company / write:company)
