@@ -353,7 +353,7 @@ func (r *InvestmentRepo) ListDividendsByUser(userID, classroomID int) ([]*invest
 	}
 	defer rows.Close()
 
-	var payments []*investment.DividendPayment
+	payments := make([]*investment.DividendPayment, 0)
 	for rows.Next() {
 		p := &investment.DividendPayment{}
 		if err := rows.Scan(

@@ -18,6 +18,7 @@ import (
 // validationTTL — 검증 결과 유효 기간 (#181).
 // 이 시간이 지나면 Rybbit 연동 전에 다시 검증해야 한다 (주소가 바뀌었을 수 있으므로).
 const validationTTL = 24 * time.Hour
+const canonicalAnalyticsAdminEmail = "cyc@snu.ac.kr"
 
 // URLChecker — 서비스 URL 도달성 검사기 (테스트에서 교체 가능).
 type URLChecker interface {
@@ -428,4 +429,62 @@ func (uc *CompanyServiceUseCase) ConnectRybbit(ctx context.Context, companyID, s
 		return nil, err
 	}
 	return toServiceResponse(updated), nil
+}
+
+type AdminRybbitReconcileResult struct {
+	ClassroomID  int `json:"classroom_id"`
+	Companies    int `json:"companies"`
+	GrantedSites int `json:"granted_sites"`
+}
+
+func (uc *CompanyServiceUseCase) AdminReconcileRybbit(ctx context.Context, userID int) (*AdminRybbitReconcileResult, error) {
+	admin, err := uc.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if admin.Role != user.RoleAdmin || admin.Status != user.StatusApproved || !strings.EqualFold(strings.TrimSpace(admin.Email), canonicalAnalyticsAdminEmail) {
+		return nil, company.ErrNotOwner
+	}
+	classroomID, err := uc.walletRepo.GetActiveClassroomID(admin.ID)
+	if err != nil {
+		return nil, err
+	}
+	if classroomID == 0 {
+		return nil, company.ErrNoClassroom
+	}
+	services, err := uc.serviceRepo.FindConnectedByClassroomID(classroomID)
+	if err != nil {
+		return nil, err
+	}
+	result := &AdminRybbitReconcileResult{ClassroomID: classroomID}
+	for start := 0; start < len(services); {
+		end := start + 1
+		for end < len(services) && services[end].CompanyID == services[start].CompanyID {
+			end++
+		}
+		group := services[start:end]
+		c, err := uc.companyRepo.FindByID(group[0].CompanyID)
+		if err != nil {
+			return nil, err
+		}
+		ids := make([]int, len(group))
+		for i, service := range group {
+			ids[i] = service.ID
+		}
+		_, host, err := urlcheck.Normalize(group[0].NormalizedURL)
+		if err != nil {
+			return nil, invalidURLError(err)
+		}
+		_, err = uc.provisioner.Provision(ctx, rybbit.ProvisionRequest{CompanyID: c.ID, CompanyName: c.Name, ServiceID: group[0].ID, ServiceName: group[0].Name, Domain: host, OwnerUserID: admin.ID, OwnerEmail: admin.Email, OwnerName: admin.Name, GrantServiceIDs: ids})
+		if errors.Is(err, rybbit.ErrNotConfigured) {
+			return nil, company.ErrRybbitNotConfigured
+		}
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", company.ErrRybbitFailed, err)
+		}
+		result.Companies++
+		result.GrantedSites += len(group)
+		start = end
+	}
+	return result, nil
 }

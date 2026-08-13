@@ -1,5 +1,11 @@
 [
   {
+    "slug": "201-admin-analytics-project-access",
+    "title": "관리자의 강의실 Analytics 프로젝트 접근",
+    "date": "2026-08-13",
+    "tags": ["Analytics", "Rybbit", "권한", "보안"]
+  },
+  {
     "slug": "200-messages-compose-classroom",
     "title": "같은 강의실 학생에게 새 메시지 보내기",
     "date": "2026-08-07",

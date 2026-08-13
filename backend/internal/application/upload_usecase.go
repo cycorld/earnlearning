@@ -59,6 +59,11 @@ func (uc *UploadUsecase) Upload(userID int, fileHeader *multipart.FileHeader, uu
 		return nil, fmt.Errorf("안전하지 않은 파일명입니다")
 	}
 	ext := strings.ToLower(filepath.Ext(filename))
+	// Generic uploads are served from same-origin /uploads. HTML is allowed
+	// only by private attachment flows that force safe download headers.
+	if ext == ".html" || ext == ".htm" {
+		return nil, fmt.Errorf("공개 업로드에는 HTML 파일을 허용하지 않습니다")
+	}
 	allowedMIMEs, extensionAllowed := allowedMIMETypesByExtension[ext]
 	if ext == "" || !extensionAllowed {
 		return nil, fmt.Errorf("허용되지 않는 파일 확장자입니다: %s", ext)

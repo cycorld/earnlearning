@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"net/http"
 	"net/url"
 	"testing"
 )
@@ -125,15 +126,15 @@ func TestOAuth(t *testing.T) {
 		}
 
 		// 5. Use access token to get user info
-		userinfoResp := ts.get("/api/oauth/userinfo", tokenData.AccessToken)
-		if !userinfoResp.Success {
-			t.Fatalf("userinfo failed: %v", userinfoResp.Error)
+		userinfoResp, userinfoBody := ts.rawGetFull("/api/oauth/userinfo", tokenData.AccessToken)
+		if userinfoResp.StatusCode != http.StatusOK {
+			t.Fatalf("userinfo failed: status=%d body=%s", userinfoResp.StatusCode, userinfoBody)
 		}
 		var userInfo struct {
 			Name  string `json:"name"`
 			Email string `json:"email"`
 		}
-		json.Unmarshal(userinfoResp.Data, &userInfo)
+		json.Unmarshal(userinfoBody, &userInfo)
 		if userInfo.Name != "OAuth테스트" {
 			t.Errorf("expected name 'OAuth테스트', got '%s'", userInfo.Name)
 		}
@@ -190,7 +191,7 @@ func TestOAuth(t *testing.T) {
 
 		// Authorize with PKCE
 		authResp := ts.post("/api/oauth/authorize", map[string]interface{}{
-			"client_id":              regData.ClientID,
+			"client_id":             regData.ClientID,
 			"redirect_uri":          "http://localhost:3000/callback",
 			"scopes":                []string{"read:profile"},
 			"code_challenge":        codeChallenge,
@@ -218,7 +219,7 @@ func TestOAuth(t *testing.T) {
 
 		// Wrong verifier should fail
 		authResp2 := ts.post("/api/oauth/authorize", map[string]interface{}{
-			"client_id":              regData.ClientID,
+			"client_id":             regData.ClientID,
 			"redirect_uri":          "http://localhost:3000/callback",
 			"scopes":                []string{"read:profile"},
 			"code_challenge":        codeChallenge,

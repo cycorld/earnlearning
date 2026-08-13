@@ -325,6 +325,9 @@ func Setup(e *echo.Echo, h *Handlers, hub *ws.Hub, jwtSecret string, buildNumber
 	admin.GET("/loans", h.Loan.AdminListLoans)
 	admin.GET("/classrooms/:id/dashboard", h.Classroom.GetClassroomDashboard)
 	admin.GET("/companies", h.Company.ListAllCompanies)
+	if h.CompanyService != nil {
+		admin.POST("/analytics/rybbit/reconcile", h.CompanyService.AdminReconcileRybbit)
+	}
 	admin.POST("/users/:id/impersonate", h.Admin.ImpersonateUser)
 	admin.POST("/notifications/announce", h.Notification.AdminSendAnnouncement)
 	admin.POST("/force-reload", h.Admin.ForceReload)

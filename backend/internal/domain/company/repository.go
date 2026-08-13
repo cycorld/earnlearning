@@ -73,6 +73,8 @@ type CompanyServiceRepository interface {
 	FindByID(id int) (*CompanyService, error)
 	// FindByCompanyID 는 id 오름차순 정렬.
 	FindByCompanyID(companyID int) ([]*CompanyService, error)
+	// FindConnectedByClassroomID 는 해당 강의실 회사의 Rybbit 연동 서비스만 반환한다.
+	FindConnectedByClassroomID(classroomID int) ([]*CompanyService, error)
 	// FindByCompanyAndNormalizedURL 은 중복 사전 검사용 (없으면 ErrServiceNotFound).
 	FindByCompanyAndNormalizedURL(companyID int, normalizedURL string) (*CompanyService, error)
 	// Update 는 이름/URL/검증 상태/연동 상태를 한 번에 덮어쓴다 (updated_at 자동 갱신).
