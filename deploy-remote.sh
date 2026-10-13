@@ -77,7 +77,13 @@ deploy_to_stage() {
 
   log "IMAGE_TAG: ${IMAGE_TAG}"
 
-  log "=== 2단계: Stage 배포 (EC2) ==="
+  log "=== 2단계: EC2(${DEPLOY_HOST})로 SSH 파이프 직배송 (GHCR 우회 및 고속 로드) ==="
+  docker save "ghcr.io/cycorld/earnlearning-backend:${IMAGE_TAG}" "ghcr.io/cycorld/earnlearning-frontend:${IMAGE_TAG}" \
+    | gzip -1 \
+    | ssh "$DEPLOY_HOST" "gunzip | docker load"
+  log "이미지 직배송 완료! ($(elapsed))"
+
+  log "=== 3단계: Stage 배포 (EC2) ==="
   ssh "$DEPLOY_HOST" "cd ${DEPLOY_DIR} && IMAGE_TAG=${IMAGE_TAG} ./deploy.sh stage"
 
   log ""

@@ -1988,5 +1988,17 @@
       "i18n"
     ],
     "github": null
+  },
+  {
+    "slug": "208-direct-ssh-stream-deploy",
+    "title": "SSH 파이프 직배송 배포 파이프라인 구축 (GHCR 의존성 우회)",
+    "date": "2026-10-13",
+    "tags": [
+      "DevOps",
+      "Deployment",
+      "Docker",
+      "SSH"
+    ],
+    "github": null
   }
 ]
