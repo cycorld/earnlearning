@@ -104,15 +104,24 @@ EOF
   # mock ssh
   cat > "$sandbox/mock-bin/ssh" <<'EOF'
 #!/bin/bash
+cat >/dev/null || true
 echo "ssh $*" >> "$MOCK_LOG"
 # 원격 명령 문자열은 마지막 인자
 cmd="${!#}"
 if printf '%s' "$cmd" | grep -q "docker inspect"; then
-  echo "${MOCK_STAGE_IMAGE:-ghcr.io/cycorld/earnlearning-backend:abc1234}"
+  echo "${MOCK_STAGE_IMAGE:-earnlearning-backend:abc1234}"
 fi
 exit 0
 EOF
   chmod +x "$sandbox/mock-bin/ssh"
+
+  # mock docker
+  cat > "$sandbox/mock-bin/docker" <<'EOF'
+#!/bin/bash
+echo "docker $*" >> "$MOCK_LOG"
+exit 0
+EOF
+  chmod +x "$sandbox/mock-bin/docker"
 }
 
 # run_scenario 는 전역 RC / OUT / LOGC 를 채운다.
@@ -201,7 +210,7 @@ assert_not_contains "$SSH_LINES" "rev-parse --short HEAD" "회귀: EC2 git HEAD 
 
 # ── 6. promote 가 'latest' 태그 거부 ──────────────────────────
 echo "[6] promote refuses ambiguous 'latest'"
-run_case promote "MOCK_STAGE_IMAGE=ghcr.io/cycorld/earnlearning-backend:latest"
+run_case promote "MOCK_STAGE_IMAGE=earnlearning-backend:latest"
 assert_eq 1 "$RC" "exit nonzero"
 assert_not_contains "$LOGC" "deploy.sh prod" "prod 배포 호출 없음 (latest 거부)"
 

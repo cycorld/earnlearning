@@ -2000,5 +2000,17 @@
       "SSH"
     ],
     "github": null
+  },
+  {
+    "slug": "209-remove-ghcr-pure-local-docker",
+    "title": "GHCR 의존성 완전 제거 및 Pure Local Docker 이미지 전환",
+    "date": "2026-10-13",
+    "tags": [
+      "DevOps",
+      "Docker",
+      "GHCR",
+      "Deployment"
+    ],
+    "github": null
   }
 ]

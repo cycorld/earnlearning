@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/cycorld/earnlearning-backend:${IMAGE_TAG:-latest}
+    image: earnlearning-backend:${IMAGE_TAG:-latest}
     restart: always
     volumes:
       - prod_db:/data/db
@@ -22,7 +22,7 @@ services:
       - blue
 
   frontend:
-    image: ghcr.io/cycorld/earnlearning-frontend:${IMAGE_TAG:-latest}
+    image: earnlearning-frontend:${IMAGE_TAG:-latest}
     restart: always
     networks:
       - blue

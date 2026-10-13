@@ -1,16 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-# ─── EarnLearning 빌드 + GHCR Push ───────────────────────────
+# ─── EarnLearning 네이티브 빌드 (로컬 이미지) ──────────────────
 # 사용법: ./deploy/build-and-push.sh [IMAGE_TAG]
-# x86_64 빌드서버에서 네이티브 빌드 → GHCR Push
+# x86_64 빌드서버(cycorld)에서 네이티브 빌드 (GHCR 외부 푸시 없음)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-REGISTRY="ghcr.io/cycorld"
-BACKEND_IMAGE="${REGISTRY}/earnlearning-backend"
-FRONTEND_IMAGE="${REGISTRY}/earnlearning-frontend"
+BACKEND_IMAGE="earnlearning-backend"
+FRONTEND_IMAGE="earnlearning-frontend"
 
 # Image tag: 인자 또는 git short SHA
 IMAGE_TAG="${1:-$(cd "$PROJECT_DIR" && git rev-parse --short HEAD)}"
@@ -41,13 +40,7 @@ build_backend() {
     -t "${BACKEND_IMAGE}:latest" \
     -f "$PROJECT_DIR/backend/Dockerfile" \
     "$PROJECT_DIR" >&2
-  log "Pushing backend..."
-  if ! docker push "${BACKEND_IMAGE}:${IMAGE_TAG}" >&2; then
-    warn "Backend push to GHCR failed (PAT scope or offline). Continuing with local image for SSH streaming."
-  else
-    docker push "${BACKEND_IMAGE}:latest" >&2 || true
-    log "Backend pushed: ${BACKEND_IMAGE}:${IMAGE_TAG}"
-  fi
+  log "Backend built: ${BACKEND_IMAGE}:${IMAGE_TAG}"
 }
 
 # ─── Frontend 빌드 ───────────────────────────────────────────
@@ -60,13 +53,7 @@ build_frontend() {
     -t "${FRONTEND_IMAGE}:latest" \
     -f "$PROJECT_DIR/frontend/Dockerfile" \
     "$PROJECT_DIR" >&2
-  log "Pushing frontend..."
-  if ! docker push "${FRONTEND_IMAGE}:${IMAGE_TAG}" >&2; then
-    warn "Frontend push to GHCR failed (PAT scope or offline). Continuing with local image for SSH streaming."
-  else
-    docker push "${FRONTEND_IMAGE}:latest" >&2 || true
-    log "Frontend pushed: ${FRONTEND_IMAGE}:${IMAGE_TAG}"
-  fi
+  log "Frontend built: ${FRONTEND_IMAGE}:${IMAGE_TAG}"
 }
 
 # ─── Main ─────────────────────────────────────────────────────
