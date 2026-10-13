@@ -3,37 +3,65 @@
     "slug": "201-admin-analytics-project-access",
     "title": "관리자의 강의실 Analytics 프로젝트 접근",
     "date": "2026-08-13",
-    "tags": ["Analytics", "Rybbit", "권한", "보안"]
+    "tags": [
+      "Analytics",
+      "Rybbit",
+      "권한",
+      "보안"
+    ]
   },
   {
     "slug": "200-messages-compose-classroom",
     "title": "같은 강의실 학생에게 새 메시지 보내기",
     "date": "2026-08-07",
-    "tags": ["메시지", "강의실", "학생 검색", "개인정보 최소화"]
+    "tags": [
+      "메시지",
+      "강의실",
+      "학생 검색",
+      "개인정보 최소화"
+    ]
   },
   {
     "slug": "199-grant-file-upload",
     "title": "정부과제 파일 첨부 범위 확인",
     "date": "2026-07-31",
-    "tags": ["정부과제", "파일 첨부", "회귀 테스트"]
+    "tags": [
+      "정부과제",
+      "파일 첨부",
+      "회귀 테스트"
+    ]
   },
   {
     "slug": "198-classroom-investment-isolation",
     "title": "투자 내역을 현재 강의실별로 분리하기",
     "date": "2026-07-30",
-    "tags": ["투자", "강의실", "격리", "버그수정"]
+    "tags": [
+      "투자",
+      "강의실",
+      "격리",
+      "버그수정"
+    ]
   },
   {
     "slug": "197-html-upload",
     "title": "게시글·댓글·DM HTML 파일 첨부",
     "date": "2026-07-30",
-    "tags": ["HTML", "파일 첨부", "보안"]
+    "tags": [
+      "HTML",
+      "파일 첨부",
+      "보안"
+    ]
   },
   {
     "slug": "189-mcp-operations",
     "title": "MCP 운영 도구 P0~P2 확장",
     "date": "2026-07-29",
-    "tags": ["MCP", "API", "보안", "운영"]
+    "tags": [
+      "MCP",
+      "API",
+      "보안",
+      "운영"
+    ]
   },
   {
     "slug": "180-main-backend-test-compilation",
@@ -1881,42 +1909,84 @@
     "slug": "183-pin-go-toolchain",
     "title": "Go 버전과 SQLite FTS5 테스트 계약 고정",
     "date": "2026-07-28",
-    "tags": ["Go", "테스트", "Docker", "재현성"],
+    "tags": [
+      "Go",
+      "테스트",
+      "Docker",
+      "재현성"
+    ],
     "github": null
   },
   {
     "slug": "184-dm-attachments",
     "title": "DM 파일/이미지 첨부 — 둘만 볼 수 있는 첨부 만들기",
     "date": "2026-07-28",
-    "tags": ["DM", "파일업로드", "보안", "TDD"],
+    "tags": [
+      "DM",
+      "파일업로드",
+      "보안",
+      "TDD"
+    ],
     "github": null
   },
   {
     "slug": "185-local-ops-isolation",
     "title": "완료 티켓 정리와 로컬 운영 데이터 격리",
     "date": "2026-07-29",
-    "tags": ["운영", "Git", "보안", "정리"],
+    "tags": [
+      "운영",
+      "Git",
+      "보안",
+      "정리"
+    ],
     "github": null
   },
   {
     "slug": "182-local-mcp-server",
     "title": "로컬 MCP 서버: AI 도구에 안전한 읽기 창구 만들기",
     "date": "2026-07-28",
-    "tags": ["MCP", "보안", "Go", "API"],
+    "tags": [
+      "MCP",
+      "보안",
+      "Go",
+      "API"
+    ],
     "github": null
   },
   {
     "slug": "191-dm-zip-mime",
     "title": "DM ZIP 첨부 MIME 호환",
     "date": "2026-07-29",
-    "tags": ["DM", "ZIP", "파일업로드", "호환성"],
+    "tags": [
+      "DM",
+      "ZIP",
+      "파일업로드",
+      "호환성"
+    ],
     "github": null
   },
   {
     "slug": "196-mcp-protocol-negotiation",
     "title": "Hermes MCP 프로토콜 협상 호환",
     "date": "2026-07-30",
-    "tags": ["MCP", "Hermes", "호환성", "보안"],
+    "tags": [
+      "MCP",
+      "Hermes",
+      "호환성",
+      "보안"
+    ],
+    "github": null
+  },
+  {
+    "slug": "207-dogfood-login-register-korean-i18n",
+    "title": "로그인·회원가입 폼 및 루트 언어 태그 UI/UX 무결성 개선",
+    "date": "2026-10-13",
+    "tags": [
+      "UI/UX",
+      "Dogfood",
+      "Frontend",
+      "i18n"
+    ],
     "github": null
   }
 ]

@@ -108,7 +108,7 @@ export default function LoginPage() {
                 onChange={(e) => setRememberEmail(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 accent-primary"
               />
-              <span className="text-muted-foreground">아이디 저장</span>
+              <span className="text-muted-foreground">이메일 저장</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input

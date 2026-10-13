@@ -43,14 +43,14 @@ describe('LoginPage', () => {
     localStorage.clear()
   })
 
-  describe('아이디 저장', () => {
-    it('기본적으로 아이디 저장 체크박스가 체크되어 있어야 한다', () => {
+  describe('이메일 저장', () => {
+    it('기본적으로 이메일 저장 체크박스가 체크되어 있어야 한다', () => {
       renderLogin()
-      const checkbox = screen.getByLabelText('아이디 저장')
+      const checkbox = screen.getByLabelText('이메일 저장')
       expect(checkbox).toBeChecked()
     })
 
-    it('로그인 시 아이디 저장이 체크되면 이메일이 localStorage에 저장된다', async () => {
+    it('로그인 시 이메일 저장이 체크되면 이메일이 localStorage에 저장된다', async () => {
       mockLogin.mockResolvedValueOnce(undefined)
       const user = userEvent.setup()
       renderLogin()
@@ -65,14 +65,14 @@ describe('LoginPage', () => {
       })
     })
 
-    it('아이디 저장 해제 후 로그인하면 저장된 이메일이 삭제된다', async () => {
+    it('이메일 저장 해제 후 로그인하면 저장된 이메일이 삭제된다', async () => {
       localStorage.setItem('el_saved_email', 'old@test.com')
       mockLogin.mockResolvedValueOnce(undefined)
       const user = userEvent.setup()
       renderLogin()
 
       // Uncheck remember email
-      await user.click(screen.getByLabelText('아이디 저장'))
+      await user.click(screen.getByLabelText('이메일 저장'))
       await user.clear(screen.getByLabelText('이메일'))
       await user.type(screen.getByLabelText('이메일'), 'new@test.com')
       await user.type(screen.getByLabelText('비밀번호'), 'password123')
