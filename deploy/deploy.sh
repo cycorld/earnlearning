@@ -116,11 +116,6 @@ deploy_stage() {
   sudo -E docker compose \
     -f "$(slot_compose stage)" \
     -p "$(slot_project stage)" \
-    pull || warn "Stage image pull skipped or failed, using local Docker cache"
-
-  sudo -E docker compose \
-    -f "$(slot_compose stage)" \
-    -p "$(slot_project stage)" \
     up -d --force-recreate
 
   if healthcheck "$(slot_port stage)"; then
@@ -153,13 +148,7 @@ deploy_prod() {
   cd "$PROJECT_DIR" && git pull --ff-only 2>/dev/null || true
   cd "$DEPLOY_DIR"
 
-  # 1. 비활성 slot에 pull + 시작
-  log "Pulling images for ${target}..."
-  sudo -E docker compose \
-    -f "$(slot_compose "$target")" \
-    -p "$(slot_project "$target")" \
-    pull || warn "${target} image pull skipped or failed, using local Docker cache"
-
+  # 1. 비활성 slot 시작
   log "Starting ${target} slot..."
   sudo -E docker compose \
     -f "$(slot_compose "$target")" \
