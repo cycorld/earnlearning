@@ -116,7 +116,7 @@ deploy_stage() {
   sudo -E docker compose \
     -f "$(slot_compose stage)" \
     -p "$(slot_project stage)" \
-    pull
+    pull || warn "Stage image pull skipped or failed, using local Docker cache"
 
   sudo -E docker compose \
     -f "$(slot_compose stage)" \
@@ -158,7 +158,7 @@ deploy_prod() {
   sudo -E docker compose \
     -f "$(slot_compose "$target")" \
     -p "$(slot_project "$target")" \
-    pull
+    pull || warn "${target} image pull skipped or failed, using local Docker cache"
 
   log "Starting ${target} slot..."
   sudo -E docker compose \
