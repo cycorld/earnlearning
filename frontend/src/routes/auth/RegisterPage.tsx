@@ -110,7 +110,7 @@ export default function RegisterPage() {
           <CardTitle className="text-center text-xl">회원가입</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pb-4">
             {apiError && (
               <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
                 {apiError}
